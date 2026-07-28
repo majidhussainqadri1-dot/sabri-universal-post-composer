@@ -51,3 +51,58 @@ if ( ! function_exists( 'supc_adapter_matches' ) ) {
 		}
 	}
 }
+
+if ( ! function_exists( 'supc_workflow_schema' ) ) {
+	/** @return array<string,mixed>|\WP_Error */
+	function supc_workflow_schema( int $user_id, string $adapter_key ) {
+		return Plugin::instance()->workflow_coordinator()->schema( $user_id, $adapter_key );
+	}
+}
+
+if ( ! function_exists( 'supc_workflow_create_draft' ) ) {
+	/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+	function supc_workflow_create_draft( int $user_id, string $adapter_key, ?string $native_reference, array $payload ) {
+		return Plugin::instance()->workflow_coordinator()->create_draft( $user_id, $adapter_key, $native_reference, $payload );
+	}
+}
+
+if ( ! function_exists( 'supc_workflow_validate' ) ) {
+	/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+	function supc_workflow_validate( int $user_id, string $adapter_key, array $payload ) {
+		return Plugin::instance()->workflow_coordinator()->validate( $user_id, $adapter_key, $payload );
+	}
+}
+
+if ( ! function_exists( 'supc_workflow_preview' ) ) {
+	/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+	function supc_workflow_preview( int $user_id, string $adapter_key, array $payload ) {
+		return Plugin::instance()->workflow_coordinator()->preview( $user_id, $adapter_key, $payload );
+	}
+}
+
+if ( ! function_exists( 'supc_workflow_submit' ) ) {
+	/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+	function supc_workflow_submit( int $user_id, string $adapter_key, string $idempotency_key, array $payload ) {
+		return Plugin::instance()->workflow_coordinator()->submit( $user_id, $adapter_key, $idempotency_key, $payload );
+	}
+}
+
+if ( ! function_exists( 'supc_workflow_status' ) ) {
+	/** @return array<string,mixed>|\WP_Error */
+	function supc_workflow_status( int $user_id, string $adapter_key, string $native_reference ) {
+		return Plugin::instance()->workflow_coordinator()->status( $user_id, $adapter_key, $native_reference );
+	}
+}
+
+if ( ! function_exists( 'supc_workflow_canonical_url' ) ) {
+	/** @return string|\WP_Error */
+	function supc_workflow_canonical_url( int $user_id, string $adapter_key, string $native_reference ) {
+		return Plugin::instance()->workflow_coordinator()->canonical_url( $user_id, $adapter_key, $native_reference );
+	}
+}
+
+if ( ! function_exists( 'supc_generate_idempotency_key' ) ) {
+	function supc_generate_idempotency_key(): string {
+		return Plugin::instance()->workflow_coordinator()->generate_idempotency_key();
+	}
+}
