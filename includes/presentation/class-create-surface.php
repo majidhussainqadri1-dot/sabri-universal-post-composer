@@ -22,6 +22,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Create_Surface {
 	private const GROUP_ORDER = array( 'publishing', 'knowledge', 'media', 'commerce', 'other' );
 
+	/** @var array<string, array{code:string,severity:string}> */
+	private array $diagnostics = array();
+
 	public function __construct( private Registry $registry ) {
 	}
 
@@ -56,21 +59,32 @@ final class Create_Surface {
 			return $this->notice(
 				'login',
 				__( 'Sign in to create platform content.', 'sabri-universal-post-composer' ),
-				__( 'Only authorized platform accounts can open a native publishing workflow.', 'sabri-universal-post-composer' ),
+				__( 'Only authorized platform accounts can open a native creation workflow.', 'sabri-universal-post-composer' ),
 				$login_url,
 				__( 'Sign In', 'sabri-universal-post-composer' )
 			);
 		}
 
-		$user_id = get_current_user_id();
-		$groups  = $this->collect_groups( $user_id );
+		$user_id   = get_current_user_id();
+		$available = $this->registry->available_for_user( $user_id );
+
+		if ( array() === $available ) {
+			if ( $this->registry->has_central_capability_for_user( $user_id ) ) {
+				return $this->integration_unavailable_notice();
+			}
+
+			return $this->notice(
+				'permission',
+				__( 'No creation permission is available for this account.', 'sabri-universal-post-composer' ),
+				__( 'Your current platform role or account status does not permit any registered creation workflow.', 'sabri-universal-post-composer' )
+			);
+		}
+
+		$this->diagnostics = array();
+		$groups            = $this->collect_from_adapters( $available, $user_id );
 
 		if ( array() === $groups ) {
-			return $this->notice(
-				'empty',
-				__( 'No authorized content type is currently available.', 'sabri-universal-post-composer' ),
-				__( 'Your account may not have creation permission, or the required native module may be unavailable.', 'sabri-universal-post-composer' )
-			);
+			return $this->integration_unavailable_notice();
 		}
 
 		$heading_id = wp_unique_id( 'supc-create-heading-' );
@@ -113,9 +127,59 @@ final class Create_Surface {
 	 * @return array<string, array{label:string,description:string,cards:array<int, array<string,string>>}>
 	 */
 	public function collect_groups( int $user_id ): array {
+		$this->diagnostics = array();
+		return $this->collect_from_adapters( $this->registry->available_for_user( $user_id ), $user_id );
+	}
+
+	/**
+	 * Return a privacy-safe System Check row after inspecting the current user's
+	 * available adapters. No URL, user, content, or adapter label is exposed.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function system_check_row( int $user_id ): array {
+		$this->collect_groups( $user_id );
+		$errors   = 0;
+		$warnings = 0;
+		$codes    = array();
+
+		foreach ( $this->diagnostics as $diagnostic ) {
+			$codes[] = $diagnostic['code'];
+			if ( 'fail' === $diagnostic['severity'] ) {
+				++$errors;
+			} else {
+				++$warnings;
+			}
+		}
+
+		$codes = array_values( array_unique( $codes ) );
+		sort( $codes );
+
+		return array(
+			'key'           => 'create_surface_diagnostics',
+			'status'        => $errors > 0 ? 'fail' : ( $warnings > 0 ? 'warning' : 'pass' ),
+			'count'         => count( $this->diagnostics ),
+			'error_count'   => $errors,
+			'warning_count' => $warnings,
+			'codes'         => $codes,
+		);
+	}
+
+	/**
+	 * @return array<string, array{code:string,severity:string}>
+	 */
+	public function diagnostics(): array {
+		return $this->diagnostics;
+	}
+
+	/**
+	 * @param array<string, Adapter> $adapters Available adapters.
+	 * @return array<string, array{label:string,description:string,cards:array<int, array<string,string>>}>
+	 */
+	private function collect_from_adapters( array $adapters, int $user_id ): array {
 		$collected = array();
 
-		foreach ( $this->registry->available_for_user( $user_id ) as $key => $adapter ) {
+		foreach ( $adapters as $key => $adapter ) {
 			try {
 				$card = $this->card_from_adapter( $key, $adapter, $user_id );
 				if ( null === $card ) {
@@ -125,6 +189,7 @@ final class Create_Surface {
 				$declared_group = $adapter->group();
 				$group_key      = $this->canonical_group( $declared_group );
 				if ( 'other' === $group_key && 'other' !== sanitize_key( $declared_group ) ) {
+					$this->record_diagnostic( $key, 'unknown_group', 'warning' );
 					do_action( 'supc_adapter_group_fallback', $key );
 				}
 
@@ -135,6 +200,7 @@ final class Create_Surface {
 
 				$collected[ $group_key ]['cards'][] = $card;
 			} catch ( Throwable $error ) {
+				$this->record_diagnostic( $key, 'render_exception', 'fail' );
 				do_action( 'supc_adapter_render_error', $key, get_class( $error ) );
 			}
 		}
@@ -153,16 +219,18 @@ final class Create_Surface {
 	 * @return array<string,string>|null
 	 */
 	private function card_from_adapter( string $key, Adapter $adapter, int $user_id ): ?array {
-		$url = wp_validate_redirect( $adapter->start_url( $user_id ), '' );
+		$url = $this->validate_internal_route( $adapter->start_url( $user_id ) );
 		if ( '' === $url ) {
+			$this->record_diagnostic( $key, 'invalid_route', 'fail' );
 			do_action( 'supc_adapter_invalid_start_url', $key );
 			return null;
 		}
 
-		$declared_privacy = $adapter->privacy_classification();
-		$privacy         = $this->canonical_privacy( $declared_privacy );
-		if ( $privacy !== sanitize_key( $declared_privacy ) ) {
-			do_action( 'supc_adapter_privacy_fallback', $key );
+		$privacy = $this->canonical_privacy( $adapter->privacy_classification() );
+		if ( null === $privacy ) {
+			$this->record_diagnostic( $key, 'invalid_privacy', 'fail' );
+			do_action( 'supc_adapter_privacy_rejected', $key );
+			return null;
 		}
 
 		return array(
@@ -204,6 +272,14 @@ final class Create_Surface {
 		}
 
 		return $html . '</section>';
+	}
+
+	private function integration_unavailable_notice(): string {
+		return $this->notice(
+			'unavailable',
+			__( 'Authorized creation services are temporarily unavailable.', 'sabri-universal-post-composer' ),
+			__( 'A required native module, route, or adapter contract is unavailable or misconfigured. No content was created.', 'sabri-universal-post-composer' )
+		);
 	}
 
 	private function is_surface_request(): bool {
@@ -250,9 +326,9 @@ final class Create_Surface {
 		return $groups[ $group ];
 	}
 
-	private function canonical_privacy( string $privacy ): string {
+	private function canonical_privacy( string $privacy ): ?string {
 		$privacy = sanitize_key( $privacy );
-		return in_array( $privacy, array( 'public', 'private', 'sensitive' ), true ) ? $privacy : 'private';
+		return in_array( $privacy, array( 'public', 'private', 'sensitive' ), true ) ? $privacy : null;
 	}
 
 	private function privacy_label( string $privacy ): string {
@@ -271,5 +347,54 @@ final class Create_Surface {
 		}
 
 		return str_starts_with( $icon, 'dashicons-' ) ? $icon : 'dashicons-' . $icon;
+	}
+
+	private function validate_internal_route( string $route ): string {
+		$route = trim( $route );
+		if ( '' === $route || 1 === preg_match( '/[\x00-\x1F\x7F]/', $route ) || str_contains( $route, '\\' ) ) {
+			return '';
+		}
+
+		$validated = wp_validate_redirect( $route, '' );
+		if ( '' === $validated ) {
+			return '';
+		}
+
+		if ( str_starts_with( $validated, '/' ) ) {
+			return str_starts_with( $validated, '//' ) ? '' : $validated;
+		}
+
+		$target = wp_parse_url( $validated );
+		$home   = wp_parse_url( home_url( '/' ) );
+		if ( ! is_array( $target ) || ! is_array( $home ) ) {
+			return '';
+		}
+
+		$target_scheme = strtolower( (string) ( $target['scheme'] ?? '' ) );
+		$home_scheme   = strtolower( (string) ( $home['scheme'] ?? '' ) );
+		$target_host   = strtolower( (string) ( $target['host'] ?? '' ) );
+		$home_host     = strtolower( (string) ( $home['host'] ?? '' ) );
+
+		if (
+			'https' !== $target_scheme ||
+			'https' !== $home_scheme ||
+			'' === $target_host ||
+			$target_host !== $home_host ||
+			isset( $target['user'] ) ||
+			isset( $target['pass'] )
+		) {
+			return '';
+		}
+
+		$target_port = isset( $target['port'] ) ? (int) $target['port'] : 443;
+		$home_port   = isset( $home['port'] ) ? (int) $home['port'] : 443;
+		return $target_port === $home_port ? $validated : '';
+	}
+
+	private function record_diagnostic( string $key, string $code, string $severity ): void {
+		$this->diagnostics[ $key . ':' . $code ] = array(
+			'code'     => $code,
+			'severity' => $severity,
+		);
 	}
 }
