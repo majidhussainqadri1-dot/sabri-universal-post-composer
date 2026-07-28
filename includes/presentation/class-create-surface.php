@@ -20,6 +20,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Create_Surface {
+	private const GROUP_ORDER = array( 'publishing', 'knowledge', 'media', 'commerce', 'other' );
+
 	public function __construct( private Registry $registry ) {
 	}
 
@@ -67,7 +69,7 @@ final class Create_Surface {
 			return $this->notice(
 				'empty',
 				__( 'No authorized content type is currently available.', 'sabri-universal-post-composer' ),
-				__( 'Your account may not have publishing permission, or the required native module may be unavailable.', 'sabri-universal-post-composer' )
+				__( 'Your account may not have creation permission, or the required native module may be unavailable.', 'sabri-universal-post-composer' )
 			);
 		}
 
@@ -111,7 +113,7 @@ final class Create_Surface {
 	 * @return array<string, array{label:string,description:string,cards:array<int, array<string,string>>}>
 	 */
 	public function collect_groups( int $user_id ): array {
-		$groups = array();
+		$collected = array();
 
 		foreach ( $this->registry->available_for_user( $user_id ) as $key => $adapter ) {
 			try {
@@ -120,19 +122,31 @@ final class Create_Surface {
 					continue;
 				}
 
-				$group_key = $this->canonical_group( $adapter->group() );
-				if ( ! isset( $groups[ $group_key ] ) ) {
-					$groups[ $group_key ] = $this->group_metadata( $group_key );
-					$groups[ $group_key ]['cards'] = array();
+				$declared_group = $adapter->group();
+				$group_key      = $this->canonical_group( $declared_group );
+				if ( 'other' === $group_key && 'other' !== sanitize_key( $declared_group ) ) {
+					do_action( 'supc_adapter_group_fallback', $key );
 				}
 
-				$groups[ $group_key ]['cards'][] = $card;
+				if ( ! isset( $collected[ $group_key ] ) ) {
+					$collected[ $group_key ] = $this->group_metadata( $group_key );
+					$collected[ $group_key ]['cards'] = array();
+				}
+
+				$collected[ $group_key ]['cards'][] = $card;
 			} catch ( Throwable $error ) {
 				do_action( 'supc_adapter_render_error', $key, get_class( $error ) );
 			}
 		}
 
-		return $groups;
+		$ordered = array();
+		foreach ( self::GROUP_ORDER as $group_key ) {
+			if ( isset( $collected[ $group_key ] ) ) {
+				$ordered[ $group_key ] = $collected[ $group_key ];
+			}
+		}
+
+		return $ordered;
 	}
 
 	/**
@@ -145,7 +159,11 @@ final class Create_Surface {
 			return null;
 		}
 
-		$privacy = $this->canonical_privacy( $adapter->privacy_classification() );
+		$declared_privacy = $adapter->privacy_classification();
+		$privacy         = $this->canonical_privacy( $declared_privacy );
+		if ( $privacy !== sanitize_key( $declared_privacy ) ) {
+			do_action( 'supc_adapter_privacy_fallback', $key );
+		}
 
 		return array(
 			'key'           => $key,
@@ -170,7 +188,7 @@ final class Create_Surface {
 		$html .= '<span class="supc-create-card__description">' . esc_html( $card['description'] ) . '</span>';
 		$html .= '<span class="supc-create-card__meta">';
 		$html .= '<span class="supc-create-card__privacy">' . esc_html( $card['privacy_label'] ) . '</span>';
-		$html .= '<span class="supc-create-card__continue">' . esc_html__( 'Continue', 'sabri-universal-post-composer' ) . '<span aria-hidden="true"> →</span></span>';
+		$html .= '<span class="supc-create-card__continue">' . esc_html__( 'Continue', 'sabri-universal-post-composer' ) . '<span class="supc-create-card__arrow" aria-hidden="true">›</span></span>';
 		$html .= '</span></span></a></li>';
 		return $html;
 	}
@@ -199,7 +217,7 @@ final class Create_Surface {
 
 	private function canonical_group( string $group ): string {
 		$group = sanitize_key( $group );
-		return in_array( $group, array( 'publishing', 'knowledge', 'media', 'commerce' ), true ) ? $group : 'other';
+		return in_array( $group, self::GROUP_ORDER, true ) ? $group : 'other';
 	}
 
 	/**
@@ -248,6 +266,10 @@ final class Create_Surface {
 
 	private function icon_class( string $icon ): string {
 		$icon = sanitize_html_class( $icon );
-		return '' !== $icon ? 'dashicons-' . $icon : 'dashicons-edit';
+		if ( '' === $icon ) {
+			return 'dashicons-edit';
+		}
+
+		return str_starts_with( $icon, 'dashicons-' ) ? $icon : 'dashicons-' . $icon;
 	}
 }
