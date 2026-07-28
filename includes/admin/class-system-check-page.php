@@ -84,8 +84,8 @@ final class System_Check_Page {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::REPAIR_ACTION ); ?>">
 				<?php wp_nonce_field( self::NONCE_ACTION ); ?>
-				<?php submit_button( __( 'Dry Run', 'sabri-universal-post-composer' ), 'secondary', 'supc_mode', false, array( 'value' => 'dry_run' ) ); ?>
-				<?php submit_button( __( 'Repair Create Page Mapping', 'sabri-universal-post-composer' ), 'primary', 'supc_mode', false, array( 'value' => 'repair' ) ); ?>
+				<button type="submit" class="button button-secondary" name="supc_mode" value="dry_run"><?php echo esc_html__( 'Dry Run', 'sabri-universal-post-composer' ); ?></button>
+				<button type="submit" class="button button-primary" name="supc_mode" value="repair"><?php echo esc_html__( 'Repair Create Page Mapping', 'sabri-universal-post-composer' ); ?></button>
 			</form>
 		</div>
 		<?php
@@ -117,7 +117,9 @@ final class System_Check_Page {
 			admin_url( 'tools.php' )
 		);
 
-		wp_safe_redirect( $redirect );
+		if ( ! wp_safe_redirect( $redirect ) ) {
+			wp_die( esc_html__( 'The administrator redirect could not be completed safely.', 'sabri-universal-post-composer' ) );
+		}
 		exit;
 	}
 
@@ -161,13 +163,14 @@ final class System_Check_Page {
 		$rows = array();
 		foreach ( $this->registry->all() as $key => $adapter ) {
 			try {
-				$status = $adapter->is_available() ? 'pass' : 'warning';
-				$codes  = array();
+				$available = $adapter->is_available();
+				$status    = $available ? 'pass' : 'warning';
+				$codes     = $available ? array() : array( 'native_unavailable' );
 
 				if ( $adapter instanceof Diagnostic_Adapter ) {
 					$health = $adapter->health_report();
-					$status = $this->normalize_status( (string) ( $health['status'] ?? $status ) );
-					$codes  = $this->normalize_codes( $health['codes'] ?? array() );
+					$status = $this->worse_status( $status, $this->normalize_status( (string) ( $health['status'] ?? $status ) ) );
+					$codes  = array_values( array_unique( array_merge( $codes, $this->normalize_codes( $health['codes'] ?? array() ) ) ) );
 				}
 
 				$rows[] = array(
@@ -242,6 +245,11 @@ final class System_Check_Page {
 		return in_array( $status, array( 'pass', 'warning', 'fail' ), true ) ? $status : 'warning';
 	}
 
+	private function worse_status( string $left, string $right ): string {
+		$weight = array( 'pass' => 0, 'warning' => 1, 'fail' => 2 );
+		return $weight[ $left ] >= $weight[ $right ] ? $left : $right;
+	}
+
 	/**
 	 * @return array<int, string>
 	 */
@@ -252,7 +260,7 @@ final class System_Check_Page {
 
 		$normalized = array();
 		foreach ( array_slice( $codes, 0, 20 ) as $code ) {
-			$code = sanitize_key( (string) $code );
+			$code = substr( sanitize_key( (string) $code ), 0, 64 );
 			if ( '' !== $code ) {
 				$normalized[] = $code;
 			}
@@ -262,8 +270,8 @@ final class System_Check_Page {
 	}
 
 	private function request_notice(): string {
-		$raw  = filter_input( INPUT_GET, 'supc_notice', FILTER_UNSAFE_RAW );
-		$code = is_string( $raw ) ? sanitize_key( wp_unslash( $raw ) ) : '';
+		$raw      = filter_input( INPUT_GET, 'supc_notice', FILTER_UNSAFE_RAW );
+		$code     = is_string( $raw ) ? sanitize_key( wp_unslash( $raw ) ) : '';
 		$messages = array(
 			'dry_run_ready'        => __( 'Dry run: the current Create page mapping is valid. No change is required.', 'sabri-universal-post-composer' ),
 			'dry_run_repairable'   => __( 'Dry run: an existing published shortcode page can be mapped safely. No change was made.', 'sabri-universal-post-composer' ),
