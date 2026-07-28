@@ -17,7 +17,7 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 
 ## Ownership boundary
 
-File 22 owns the universal content-type selector, adapter registry, shared creation experience, orchestration state, page resolution, and integration health. Native modules own permanent records, review decisions, secure storage, canonical URLs, and module-specific lifecycle rules.
+File 22 owns the universal content-type selector, adapter registry, shared creation experience, temporary orchestration boundaries, page resolution, and integration health. Native modules own permanent records, review decisions, secure storage, canonical URLs, durable idempotency reconciliation, and module-specific lifecycle rules.
 
 ## Current development stack
 
@@ -25,6 +25,7 @@ File 22 owns the universal content-type selector, adapter registry, shared creat
 - **Phase 22B:** release-critical File 21 `social_publication` adapter acceptance, ownership diagnostics, and fail-soft gateway rules.
 - **Phase 22C:** accessible, responsive Universal Create gateway surface that routes authorized users to native workflows without duplicating content.
 - **Phase 22D:** capability-protected administrator health dashboard, privacy-safe adapter diagnostics, and bounded Create-page mapping repair with dry-run support.
+- **Phase 22E:** guarded server-side native workflow orchestration for schema, native drafts, validation, preview, idempotent submission, status, and canonical URL retrieval.
 
 All phases remain stacked Draft pull requests. No merge, staging approval, package approval, or production approval is implied.
 
@@ -59,6 +60,22 @@ Unknown privacy classifications are not relabeled. The invalid adapter is omitte
 The user-facing law is:
 
 > One gateway, one native record.
+
+## Native workflow orchestration
+
+Phase 22E adds guarded server-side PHP functions for native modules implementing `Workflow_Adapter`:
+
+- schema discovery;
+- create or resume native draft;
+- validation;
+- same-origin preview;
+- idempotent submission;
+- native status;
+- canonical URL retrieval.
+
+The coordinator rechecks Safe Mode, Membership Core eligibility, central capability, adapter authorization, native availability, payload safety, native-reference format, idempotency-key format, result envelopes, and same-origin HTTPS URLs on every operation.
+
+Phase 22E does not expose a REST, AJAX, or browser form controller and does not persist File 22-owned draft payloads. Native modules remain responsible for secure storage, durable idempotency, publication, and canonical records.
 
 ## Administrator health
 
