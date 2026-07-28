@@ -19,9 +19,11 @@ final class Permission_Resolver {
 	private const STATUS_CALLBACK = 'smc_user_status';
 
 	public function core_available(): bool {
+		$callback_exists = (bool) call_user_func( 'function_exists', self::STATUS_CALLBACK );
+
 		return defined( 'SMC_VERSION' )
 			&& version_compare( (string) SMC_VERSION, SUPC_MIN_SMC_VERSION, '>=' )
-			&& is_callable( self::STATUS_CALLBACK );
+			&& $callback_exists;
 	}
 
 	public function account_is_eligible( int $user_id ): bool {
