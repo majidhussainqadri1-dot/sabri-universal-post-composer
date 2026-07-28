@@ -1,0 +1,75 @@
+name: File 22 CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'phase-*'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php-lint:
+    name: PHP ${{ matrix.php }} syntax
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3']
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Lint PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(find . -type f -name '*.php' -not -path './vendor/*' -print0)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo 'No PHP files found.' >&2
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            php -l "$file"
+          done
+
+  repository-contract:
+    name: Repository contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify required files and identifiers
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            README.md
+            sabri-universal-post-composer.php
+            includes/contracts/interface-adapter.php
+            includes/core/class-plugin.php
+            includes/core/class-registry.php
+            docs/ARCHITECTURE.md
+            docs/ADAPTER-CONTRACT.md
+            docs/DECISION-LOG.md
+            docs/SECURITY.md
+          )
+          for file in "${required[@]}"; do
+            test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
+          done
+          grep -q 'Plugin Name: Sabri Universal Post Composer' sabri-universal-post-composer.php
+          grep -q "define('SUPC_VERSION'" sabri-universal-post-composer.php
+          grep -q 'One canonical native record' README.md
