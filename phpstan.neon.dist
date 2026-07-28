@@ -1,12 +1,11 @@
 parameters:
-    level: 5
+    level: 6
     paths:
-        - includes
-        - sabri-universal-post-composer.php
-        - uninstall.php
+        - includes/contracts
+        - includes/core/class-safe-mode.php
+        - includes/core/class-permission-resolver.php
+        - includes/core/class-registry.php
+        - includes/core/functions.php
     bootstrapFiles:
         - tests/bootstrap.php
-    excludePaths:
-        analyse:
-            - tests/*
     reportUnmatchedIgnoredErrors: false
