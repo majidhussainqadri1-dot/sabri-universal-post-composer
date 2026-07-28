@@ -1,74 +1,90 @@
 <?php
 /**
- * Adapter contract.
+ * Base adapter contract.
  *
- * Native modules retain ownership of permanent records, moderation, secure
- * storage, and canonical URLs. The Universal Composer only orchestrates.
+ * @package SabriUniversalPostComposer
  */
 
 declare(strict_types=1);
 
 namespace Sabri\UniversalComposer\Contracts;
 
-if (! defined('ABSPATH')) {
-    exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
-interface Adapter
-{
-    /**
-     * Stable machine key, for example publication, learning_lesson, or pdf.
-     */
-    public function key(): string;
+/**
+ * Defines metadata, availability, authorization, and the safe entry route.
+ */
+interface Adapter {
+	/**
+	 * Exact File 22 adapter API version supported by this adapter.
+	 */
+	public function api_version(): string;
 
-    /**
-     * Human-readable American English label.
-     */
-    public function label(): string;
+	/**
+	 * Stable key matching ^[a-z][a-z0-9_]{2,63}$.
+	 */
+	public function key(): string;
 
-    /**
-     * Native module and version are present and healthy enough to create.
-     */
-    public function is_available(): bool;
+	/**
+	 * Human-readable American English label.
+	 */
+	public function label(): string;
 
-    /**
-     * Current user is authorized to create this content type.
-     */
-    public function can_create(int $user_id): bool;
+	/**
+	 * Short user-facing explanation of the content type.
+	 */
+	public function description(): string;
 
-    /**
-     * Versioned field schema and validation metadata.
-     *
-     * @return array<string, mixed>
-     */
-    public function schema(): array;
+	/**
+	 * Deterministic group key such as publishing, knowledge, media, or commerce.
+	 */
+	public function group(): string;
 
-    /**
-     * Create or resume a native draft and return an opaque native reference.
-     *
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>|\WP_Error
-     */
-    public function create_draft(int $user_id, array $payload);
+	/**
+	 * Dashicon name or a safe registered platform icon key.
+	 */
+	public function icon(): string;
 
-    /**
-     * Validate without publishing or mutating public state.
-     *
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>|\WP_Error
-     */
-    public function validate(int $user_id, array $payload);
+	/**
+	 * Lower values render first.
+	 */
+	public function priority(): int;
 
-    /**
-     * Idempotently submit to the native owner.
-     *
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>|\WP_Error
-     */
-    public function submit(int $user_id, string $idempotency_key, array $payload);
+	/**
+	 * Native plugin slug or canonical module identifier.
+	 */
+	public function native_module(): string;
 
-    /**
-     * Return the canonical native destination for an existing object.
-     */
-    public function canonical_url(string $native_reference): string;
+	/**
+	 * Minimum supported native module version.
+	 */
+	public function minimum_native_version(): string;
+
+	/**
+	 * Central WordPress capability required before adapter-specific checks.
+	 */
+	public function required_capability(): string;
+
+	/**
+	 * One of public, private, or sensitive.
+	 */
+	public function privacy_classification(): string;
+
+	/**
+	 * Whether the native module and supported version are available.
+	 */
+	public function is_available(): bool;
+
+	/**
+	 * Additional adapter-specific restriction. It may restrict, never expand,
+	 * the central Membership Core permission decision.
+	 */
+	public function can_create( int $user_id ): bool;
+
+	/**
+	 * Safe native or File 22 route that starts this creation workflow.
+	 */
+	public function start_url( int $user_id ): string;
 }
