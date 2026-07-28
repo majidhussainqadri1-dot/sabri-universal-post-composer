@@ -7,7 +7,6 @@ use Sabri\UniversalComposer\Admin\System_Check_Page;
 use Sabri\UniversalComposer\Contracts\Diagnostic_Adapter;
 use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
-use Sabri\UniversalComposer\Presentation\Create_Surface;
 
 final class Admin_Health_Test_Adapter implements Diagnostic_Adapter {
 	public function api_version(): string { return '1.0.0'; }
@@ -46,8 +45,7 @@ final class AdminSystemCheckTest extends TestCase {
 		$GLOBALS['supc_test_manage_options'] = true;
 		$GLOBALS['supc_test_filter_values']  = array();
 		$this->registry = new Registry( new Permission_Resolver() );
-		$surface        = new Create_Surface( $this->registry );
-		$this->page     = new System_Check_Page( $this->registry, $surface );
+		$this->page     = new System_Check_Page( $this->registry );
 	}
 
 	public function test_system_rows_normalize_untrusted_filter_data(): void {
