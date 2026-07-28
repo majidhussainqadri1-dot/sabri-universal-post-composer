@@ -24,8 +24,9 @@ File 22 owns the universal content-type selector, adapter registry, shared creat
 - **Phase 22A:** governance, contracts, central permission enforcement, page routing, Safe Mode, and automated contract tests.
 - **Phase 22B:** release-critical File 21 `social_publication` adapter acceptance, ownership diagnostics, and fail-soft gateway rules.
 - **Phase 22C:** accessible, responsive Universal Create gateway surface that routes authorized users to native workflows without duplicating content.
+- **Phase 22D:** capability-protected administrator health dashboard, privacy-safe adapter diagnostics, and bounded Create-page mapping repair with dry-run support.
 
-All three phases remain stacked Draft pull requests. No merge, staging approval, package approval, or production approval is implied.
+All phases remain stacked Draft pull requests. No merge, staging approval, package approval, or production approval is implied.
 
 ## Technical baseline
 
@@ -58,6 +59,12 @@ Unknown privacy classifications are not relabeled. The invalid adapter is omitte
 The user-facing law is:
 
 > One gateway, one native record.
+
+## Administrator health
+
+Authorized administrators can open `Tools → Composer Health` to view normalized System Check rows and privacy-safe adapter metadata. The page excludes user data, content data, native routes, raw exception messages, identity evidence, and clinical information.
+
+The only repair operation is limited to File 22's Create-page mapping. It supports a no-write dry run and may only retain a valid mapping, map an existing published shortcode page, or create a new File 22-managed page on an unoccupied approved slug. It never edits or deletes unrelated pages or native-module records.
 
 ## Development workflow
 
