@@ -136,6 +136,7 @@ jobs:
             docs/PRIVACY.md docs/ACCESSIBILITY.md docs/MIGRATION.md docs/ROLLBACK.md
             docs/STAGING-ACCEPTANCE.md docs/COMPATIBILITY-MATRIX.md docs/ERROR-CODES.md
             docs/FILE21-INTEGRATION.md docs/MASTER-PLAN-AMENDMENT-v2.1.md
+            docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
@@ -144,4 +145,5 @@ jobs:
           grep -q "define( 'SUPC_ADAPTER_API_VERSION'" sabri-universal-post-composer.php
           grep -q 'One canonical native record' README.md
           grep -q 'social_publication' docs/FILE21-INTEGRATION.md
+          grep -q 'Post-Implementation Review' docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
           grep -q 'File 23' docs/MASTER-PLAN-AMENDMENT-v2.1.md
