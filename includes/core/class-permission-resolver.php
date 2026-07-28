@@ -16,10 +16,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Permission_Resolver {
+	private const STATUS_CALLBACK = 'smc_user_status';
+
 	public function core_available(): bool {
 		return defined( 'SMC_VERSION' )
 			&& version_compare( (string) SMC_VERSION, SUPC_MIN_SMC_VERSION, '>=' )
-			&& function_exists( 'smc_user_status' );
+			&& is_callable( self::STATUS_CALLBACK );
 	}
 
 	public function account_is_eligible( int $user_id ): bool {
@@ -32,7 +34,7 @@ final class Permission_Resolver {
 			return false;
 		}
 
-		$status = (string) smc_user_status( $user_id );
+		$status = (string) call_user_func( self::STATUS_CALLBACK, $user_id );
 		if ( in_array( $status, array( 'rejected', 'suspended', 'expired_document' ), true ) ) {
 			return false;
 		}
