@@ -49,7 +49,11 @@ Adapters must implement `Sabri\UniversalComposer\Contracts\Adapter`. Full native
 
 ## Create surface
 
-The resolved Create page groups only authorized and available adapters into controlled Publishing, Knowledge and Learning, Media, Commerce, and Other sections. Every route is validated before output. Unknown privacy values fail conservatively to restricted presentation and emit a diagnostic event.
+The resolved Create page groups only authorized and available adapters into controlled Publishing, Knowledge and Learning, Media, Commerce, and Other sections.
+
+Every route must be either a relative internal path or an absolute same-origin HTTPS URL. External hosts, HTTP downgrade routes, credentials, mismatched ports, protocol-relative URLs, control characters, and backslashes are rejected.
+
+Unknown privacy classifications are not relabeled. The invalid adapter is omitted, a privacy-safe diagnostic is reported, and healthy adapters remain available.
 
 The user-facing law is:
 
