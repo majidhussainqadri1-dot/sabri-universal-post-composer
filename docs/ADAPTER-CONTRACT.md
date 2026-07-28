@@ -1,79 +1,56 @@
-# Adapter Contract
+# Adapter Contract — API 1.0.0
 
-Every content type is owned by a native module. File 22 only coordinates the creation experience.
+Every content type is owned by a native module. File 22 coordinates discovery and creation without taking permanent ownership.
 
-## Required adapter behavior
+## Base Adapter
 
-An adapter must provide:
+The base adapter supplies:
 
-1. A stable machine key.
-2. An American English display label.
-3. Native module and minimum-version detection.
-4. A capability-based authorization decision for the current user.
-5. A versioned field schema.
-6. Native draft creation or an explicit declaration that native drafts are unsupported.
-7. Side-effect-free validation.
-8. Idempotent submission.
-9. A canonical native destination.
-10. Native ownership, cleanup, privacy, and rollback callbacks in later contract versions.
+- exact adapter API version;
+- canonical machine key;
+- label and description;
+- group, icon, and deterministic priority;
+- native module identifier and minimum version;
+- central required capability;
+- privacy classification;
+- native availability;
+- adapter-specific authorization restriction;
+- safe start URL.
 
-## Prohibited adapter behavior
+The canonical key must match `^[a-z][a-z0-9_]{2,63}$`. Invalid keys are rejected, never silently rewritten.
 
-An adapter must not:
+## Workflow Adapter
 
-- grant permissions independently of Sabri Membership Core;
-- duplicate a native post type, custom table, moderation queue, or media vault;
-- expose pending, private, rejected, or unsafe content publicly;
-- store PDF bytes, consent evidence, identity evidence, or clinical records in a generic File 22 upload area;
-- claim successful publication before the native owner confirms a durable result;
-- convert a retry into a duplicate native object.
+A full workflow adapter additionally supplies:
+
+- schema version;
+- native-draft support declaration;
+- versioned schema;
+- create or resume draft with an explicit native reference;
+- side-effect-free validation;
+- private preview;
+- idempotent submission;
+- native status mapping;
+- canonical URL.
+
+## Diagnostic Adapter
+
+A diagnostic adapter may expose a privacy-safe health report. Reports must never contain full unpublished bodies, identity evidence, consent evidence, patient narratives, secrets, or encryption keys.
 
 ## Idempotency
 
-Final submission must use an immutable idempotency key bound to the composer session and submission attempt. Repeating the same request must return the same native result.
+Final submission uses an immutable idempotency key bound to the composer session and submission attempt. Repeating the same request returns the same native result.
 
 Recommended logical key:
 
 `composer_session_uuid + submission_attempt_uuid`
 
-The adapter must persist or resolve:
+If a native object exists but the File 22 response was lost, the adapter reconciles the existing mapping instead of creating another object.
 
-- idempotency key;
-- native object reference;
-- result state;
-- canonical URL when available;
-- failure classification;
-- retry eligibility.
+## Fail-soft behavior
 
-## Partial-failure recovery
+File 22 isolates `Throwable` failures per adapter. One broken adapter is disabled for the request and recorded in privacy-safe diagnostics; healthy adapters remain available.
 
-If the native object is created but File 22 fails before storing the response, the next retry must reconcile against the existing native mapping instead of creating another object.
+## Prohibited behavior
 
-Notifications and indexing events must be emitted through an outbox or other retry-safe mechanism after the native record exists.
-
-## Capability resolution
-
-Role names alone are insufficient. Authorization must consider:
-
-- account role;
-- verification state;
-- trusted-publisher state;
-- suspension state;
-- content-type capability;
-- native module policy.
-
-## Native examples
-
-| Adapter | Native owner |
-|---|---|
-| `publication` | File 21 |
-| `learning_lesson` | File 05 |
-| `encyclopedia_entry` | File 06 |
-| `video` | File 10 |
-| `reel` | File 11 through File 10 video ownership |
-| `pdf_document` | File 12 |
-| `marketplace_listing` | File 18 |
-
-## Fail-soft rule
-
-An unavailable adapter is omitted from the user's Create choices. Its failure must not disable unrelated healthy adapters.
+An adapter must not grant permissions independently, duplicate native records, expose unsafe content, store protected evidence in generic File 22 storage, claim publication before a durable native result, or convert retries into duplicates.
