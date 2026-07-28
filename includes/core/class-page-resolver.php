@@ -16,6 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Page_Resolver {
 	private const SHORTCODE = 'sabri_universal_composer';
 
+	private static ?int $resolved_page_id = null;
+
 	public static function activate(): void {
 		$page_id = self::resolve_page_id( true );
 		if ( $page_id > 0 ) {
@@ -24,18 +26,25 @@ final class Page_Resolver {
 	}
 
 	public static function resolve_page_id( bool $create = false ): int {
+		if ( null !== self::$resolved_page_id && ( self::$resolved_page_id > 0 || ! $create ) ) {
+			return self::$resolved_page_id;
+		}
+
 		$configured = absint( get_option( 'supc_create_page_id', 0 ) );
 		if ( self::is_valid_page( $configured ) ) {
+			self::$resolved_page_id = $configured;
 			return $configured;
 		}
 
 		$existing = self::find_shortcode_page();
 		if ( $existing > 0 ) {
 			update_option( 'supc_create_page_id', $existing, false );
+			self::$resolved_page_id = $existing;
 			return $existing;
 		}
 
 		if ( ! $create ) {
+			self::$resolved_page_id = 0;
 			return 0;
 		}
 
@@ -57,10 +66,12 @@ final class Page_Resolver {
 			);
 
 			if ( ! is_wp_error( $page_id ) ) {
-				return (int) $page_id;
+				self::$resolved_page_id = (int) $page_id;
+				return self::$resolved_page_id;
 			}
 		}
 
+		self::$resolved_page_id = 0;
 		return 0;
 	}
 
@@ -97,7 +108,7 @@ final class Page_Resolver {
 			array(
 				'post_type'              => 'page',
 				'post_status'            => 'publish',
-				'posts_per_page'         => 100,
+				'posts_per_page'         => -1,
 				'orderby'                => 'ID',
 				'order'                  => 'ASC',
 				'fields'                 => 'ids',
