@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Sabri\UniversalComposer\Core;
 
+use Sabri\UniversalComposer\Integration\Core_Adapter_Requirements;
 use Sabri\UniversalComposer\Integration\Shell_Bridge;
 use Throwable;
 
@@ -50,6 +51,7 @@ final class Plugin {
 		add_filter( 'supc_system_check_report', array( $this, 'append_system_check' ) );
 
 		( new Shell_Bridge( $this->registry ) )->register();
+		( new Core_Adapter_Requirements( $this->registry ) )->register();
 		do_action( 'supc_booted', $this->registry );
 	}
 
