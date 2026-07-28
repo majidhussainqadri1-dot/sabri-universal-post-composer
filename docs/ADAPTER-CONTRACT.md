@@ -23,6 +23,7 @@ The canonical key must match `^[a-z][a-z0-9_]{2,63}$`. Invalid keys are rejected
 
 A full workflow adapter additionally supplies:
 
+- exact direct workflow API version;
 - schema version;
 - native-draft support declaration;
 - versioned schema;
@@ -35,33 +36,54 @@ A full workflow adapter additionally supplies:
 
 Phase 22E exposes these operations only through guarded server-side PHP functions. It does not expose a REST, AJAX, or form endpoint.
 
+`workflow_api_version()` must exactly equal `SUPC_WORKFLOW_API_VERSION`. The current frozen value is `1.0.0`.
+
 ### Schema envelope
 
 `schema()` must return an array containing:
 
 - `version`, exactly matching `schema_version()`;
-- `fields`, as an array.
+- `fields`, as an array with canonical field keys.
+
+The encoded schema may not exceed 256 KiB. File 22 returns only `version` and `fields`.
 
 ### Draft envelope
 
-`create_draft()` must return a valid opaque `native_reference`. File 22 does not create a shadow draft.
+`create_draft()` may be called only when `supports_native_drafts()` returns true. The normalized result contains only:
+
+- valid opaque `native_reference`;
+- controlled `status`.
+
+File 22 does not create a shadow draft.
 
 ### Validation envelope
 
-`validate()` must return a boolean `valid` value and may return privacy-safe field error codes.
+`validate()` must return a boolean `valid` value. Optional `errors` and `warnings` must be canonical bounded code collections, not free-form messages or payload values.
+
+The normalized result contains only `valid`, `errors`, and `warnings`.
 
 ### Preview envelope
 
-`preview()` must return `preview_url`. It must be a relative internal path or an absolute same-origin HTTPS URL. Raw preview HTML is not accepted by the Phase 22E coordinator.
+`preview()` must return:
+
+- `preview_url`, as a relative internal path or absolute same-origin HTTPS URL;
+- integer `expires_at`, in the future and no more than 30 minutes from the orchestration call.
+
+Raw preview HTML and long-lived preview URLs are not accepted by the Phase 22E coordinator.
 
 ### Submission and status envelopes
 
 `submit()` and `status()` must return:
 
 - `native_reference`;
-- one controlled status: `draft`, `pending_review`, `scheduled`, `published`, `rejected`, or `failed`.
+- one controlled status: `draft`, `pending_review`, `scheduled`, `published`, `rejected`, or `failed`;
+- optional same-origin HTTPS `canonical_url`.
 
-An optional `canonical_url` must satisfy the same internal HTTPS policy.
+Only these approved keys are returned. The encoded native result may not exceed 1 MiB.
+
+## Native errors
+
+A native `WP_Error` must not be used to expose a payload, patient narrative, filesystem path, stack detail, or secret. File 22 replaces native errors with `supc_native_workflow_error` and retains only a sanitized native code in privacy-safe diagnostics.
 
 ## Diagnostic Adapter
 
@@ -73,13 +95,13 @@ Direct workflow payloads may contain only scalar values, `null`, and nested arra
 
 ## Idempotency
 
-Final submission uses an immutable idempotency key bound to the composer session and submission attempt. Repeating the same request returns the same native result.
+Final submission uses an immutable key consisting of two UUID-v4 values separated by a colon. File 22 may generate the key and forwards it unchanged.
 
-Recommended logical key:
+The native owner is responsible for durable reconciliation. If a native object exists but the File 22 response was lost, repeating the same key returns the existing mapping instead of creating another object. A key reused with a conflicting payload must fail safely under the native owner’s durable contract.
 
-`composer_session_uuid + submission_attempt_uuid`
+## Authorization and availability order
 
-File 22 may generate a two-UUID key, but the native owner is responsible for durable reconciliation. If a native object exists but the File 22 response was lost, the adapter reconciles the existing mapping instead of creating another object.
+The coordinator verifies central and adapter permission before exposing native availability. An unauthorized account must not learn whether the native module is online or offline through different workflow responses.
 
 ## Fail-soft behavior
 
@@ -89,4 +111,4 @@ Workflow exception diagnostics contain only the canonical adapter key, controlle
 
 ## Prohibited behavior
 
-An adapter must not grant permissions independently, duplicate native records, expose unsafe content, store protected evidence in generic File 22 storage, claim publication before a durable native result, convert retries into duplicates, or expose direct HTTP workflow handlers without separate nonce, CSRF, rate-limit, and request-method controls.
+An adapter must not grant permissions independently, duplicate native records, expose unsafe content, store protected evidence in generic File 22 storage, claim publication before a durable native result, convert retries into duplicates, return arbitrary extra native data through normalized envelopes, or expose direct HTTP workflow handlers without separate nonce, CSRF, authenticated-subject, rate-limit, and request-method controls.
