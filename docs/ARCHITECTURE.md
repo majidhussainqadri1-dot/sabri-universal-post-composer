@@ -11,7 +11,7 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 | Identity, verification, roles, capabilities, suspension | File 00 — Sabri Membership Core |
 | Global header and Create placement | File 20 — Unified Application Shell |
 | Social, Founder, doctor, News, Patient Case, Research Summary, and Poll publishing | File 21 — Complete Home and News Feed |
-| Universal type selection, shared creation UX, orchestration, and adapter health | File 22 |
+| Universal type selection, shared creation UX, guarded invocation, temporary orchestration boundaries, and adapter health | File 22 |
 | Final public profile and timeline visual experience | File 23 |
 | Learning lessons | File 05 |
 | Encyclopedia entries | File 06 |
@@ -37,15 +37,36 @@ File 20 is a production integration, but File 22 remains safe when the shell is 
 4. Required central WordPress capability.
 5. Adapter-specific restriction.
 
-An adapter may restrict access; it may never expand or bypass the central decision.
+An adapter may restrict access; it may never expand or bypass the central decision. Phase 22E repeats this permission order for every direct workflow operation and never trusts a prior page-render decision.
 
 ## Canonical record law
 
 One native record may be projected into Home, News, a profile timeline, search, and a module archive. File 22 must not create duplicate permanent records for those surfaces.
 
+A `Workflow_Adapter` creates, validates, previews, submits, and reports status through its native module. File 22 passes guarded server-side calls but does not persist the native payload, protected evidence, upload bytes, or final record.
+
 ## Registration lifecycle
 
 Native modules may call `supc_register_adapter()` after File 22 loads. The compatibility events `supc_register_adapters` and `supc_registry_ready` fire on `init`, but direct registration remains available to late-loading modules.
+
+## Workflow invocation boundary
+
+Phase 22E adds an internal `Workflow_Coordinator` and public server-side PHP helper functions. It validates:
+
+- adapter and workflow-contract availability;
+- central and adapter-specific authorization;
+- payload shape, nesting, finite values, and encoded size;
+- opaque native references;
+- immutable idempotency keys;
+- schema and operation result envelopes;
+- same-origin HTTPS preview and canonical URLs;
+- controlled native statuses.
+
+It does not expose a public HTTP controller. Any future REST, AJAX, or form layer must separately enforce nonce, CSRF, method, rate-limit, upload, and request-origin controls.
+
+## Idempotency boundary
+
+File 22 may generate a logical idempotency key and forwards it unchanged. The native owner must durably bind that key to the canonical native object and reconcile retries without duplication. File 22 does not claim durable idempotency merely because it generated the key.
 
 ## State dimensions
 
@@ -55,6 +76,8 @@ Native modules may call `supc_register_adapter()` after File 22 loads. The compa
 - Safety hold: `clear`, `privacy_hold`, `medical_hold`, `copyright_hold`, `security_hold`, `suspended`.
 
 Corrections and retractions are immutable editorial events, not overloaded composer states.
+
+Phase 22E exposes only controlled native operation statuses: `draft`, `pending_review`, `scheduled`, `published`, `rejected`, and `failed`. Richer review, publication, and safety dimensions remain native-module responsibilities until a separately versioned reconciliation contract is approved.
 
 ## Core release boundary
 
