@@ -163,6 +163,15 @@ final class Registry {
 	}
 
 	/**
+	 * Compatibility query used by the Create surface. True now means that the
+	 * central gate permits a registered workflow but its native service is not
+	 * available; adapter-specific authorization denial remains false.
+	 */
+	public function has_central_capability_for_user( int $user_id ): bool {
+		return 'unavailable' === $this->creation_state_for_user( $user_id );
+	}
+
+	/**
 	 * @return array<string, array<string, mixed>>
 	 */
 	public function errors(): array {
