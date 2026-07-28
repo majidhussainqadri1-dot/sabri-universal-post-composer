@@ -104,6 +104,16 @@ function wp_login_url( string $redirect = '' ): string {
 	return 'https://example.test/wp-login.php?redirect_to=' . rawurlencode( $redirect );
 }
 
+function home_url( string $path = '' ): string {
+	return 'https://example.test' . ( '' === $path ? '' : '/' . ltrim( $path, '/' ) );
+}
+
+/** @return array<string, int|string>|false */
+function wp_parse_url( string $url ): array|false {
+	$parts = parse_url( $url );
+	return is_array( $parts ) ? $parts : false;
+}
+
 function wp_unique_id( string $prefix = '' ): string {
 	++$GLOBALS['supc_test_unique_id'];
 	return $prefix . $GLOBALS['supc_test_unique_id'];
@@ -119,7 +129,11 @@ function sanitize_html_class( string $class ): string {
 }
 
 function wp_validate_redirect( string $location, string $fallback = '' ): string {
-	if ( str_starts_with( $location, '/' ) || str_starts_with( $location, 'https://example.test/' ) ) {
+	if (
+		str_starts_with( $location, '/' ) ||
+		str_starts_with( $location, 'https://' ) ||
+		str_starts_with( $location, 'http://' )
+	) {
 		return $location;
 	}
 	return $fallback;
