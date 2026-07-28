@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Sabri\UniversalComposer\Core;
 
+use Sabri\UniversalComposer\Admin\System_Check_Page;
 use Sabri\UniversalComposer\Integration\Core_Adapter_Requirements;
 use Sabri\UniversalComposer\Integration\Shell_Bridge;
 use Sabri\UniversalComposer\Presentation\Create_Surface;
@@ -24,11 +25,14 @@ final class Plugin {
 
 	private Create_Surface $create_surface;
 
+	private System_Check_Page $system_check_page;
+
 	private bool $booted = false;
 
 	private function __construct() {
-		$this->registry       = new Registry( new Permission_Resolver() );
-		$this->create_surface = new Create_Surface( $this->registry );
+		$this->registry          = new Registry( new Permission_Resolver() );
+		$this->create_surface    = new Create_Surface( $this->registry );
+		$this->system_check_page = new System_Check_Page( $this->registry, $this->create_surface );
 	}
 
 	public static function instance(): self {
@@ -54,6 +58,7 @@ final class Plugin {
 		add_filter( 'supc_system_check_report', array( $this, 'append_system_check' ) );
 
 		$this->create_surface->register();
+		$this->system_check_page->register();
 		( new Shell_Bridge( $this->registry ) )->register();
 		( new Core_Adapter_Requirements( $this->registry ) )->register();
 		do_action( 'supc_booted', $this->registry );
