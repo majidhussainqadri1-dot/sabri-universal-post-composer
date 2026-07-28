@@ -1,11 +1,11 @@
 # Security and Privacy Baseline
 
-File 22 fails closed for authorization, suspension, invalid adapter contracts, unsafe routing, ambiguous ownership, expired sessions, invalid nonces, and unsupported native modules.
+File 22 fails closed for authorization, suspension, invalid adapter contracts, unsafe routing, ambiguous ownership, expired sessions, invalid nonces, unsupported native modules, malformed workflow payloads, weak idempotency keys, unsafe preview URLs, and invalid native results.
 
 ## Required controls
 
 - Membership Core checks at open, autosave, upload, preview, submit, schedule, edit, and publish boundaries.
-- WordPress nonces and same-origin writes.
+- WordPress nonces and same-origin writes at every future HTTP controller.
 - Ownership and IDOR protection.
 - Sanitization before storage and context-appropriate escaping.
 - Prepared SQL for future tables.
@@ -14,6 +14,16 @@ File 22 fails closed for authorization, suspension, invalid adapter contracts, u
 - MIME, signature, size, and ownership validation.
 - Short-lived private previews.
 - Audit metadata without full sensitive bodies.
+
+## Phase 22E server-side workflow boundary
+
+The Phase 22E coordinator is an internal PHP service, not a public REST, AJAX, or form endpoint. It rechecks Safe Mode, Membership Core eligibility, central capability, adapter-specific authorization, and native availability on every operation.
+
+Workflow payloads are not stored by File 22. They are limited to scalar values, `null`, and bounded nested arrays. Objects, resources, excessive nesting, non-finite floats, and encoded payloads over 1 MiB are rejected before native invocation.
+
+Native references and idempotency keys use controlled opaque formats. Preview and canonical URLs must be relative internal routes or absolute same-origin HTTPS URLs. Native exception diagnostics contain only the adapter key, controlled operation key, and exception class; payloads and raw exception messages are excluded.
+
+The native owner remains responsible for durable idempotency reconciliation, secure draft storage, protected evidence, uploads, moderation, publication, and canonical records.
 
 ## Patient Case restrictions
 
@@ -33,4 +43,4 @@ Rejected, suspended, and expired-document accounts are denied centrally before a
 
 ## Release gate
 
-No release proceeds with unresolved critical or high-severity privilege escalation, CSRF, XSS, IDOR, MIME spoofing, path traversal, SSRF, open redirect, SQL injection, duplicate-submit races, draft theft, preview leakage, or upload ownership theft.
+No release proceeds with unresolved critical or high-severity privilege escalation, CSRF, XSS, IDOR, MIME spoofing, path traversal, SSRF, open redirect, SQL injection, duplicate-submit races, draft theft, preview leakage, payload leakage, weak idempotency, unsafe native result envelopes, or upload ownership theft.
