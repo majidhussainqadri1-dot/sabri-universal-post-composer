@@ -55,3 +55,4 @@ require_once dirname( __DIR__ ) . '/includes/contracts/interface-adapter.php';
 require_once dirname( __DIR__ ) . '/includes/core/class-safe-mode.php';
 require_once dirname( __DIR__ ) . '/includes/core/class-permission-resolver.php';
 require_once dirname( __DIR__ ) . '/includes/core/class-registry.php';
+require_once dirname( __DIR__ ) . '/includes/integration/class-core-adapter-requirements.php';
