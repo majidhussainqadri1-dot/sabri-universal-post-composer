@@ -24,6 +24,9 @@ final class Registry {
 	/** @var array<int, array<string, Adapter>> */
 	private array $available_cache = array();
 
+	/** @var array<int, string> */
+	private array $state_cache = array();
+
 	/** @var array<string, array<string, mixed>> */
 	private array $errors = array();
 
@@ -119,27 +122,44 @@ final class Registry {
 	}
 
 	/**
-	 * Determine whether the central account and capability gates permit at least
-	 * one registered adapter, without treating native-module availability as a
-	 * permission decision.
+	 * Return available, unavailable, or denied without conflating an adapter's
+	 * own authorization restriction with native-module availability.
 	 */
-	public function has_central_capability_for_user( int $user_id ): bool {
-		if ( $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
-			return false;
+	public function creation_state_for_user( int $user_id ): string {
+		if ( isset( $this->state_cache[ $user_id ] ) ) {
+			return $this->state_cache[ $user_id ];
 		}
 
+		if ( $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
+			$this->state_cache[ $user_id ] = 'denied';
+			return 'denied';
+		}
+
+		$has_unavailable = false;
 		foreach ( $this->all() as $key => $adapter ) {
 			try {
 				$capability = trim( $adapter->required_capability() );
-				if ( '' === $capability || user_can( $user_id, $capability ) ) {
-					return true;
+				if ( '' !== $capability && ! user_can( $user_id, $capability ) ) {
+					continue;
+				}
+
+				if ( ! $adapter->is_available() ) {
+					$has_unavailable = true;
+					continue;
+				}
+
+				if ( $this->permissions->can_use_adapter( $user_id, $adapter ) ) {
+					$this->state_cache[ $user_id ] = 'available';
+					return 'available';
 				}
 			} catch ( Throwable $error ) {
-				$this->runtime_error( $key, 'capability_exception', $error );
+				$has_unavailable = true;
+				$this->runtime_error( $key, 'state_exception', $error );
 			}
 		}
 
-		return false;
+		$this->state_cache[ $user_id ] = $has_unavailable ? 'unavailable' : 'denied';
+		return $this->state_cache[ $user_id ];
 	}
 
 	/**
@@ -151,6 +171,7 @@ final class Registry {
 
 	public function flush_cache(): void {
 		$this->available_cache = array();
+		$this->state_cache     = array();
 	}
 
 	private function compare_adapters( Adapter $left, Adapter $right ): int {
