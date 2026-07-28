@@ -141,6 +141,7 @@ jobs:
             docs/FILE21-INTEGRATION.md docs/MASTER-PLAN-AMENDMENT-v2.1.md
             docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
             docs/PHASE-22C-CREATE-SURFACE.md
+            docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
@@ -155,3 +156,5 @@ jobs:
           grep -q 'One gateway, one native record.' includes/presentation/class-create-surface.php
           grep -q 'prefers-reduced-motion' assets/css/create-surface.css
           grep -q 'forced-colors' assets/css/create-surface.css
+          grep -q 'Phase 22C Post-Implementation Review' docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
+          grep -q 'includes/presentation/class-create-surface.php' MANIFEST.md
