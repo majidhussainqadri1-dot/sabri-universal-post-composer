@@ -22,6 +22,10 @@
 - Route validation, adapter metadata escaping, controlled group diagnostics, and fail-closed privacy rejection.
 - Built-in privacy-safe Create-surface diagnostics in the System Check report.
 - Separate Phase 22C first-review and second-review correction records with focused regression tests.
+- Phase 22D `Tools → Composer Health` administrator dashboard with normalized System Check rows and privacy-safe adapter health metadata.
+- Capability-protected and nonce-protected Create-page mapping dry run and bounded repair operation.
+- Read-only Create-page inspection and explicit repair result codes.
+- PHPUnit contracts for dashboard normalization, health-report privacy, capability denial, no-write dry run, existing-page remapping, managed-page creation, and unrelated-page preservation.
 
 ### Changed
 
@@ -38,6 +42,7 @@
 - Invalid privacy classifications now hide only the invalid adapter and fail System Check instead of being relabeled.
 - Permission denial and native integration failure now render distinct states.
 - An unavailable native module is no longer reported as a user permission denial.
+- Create-page inspection is separated from mutation; repair writes occur only after an explicit protected repair request.
 
 ### Fixed
 
@@ -57,3 +62,5 @@
 - File 21 fallback remains available during partial rollout, duplicate-key collision, incompatible shell, missing producer hook, Safe Mode, or rollback.
 - Adapter routes must be relative internal paths or absolute same-origin HTTPS URLs.
 - Invalid privacy metadata fails closed without disabling healthy adapters.
+- Administrator health output excludes user data, content data, native routes, raw exception messages, identity evidence, and clinical information.
+- Repair controls are restricted to File 22-owned Create-page mapping and cannot edit or delete unrelated pages or native-module records.
