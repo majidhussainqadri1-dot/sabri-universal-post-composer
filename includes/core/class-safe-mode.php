@@ -23,11 +23,9 @@ final class Safe_Mode {
 			return true;
 		}
 
-		if (
-			class_exists( '\\Sabri\\UnifiedShell\\SafeMode' ) &&
-			is_callable( array( '\\Sabri\\UnifiedShell\\SafeMode', 'disabled' ) )
-		) {
-			return (bool) \Sabri\UnifiedShell\SafeMode::disabled();
+		$callback = array( '\\Sabri\\UnifiedShell\\SafeMode', 'disabled' );
+		if ( is_callable( $callback ) ) {
+			return (bool) call_user_func( $callback );
 		}
 
 		return false;
