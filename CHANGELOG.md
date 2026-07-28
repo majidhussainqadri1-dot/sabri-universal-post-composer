@@ -16,13 +16,17 @@
 - File 22 Safe Mode and emergency-disable integration.
 - PHPUnit, PHPStan, WordPress Coding Standards, and repository-contract CI.
 - Formal File 22/File 23 master-plan amendment.
+- Read-only `supc_adapter_matches()` contract for exact native-owner and current-availability confirmation.
 
 ### Changed
 
 - Content choices are accessible links to native start routes rather than inactive buttons.
 - Adapter registration is available through `supc_register_adapter()` and is not limited to a one-shot hook.
 - File 21 version `1.0.3` is the frozen minimum owner for the first release-critical social publication adapter.
-- A missing File 21 adapter is reported as a Core 1.0 release failure without causing a public-site fatal.
+- File 21 must implement the diagnostic contract and declare the canonical `sabri_feed_create_posts` capability.
+- Wrong owner, wrong capability, wrong group/privacy class, old declared version, and old actual runtime version are release failures rather than warnings.
+- A duplicate `social_publication` key is not accepted as successful File 21 registration.
+- File 21 fallback removal requires the exact File 20 producer contract and current-user Create visibility; a version string alone is insufficient.
 - WordPress readme no longer declares a stable development tag.
 
 ### Security
@@ -30,3 +34,4 @@
 - Suspended, rejected, and expired-document accounts are denied centrally.
 - Sensitive Patient Case drafts remain server-side by default.
 - File 22 does not own PDF bytes, identity evidence, patient-consent evidence, or private clinical records.
+- File 21 fallback remains available during partial rollout, duplicate-key collision, incompatible shell, missing producer hook, Safe Mode, or rollback.
