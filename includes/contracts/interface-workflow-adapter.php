@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Used when File 22 directly orchestrates native drafts and submission.
  */
 interface Workflow_Adapter extends Adapter {
+	public function workflow_api_version(): string;
+
 	public function schema_version(): string;
 
 	public function supports_native_drafts(): bool;
