@@ -69,7 +69,26 @@ jobs:
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --no-progress --prefer-dist --quiet
-      - run: composer phpstan
+      - name: Analyze and capture diagnostics
+        id: analyze
+        shell: bash
+        run: |
+          set +e
+          vendor/bin/phpstan analyse --configuration=phpstan.neon.dist --error-format=json --no-progress > phpstan-result.json
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          cat phpstan-result.json
+          exit 0
+      - name: Upload PHPStan diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: phpstan-result
+          path: phpstan-result.json
+          if-no-files-found: error
+          retention-days: 3
+      - name: Enforce PHPStan result
+        shell: bash
+        run: test "${{ steps.analyze.outputs.status }}" = "0"
 
   phpunit:
     name: PHPUnit contract tests
