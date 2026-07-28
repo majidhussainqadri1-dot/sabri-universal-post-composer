@@ -15,7 +15,8 @@ final class Surface_Test_Adapter implements Adapter {
 		private string $adapter_group = 'publishing',
 		private string $adapter_privacy = 'public',
 		private string $adapter_url = '/create-native/',
-		private int $adapter_priority = 10
+		private int $adapter_priority = 10,
+		private string $adapter_icon = 'edit'
 	) {
 	}
 
@@ -24,7 +25,7 @@ final class Surface_Test_Adapter implements Adapter {
 	public function label(): string { return $this->adapter_label; }
 	public function description(): string { return 'Create a native item.'; }
 	public function group(): string { return $this->adapter_group; }
-	public function icon(): string { return 'edit'; }
+	public function icon(): string { return $this->adapter_icon; }
 	public function priority(): int { return $this->adapter_priority; }
 	public function native_module(): string { return 'surface-test-module'; }
 	public function minimum_native_version(): string { return '1.0.0'; }
@@ -52,16 +53,17 @@ final class CreateSurfaceTest extends TestCase {
 		$this->registry                     = new Registry( new Permission_Resolver() );
 	}
 
-	public function test_groups_authorized_adapters_in_deterministic_sections(): void {
-		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'video_item', 'Video', 'media', 'public', '/video/create/', 20 ) ) );
-		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'social_post', 'Social Post', 'publishing', 'public', '/create-post/', 10 ) ) );
-		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'custom_item', 'Custom', 'unregistered_group', 'private', '/custom/create/', 30 ) ) );
+	public function test_groups_authorized_adapters_in_canonical_section_order(): void {
+		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'video_item', 'Video', 'media', 'public', '/video/create/', 1 ) ) );
+		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'social_post', 'Social Post', 'publishing', 'public', '/create-post/', 50 ) ) );
+		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'custom_item', 'Custom', 'unregistered_group', 'private', '/custom/create/', 2 ) ) );
 
 		$groups = ( new Create_Surface( $this->registry ) )->collect_groups( 1 );
 
 		$this->assertSame( array( 'publishing', 'media', 'other' ), array_keys( $groups ) );
 		$this->assertSame( 'social_post', $groups['publishing']['cards'][0]['key'] );
 		$this->assertSame( 'Restricted content', $groups['other']['cards'][0]['privacy_label'] );
+		$this->assertSame( 'supc_adapter_group_fallback', $GLOBALS['supc_test_actions_fired'][0][0] );
 	}
 
 	public function test_invalid_external_start_url_is_not_rendered(): void {
@@ -73,8 +75,18 @@ final class CreateSurfaceTest extends TestCase {
 		$this->assertSame( 'supc_adapter_invalid_start_url', $GLOBALS['supc_test_actions_fired'][0][0] );
 	}
 
+	public function test_unknown_privacy_falls_back_to_restricted_and_emits_diagnostic(): void {
+		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'legacy_item', 'Legacy', 'publishing', 'unknown' ) ) );
+
+		$groups = ( new Create_Surface( $this->registry ) )->collect_groups( 1 );
+
+		$this->assertSame( 'private', $groups['publishing']['cards'][0]['privacy'] );
+		$this->assertSame( 'Restricted content', $groups['publishing']['cards'][0]['privacy_label'] );
+		$this->assertSame( 'supc_adapter_privacy_fallback', $GLOBALS['supc_test_actions_fired'][0][0] );
+	}
+
 	public function test_render_outputs_accessible_native_links_and_escapes_adapter_text(): void {
-		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'social_post', '<script>Post</script>', 'publishing', 'sensitive', '/create-post/' ) ) );
+		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'social_post', '<script>Post</script>', 'publishing', 'sensitive', '/create-post/', 10, 'dashicons-admin-post' ) ) );
 
 		$html = ( new Create_Surface( $this->registry ) )->render();
 
@@ -84,6 +96,9 @@ final class CreateSurfaceTest extends TestCase {
 		$this->assertStringContainsString( '&lt;script&gt;Post&lt;/script&gt;', $html );
 		$this->assertStringNotContainsString( '<script>Post</script>', $html );
 		$this->assertStringContainsString( 'Sensitive workflow', $html );
+		$this->assertStringContainsString( 'dashicons-admin-post', $html );
+		$this->assertStringNotContainsString( 'dashicons-dashicons-admin-post', $html );
+		$this->assertStringContainsString( 'supc-create-card__arrow', $html );
 		$this->assertStringContainsString( 'One gateway, one native record.', $html );
 	}
 
