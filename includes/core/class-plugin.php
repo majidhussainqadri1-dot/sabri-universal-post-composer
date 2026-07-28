@@ -21,7 +21,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Plugin {
 	private static ?self $instance = null;
 
+	private Permission_Resolver $permissions;
+
 	private Registry $registry;
+
+	private Workflow_Coordinator $workflow_coordinator;
 
 	private Create_Surface $create_surface;
 
@@ -30,9 +34,11 @@ final class Plugin {
 	private bool $booted = false;
 
 	private function __construct() {
-		$this->registry          = new Registry( new Permission_Resolver() );
-		$this->create_surface    = new Create_Surface( $this->registry );
-		$this->system_check_page = new System_Check_Page( $this->registry );
+		$this->permissions          = new Permission_Resolver();
+		$this->registry             = new Registry( $this->permissions );
+		$this->workflow_coordinator = new Workflow_Coordinator( $this->registry, $this->permissions );
+		$this->create_surface       = new Create_Surface( $this->registry );
+		$this->system_check_page    = new System_Check_Page( $this->registry );
 	}
 
 	public static function instance(): self {
@@ -77,6 +83,10 @@ final class Plugin {
 		return $this->registry;
 	}
 
+	public function workflow_coordinator(): Workflow_Coordinator {
+		return $this->workflow_coordinator;
+	}
+
 	public function render_shortcode(): string {
 		return $this->create_surface->render();
 	}
@@ -112,7 +122,7 @@ final class Plugin {
 		$page_status = Page_Resolver::inspect()['status'];
 		$rows[] = array(
 			'key'    => 'membership_core',
-			'status' => ( new Permission_Resolver() )->core_available() ? 'pass' : 'fail',
+			'status' => $this->permissions->core_available() ? 'pass' : 'fail',
 		);
 		$rows[] = array(
 			'key'    => 'create_page',
