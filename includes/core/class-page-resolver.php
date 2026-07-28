@@ -38,7 +38,9 @@ final class Page_Resolver {
 
 		$existing = self::find_shortcode_page();
 		if ( $existing > 0 ) {
-			update_option( 'supc_create_page_id', $existing, false );
+			if ( $create ) {
+				update_option( 'supc_create_page_id', $existing, false );
+			}
 			self::$resolved_page_id = $existing;
 			return $existing;
 		}
@@ -62,17 +64,17 @@ final class Page_Resolver {
 		$configured = absint( get_option( 'supc_create_page_id', 0 ) );
 		if ( self::is_valid_page( $configured ) ) {
 			return array(
-				'status'               => 'ready',
-				'configured_page_id'   => $configured,
-				'discovered_page_id'   => $configured,
+				'status'             => 'ready',
+				'configured_page_id' => $configured,
+				'discovered_page_id' => $configured,
 			);
 		}
 
 		$existing = self::find_shortcode_page();
 		return array(
-			'status'               => $existing > 0 ? 'repairable' : 'missing',
-			'configured_page_id'   => $configured,
-			'discovered_page_id'   => $existing,
+			'status'             => $existing > 0 ? 'repairable' : 'missing',
+			'configured_page_id' => $configured,
+			'discovered_page_id' => $existing,
 		);
 	}
 
@@ -201,7 +203,7 @@ final class Page_Resolver {
 				true
 			);
 
-			if ( ! is_wp_error( $page_id ) ) {
+			if ( ! is_wp_error( $page_id ) && self::is_valid_page( (int) $page_id ) ) {
 				return (int) $page_id;
 			}
 		}
