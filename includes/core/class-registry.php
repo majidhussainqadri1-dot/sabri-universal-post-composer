@@ -119,6 +119,30 @@ final class Registry {
 	}
 
 	/**
+	 * Determine whether the central account and capability gates permit at least
+	 * one registered adapter, without treating native-module availability as a
+	 * permission decision.
+	 */
+	public function has_central_capability_for_user( int $user_id ): bool {
+		if ( $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
+			return false;
+		}
+
+		foreach ( $this->all() as $key => $adapter ) {
+			try {
+				$capability = trim( $adapter->required_capability() );
+				if ( '' === $capability || user_can( $user_id, $capability ) ) {
+					return true;
+				}
+			} catch ( Throwable $error ) {
+				$this->runtime_error( $key, 'capability_exception', $error );
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * @return array<string, array<string, mixed>>
 	 */
 	public function errors(): array {
