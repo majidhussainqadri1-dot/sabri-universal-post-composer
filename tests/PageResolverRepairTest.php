@@ -21,6 +21,18 @@ final class PageResolverRepairTest extends TestCase {
 		$this->assertSame( array(), $GLOBALS['supc_test_pages'] );
 	}
 
+	public function test_read_only_resolution_discovers_page_without_persisting_mapping(): void {
+		$GLOBALS['supc_test_pages'][42] = array(
+			'status'    => 'publish',
+			'content'   => '[sabri_universal_composer]',
+			'slug'      => 'existing-create',
+			'permalink' => 'https://example.test/existing-create/',
+		);
+
+		$this->assertSame( 42, Page_Resolver::resolve_page_id( false ) );
+		$this->assertArrayNotHasKey( 'supc_create_page_id', $GLOBALS['supc_test_options'] );
+	}
+
 	public function test_repair_maps_existing_shortcode_page_without_editing_it(): void {
 		$GLOBALS['supc_test_options']['supc_create_page_id'] = 999;
 		$GLOBALS['supc_test_pages'][42] = array(
