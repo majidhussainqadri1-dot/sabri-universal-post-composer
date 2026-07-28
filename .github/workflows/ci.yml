@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - main
-      - 'phase-*'
   pull_request:
 
 permissions:
   contents: read
+
+concurrency:
+  group: file-22-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   php-lint:
@@ -22,10 +25,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@2.37.1
         with:
           php-version: ${{ matrix.php }}
           coverage: none
@@ -43,6 +46,37 @@ jobs:
             php -l "$file"
           done
 
+  quality:
+    name: Standards, static analysis, and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate Composer configuration
+        run: composer validate --strict --no-check-lock
+
+      - name: Install development tools
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: WordPress coding standards
+        run: composer phpcs
+
+      - name: PHPStan
+        run: composer phpstan
+
+      - name: PHPUnit contract tests
+        run: composer test
+
   repository-contract:
     name: Repository contract
     runs-on: ubuntu-latest
@@ -50,7 +84,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Verify required files and identifiers
         shell: bash
@@ -58,18 +92,39 @@ jobs:
           set -euo pipefail
           required=(
             README.md
+            LICENSE.md
+            CHANGELOG.md
+            composer.json
+            phpunit.xml.dist
+            phpstan.neon.dist
+            phpcs.xml.dist
             sabri-universal-post-composer.php
             includes/contracts/interface-adapter.php
+            includes/contracts/interface-workflow-adapter.php
+            includes/contracts/interface-diagnostic-adapter.php
+            includes/core/class-permission-resolver.php
+            includes/core/class-page-resolver.php
+            includes/core/class-safe-mode.php
             includes/core/class-plugin.php
             includes/core/class-registry.php
+            includes/core/functions.php
             docs/ARCHITECTURE.md
             docs/ADAPTER-CONTRACT.md
             docs/DECISION-LOG.md
             docs/SECURITY.md
+            docs/PRIVACY.md
+            docs/ACCESSIBILITY.md
+            docs/MIGRATION.md
+            docs/ROLLBACK.md
+            docs/STAGING-ACCEPTANCE.md
+            docs/COMPATIBILITY-MATRIX.md
+            docs/ERROR-CODES.md
+            docs/MASTER-PLAN-AMENDMENT-v2.1.md
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
           done
           grep -q 'Plugin Name: Sabri Universal Post Composer' sabri-universal-post-composer.php
-          grep -q "define('SUPC_VERSION'" sabri-universal-post-composer.php
+          grep -q "define( 'SUPC_ADAPTER_API_VERSION'" sabri-universal-post-composer.php
           grep -q 'One canonical native record' README.md
+          grep -q 'File 23' docs/MASTER-PLAN-AMENDMENT-v2.1.md
