@@ -66,6 +66,21 @@ final class RegistryTest extends TestCase {
 		$this->assertTrue( $this->registry->register( new Test_Adapter( 'publication' ) ) );
 		$this->assertNotEmpty( $this->registry->available_for_user( 1 ) );
 		$this->assertSame( array(), $this->registry->available_for_user( 2 ) );
+		$this->assertSame( 'denied', $this->registry->creation_state_for_user( 2 ) );
+	}
+
+	public function test_adapter_specific_denial_is_not_reported_as_native_unavailability(): void {
+		$this->assertTrue( $this->registry->register( new Test_Adapter( 'restricted', 10, true, false ) ) );
+		$this->assertSame( array(), $this->registry->available_for_user( 1 ) );
+		$this->assertSame( 'denied', $this->registry->creation_state_for_user( 1 ) );
+		$this->assertFalse( $this->registry->has_central_capability_for_user( 1 ) );
+	}
+
+	public function test_native_unavailability_is_distinct_from_permission_denial(): void {
+		$this->assertTrue( $this->registry->register( new Test_Adapter( 'offline', 10, false, true ) ) );
+		$this->assertSame( array(), $this->registry->available_for_user( 1 ) );
+		$this->assertSame( 'unavailable', $this->registry->creation_state_for_user( 1 ) );
+		$this->assertTrue( $this->registry->has_central_capability_for_user( 1 ) );
 	}
 
 	public function test_one_adapter_exception_does_not_disable_others(): void {
