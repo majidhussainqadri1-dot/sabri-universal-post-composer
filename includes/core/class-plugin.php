@@ -117,6 +117,7 @@ final class Plugin {
 			'status' => array() === $this->registry->errors() ? 'pass' : 'warning',
 			'count'  => count( $this->registry->errors() ),
 		);
+		$rows[] = $this->create_surface->system_check_row( get_current_user_id() );
 		return $rows;
 	}
 }
