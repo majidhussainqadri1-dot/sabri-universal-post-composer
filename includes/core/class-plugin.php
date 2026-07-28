@@ -32,7 +32,7 @@ final class Plugin {
 	private function __construct() {
 		$this->registry          = new Registry( new Permission_Resolver() );
 		$this->create_surface    = new Create_Surface( $this->registry );
-		$this->system_check_page = new System_Check_Page( $this->registry, $this->create_surface );
+		$this->system_check_page = new System_Check_Page( $this->registry );
 	}
 
 	public static function instance(): self {
@@ -109,13 +109,15 @@ final class Plugin {
 	 * @return array<int, array<string, mixed>>
 	 */
 	public function append_system_check( array $rows ): array {
+		$page_status = Page_Resolver::inspect()['status'];
 		$rows[] = array(
 			'key'    => 'membership_core',
 			'status' => ( new Permission_Resolver() )->core_available() ? 'pass' : 'fail',
 		);
 		$rows[] = array(
 			'key'    => 'create_page',
-			'status' => Page_Resolver::is_ready() ? 'pass' : 'fail',
+			'status' => 'ready' === $page_status ? 'pass' : ( 'repairable' === $page_status ? 'warning' : 'fail' ),
+			'codes'  => 'ready' === $page_status ? array() : array( 'create_page_' . $page_status ),
 		);
 		$rows[] = array(
 			'key'    => 'adapter_errors',
