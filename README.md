@@ -13,14 +13,19 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 - Unavailable or broken adapters fail independently and do not disable healthy adapters.
 - Staging-first development; direct experimental changes on the live website are prohibited.
 - Security, privacy, medical safety, accessibility, migration, and rollback are required from the beginning.
+- Every substantial implementation is followed by a separate mandatory review before the next phase.
 
 ## Ownership boundary
 
 File 22 owns the universal content-type selector, adapter registry, shared creation experience, orchestration state, page resolution, and integration health. Native modules own permanent records, review decisions, secure storage, canonical URLs, and module-specific lifecycle rules.
 
-## Current phase
+## Current development stack
 
-Phase 22A — Governance, contracts, permission enforcement, page routing, safe-mode integration, and automated contract tests.
+- **Phase 22A:** governance, contracts, central permission enforcement, page routing, Safe Mode, and automated contract tests.
+- **Phase 22B:** release-critical File 21 `social_publication` adapter acceptance, ownership diagnostics, and fail-soft gateway rules.
+- **Phase 22C:** accessible, responsive Universal Create gateway surface that routes authorized users to native workflows without duplicating content.
+
+All three phases remain stacked Draft pull requests. No merge, staging approval, package approval, or production approval is implied.
 
 ## Technical baseline
 
@@ -30,6 +35,7 @@ Phase 22A — Governance, contracts, permission enforcement, page routing, safe-
 - Production HTTPS required
 - American English interface baseline
 - No external runtime CDN or remote fonts
+- Core Create navigation works without JavaScript
 
 ## Public integration
 
@@ -41,12 +47,20 @@ $result = supc_register_adapter( $adapter );
 
 Adapters must implement `Sabri\UniversalComposer\Contracts\Adapter`. Full native draft orchestration additionally implements `Workflow_Adapter`.
 
+## Create surface
+
+The resolved Create page groups only authorized and available adapters into controlled Publishing, Knowledge and Learning, Media, Commerce, and Other sections. Every route is validated before output. Unknown privacy values fail conservatively to restricted presentation and emit a diagnostic event.
+
+The user-facing law is:
+
+> One gateway, one native record.
+
 ## Development workflow
 
-Audit → branch → coding → short automated checks → controlled staging → Founder verification → pull-request review → merge.
+Audit → branch → coding → short automated checks → separate post-implementation review → correction → fresh checks → controlled staging → Founder verification → pull-request review → merge.
 
 ## Status
 
 Development version `0.1.0-dev`. No production package, staging acceptance, live deployment, or completion claim has been issued.
 
-See the `docs/` directory for architecture, privacy, security, accessibility, migration, rollback, compatibility, error codes, staging acceptance, and the formal File 22/File 23 amendment.
+See the `docs/` directory for architecture, privacy, security, accessibility, migration, rollback, compatibility, error codes, staging acceptance, phase contracts, review records, and the formal File 22/File 23 amendment.
