@@ -1,0 +1,23 @@
+# Operating systems and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Local dependencies and build output
+vendor/
+node_modules/
+build/
+dist/
+*.zip
+
+# Test and coverage output
+.phpunit.result.cache
+coverage/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.log
