@@ -31,7 +31,17 @@ Public PHP integration functions:
 - `supc_workflow_canonical_url()`;
 - `supc_generate_idempotency_key()`.
 
-These are internal server-side APIs. A future HTTP, REST, AJAX, or form controller must add its own nonce, CSRF, request-method, rate-limit, and content-security boundary before calling them.
+These are internal server-side APIs. A future HTTP, REST, AJAX, or form controller must add its own nonce, CSRF, request-method, rate-limit, authenticated-subject, and content-security boundary before calling them.
+
+## Version negotiation
+
+Every direct workflow adapter must declare:
+
+```text
+workflow_api_version() === SUPC_WORKFLOW_API_VERSION
+```
+
+The current frozen Phase 22E workflow API version is `1.0.0`. A base adapter API match does not substitute for the direct workflow handshake.
 
 ## Authorization order
 
@@ -41,12 +51,13 @@ Every operation resolves authorization in this order:
 2. canonical adapter key;
 3. registered adapter existence;
 4. `Workflow_Adapter` support;
-5. native availability;
+5. exact workflow API version;
 6. Membership Core account eligibility;
 7. central required capability;
-8. adapter-specific authorization.
+8. adapter-specific authorization;
+9. native availability.
 
-An adapter may narrow central permission but cannot broaden it.
+Permission is resolved before native availability is disclosed. An adapter may narrow central permission but cannot broaden it.
 
 ## Payload boundary
 
@@ -67,41 +78,78 @@ Files, patient evidence, identity documents, consent evidence, and other protect
 
 Native references are opaque identifiers limited to a conservative canonical character set and maximum length.
 
-Final submission requires an immutable idempotency key. File 22 can generate a two-UUID key, but the native owner remains responsible for durable idempotency reconciliation. Repeating the same key must not create another native object.
+Final submission requires exactly two UUID-v4 values separated by a colon. File 22 can generate this key, but the native owner remains responsible for durable idempotency reconciliation. Repeating the same key must return the same canonical native result and must not create another object.
+
+## Size boundaries
+
+- request payload: maximum 1 MiB encoded;
+- schema result: maximum 256 KiB encoded;
+- native operation result: maximum 1 MiB encoded.
+
+Type, nesting, and size checks are all required. Passing one check does not bypass the others.
 
 ## Result envelopes
+
+The coordinator returns only approved keys. Additional native fields are discarded rather than propagated.
 
 ### Schema
 
 The schema must contain:
 
 - `version`, exactly matching `schema_version()`;
-- `fields`, as an array.
+- `fields`, as an array whose field keys are canonical.
+
+Only `version` and `fields` are returned.
 
 ### Draft creation
 
-The native result must contain a valid `native_reference`.
+Direct draft orchestration is allowed only when `supports_native_drafts()` is true.
+
+The returned envelope contains only:
+
+- `native_reference`;
+- one controlled status.
 
 ### Validation
 
-The native result must contain a boolean `valid` field. Native modules may add privacy-safe field error codes.
+The returned envelope contains only:
+
+- boolean `valid`;
+- canonical `errors` code collection;
+- canonical `warnings` code collection.
+
+Free-form validation messages, patient narratives, and raw field values are rejected.
 
 ### Preview
 
-The native result must contain `preview_url`. The URL must be a relative internal route or an absolute same-origin HTTPS URL.
+The returned envelope contains only:
+
+- `preview_url`;
+- integer `expires_at`.
+
+The URL must be a relative internal route or an absolute same-origin HTTPS URL. Expiration must be in the future and no more than 30 minutes from the orchestration call.
 
 ### Submission and status
 
-The native result must contain:
+The returned envelope contains:
 
 - a valid `native_reference`;
-- one controlled status: `draft`, `pending_review`, `scheduled`, `published`, `rejected`, or `failed`.
+- one controlled status: `draft`, `pending_review`, `scheduled`, `published`, `rejected`, or `failed`;
+- optional same-origin `canonical_url`.
 
-An optional `canonical_url` must satisfy the same internal HTTPS policy.
+## Native error normalization
+
+Native `WP_Error` objects are never returned unchanged. File 22 returns a generic `supc_native_workflow_error` and retains only:
+
+- canonical adapter key;
+- controlled operation key;
+- sanitized native error code.
+
+Native messages and native error data are discarded.
 
 ## Failure isolation and privacy
 
-Native `Throwable` failures are converted into controlled `WP_Error` results. Diagnostic actions contain only:
+Native `Throwable` failures are converted into controlled `WP_Error` results. Exception diagnostic actions contain only:
 
 - adapter key;
 - operation key;
