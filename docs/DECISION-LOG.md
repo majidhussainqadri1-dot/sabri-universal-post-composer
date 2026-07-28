@@ -2,40 +2,40 @@
 
 ## 2026-07-28 — File 22 identity
 
-**Decision:** File 22 is Sabri Universal Post Composer.
+**Decision:** File 22 is Sabri Universal Post Composer. The prior Complete Public UI, Profile Timeline and Visual Experience module moves to File 23.
 
-**Prior record:** The consolidated master plan previously assigned File 22 to Complete Public UI, Profile Timeline and Visual Experience.
-
-**New record:** The prior visual-experience module moves to File 23. All future governing documents, roadmaps, code comments, test plans, and integration references must use the new numbering. Existing public hooks must receive compatibility aliases rather than silent breaking renames.
-
-**Reason:** The platform requires a single role-aware Create gateway before final public UI harmonization.
-
-**Migration impact:** Documentation and future integration references must be updated. Existing runtime data is not modified by this decision.
-
-**Test impact:** Repository, package, branch, plugin slug, and release manifests must consistently identify File 22 as `sabri-universal-post-composer`.
+**Migration impact:** Documentation and future integration references change; runtime content does not. Existing hook names require compatibility aliases before any rename.
 
 ## 2026-07-28 — Ownership boundary
 
 **Decision:** File 22 is a facade and orchestrator, not a duplicate publishing backend.
 
-**Reason:** File 21 and other companion modules already own native content models, moderation, storage, and canonical destinations.
+**Test impact:** One submission must create one native object and no duplicate permanent File 22 copy.
 
-**Migration impact:** Existing forms and shortcodes remain valid until an explicit reversible compatibility migration is accepted on staging.
+## 2026-07-28 — Mandatory permission authority
 
-**Test impact:** Tests must prove that one submission creates one native object and no duplicate permanent File 22 copy.
+**Decision:** Sabri Membership Core 1.0.1 or later is a hard dependency. File 22 checks account status and central capability before any adapter-specific decision.
 
-## 2026-07-28 — Dependencies
+**Security impact:** Rejected, suspended, and expired-document accounts are denied. Adapters may restrict but never expand access.
 
-**Decision:** File 00 is the central permission authority. File 20 is a production shell integration. File 21 and other modules are adapter-specific dependencies.
+## 2026-07-28 — File 20 integration
 
-**Reason:** One unavailable module must not disable unrelated healthy creation types.
+**Decision:** File 20 must expose an official `sabri_shell_can_show_create` filter after login and Safe Mode checks. File 22 supplies final adapter-aware visibility and the Create URL.
+
+**Compatibility impact:** Older File 20 versions continue to accept the URL filter but cannot expose Create to roles outside their hard-coded list; staging must use the companion File 20 contract update.
+
+## 2026-07-28 — Adapter registration
+
+**Decision:** Direct `supc_register_adapter()` registration is supported after File 22 loads. Registration is not limited to a one-shot action.
 
 ## 2026-07-28 — Sensitive storage
 
 **Decision:** File 22 will not own PDF bytes, patient-consent evidence, identity evidence, or private clinical records.
 
-**Reason:** These data classes require dedicated native security boundaries and retention policies.
+## 2026-07-28 — Safe Create page
+
+**Decision:** Activation resolves or creates a dedicated Create page without overwriting an unrelated page. The private creation surface is noindex, noarchive, and no-cache.
 
 ## 2026-07-28 — Development workflow
 
-**Decision:** Development follows audit → branch → coding → automated checks → staging → Founder verification → PR review → merge. Direct experimental editing on the live website is prohibited.
+**Decision:** Audit → branch → coding → short automated checks → staging → Founder verification → PR review → merge. Direct experimental live editing is prohibited.
