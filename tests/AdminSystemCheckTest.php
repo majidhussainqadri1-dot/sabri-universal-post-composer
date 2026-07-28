@@ -147,6 +147,9 @@ final class AdminSystemCheckTest extends TestCase {
 
 	public function test_repair_buttons_submit_exact_control_values_and_tables_are_accessible(): void {
 		$this->assertTrue( $this->registry->register( new Admin_Health_Test_Adapter() ) );
+		$GLOBALS['supc_test_filter_values']['supc_system_check_report'] = array(
+			array( 'key' => 'membership_core', 'status' => 'pass', 'count' => 0, 'codes' => array() ),
+		);
 		ob_start();
 		$this->page->render();
 		$html = (string) ob_get_clean();
