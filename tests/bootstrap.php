@@ -32,6 +32,11 @@ function do_action( string $hook, ...$args ): void {
 	unset( $hook, $args );
 }
 
+function add_filter( string $hook, callable $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+	unset( $hook, $callback, $priority, $accepted_args );
+	return true;
+}
+
 function get_userdata( int $user_id ): object|false {
 	return $user_id > 0 ? (object) array( 'ID' => $user_id ) : false;
 }
