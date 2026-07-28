@@ -83,7 +83,8 @@ final class Plugin {
 			);
 		}
 
-		$available = $this->registry->available_for_user( get_current_user_id() );
+		$user_id   = get_current_user_id();
+		$available = $this->registry->available_for_user( $user_id );
 		if ( array() === $available ) {
 			return '<div class="supc-notice supc-notice--empty"><p>'
 				. esc_html__( 'No authorized content type is currently available for this account.', 'sabri-universal-post-composer' )
@@ -93,8 +94,9 @@ final class Plugin {
 		$items = '';
 		foreach ( $available as $key => $adapter ) {
 			try {
-				$url = $adapter->start_url( get_current_user_id() );
+				$url = wp_validate_redirect( $adapter->start_url( $user_id ), '' );
 				if ( '' === $url ) {
+					do_action( 'supc_adapter_invalid_start_url', $key );
 					continue;
 				}
 
