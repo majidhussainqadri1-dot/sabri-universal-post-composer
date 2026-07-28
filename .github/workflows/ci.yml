@@ -150,6 +150,7 @@ jobs:
             docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
             docs/PHASE-22C-POST-CORRECTION-VERIFICATION-2026-07-29.md
             docs/PHASE-22D-ADMIN-SYSTEM-CHECK.md
+            docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
@@ -172,8 +173,10 @@ jobs:
           grep -q 'Second Review Corrections' docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
           grep -q 'Post-Correction Verification' docs/PHASE-22C-POST-CORRECTION-VERIFICATION-2026-07-29.md
           grep -q 'Tools → Composer Health' docs/PHASE-22D-ADMIN-SYSTEM-CHECK.md
+          grep -q 'Phase 22D Post-Implementation Review' docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
           grep -q 'check_admin_referer' includes/admin/class-system-check-page.php
           grep -q 'current_user_can' includes/admin/class-system-check-page.php
           grep -q 'repair_mapping' includes/core/class-page-resolver.php
           grep -q 'inspect' includes/core/class-page-resolver.php
           grep -q 'includes/admin/class-system-check-page.php' MANIFEST.md
+          grep -q 'docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md' MANIFEST.md
