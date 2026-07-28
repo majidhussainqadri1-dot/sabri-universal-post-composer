@@ -25,7 +25,10 @@
 - Phase 22D `Tools → Composer Health` administrator dashboard with normalized System Check rows and privacy-safe adapter health metadata.
 - Capability-protected and nonce-protected Create-page mapping dry run and bounded repair operation.
 - Read-only Create-page inspection and explicit repair result codes.
-- PHPUnit contracts for dashboard normalization, health-report privacy, capability denial, no-write dry run, existing-page remapping, managed-page creation, and unrelated-page preservation.
+- Role-independent Static Adapter Health separated from current-administrator invocation diagnostics.
+- Explicit administrator selection when multiple valid Create-page candidates exist.
+- Short-lived atomic Create-page repair lock and post-insert ownership validation.
+- PHPUnit contracts for option-write failure, ambiguity, non-page mappings, repair locking, slug mutation, ownership metadata, one-attempt insertion, inspection memoization, and administrator-table accessibility.
 
 ### Changed
 
@@ -42,7 +45,8 @@
 - Invalid privacy classifications now hide only the invalid adapter and fail System Check instead of being relabeled.
 - Permission denial and native integration failure now render distinct states.
 - An unavailable native module is no longer reported as a user permission denial.
-- Create-page inspection is separated from mutation; repair writes occur only after an explicit protected repair request.
+- Create-page inspection is separated from mutation, memoized per request, and reports `ready`, `repairable`, `ambiguous`, or `missing`.
+- Managed-page repair performs one insertion attempt and accepts only an exact validated File 22-owned page.
 
 ### Fixed
 
@@ -53,6 +57,11 @@
 - Corrected insufficient contrast for the Sign In action and explicitly controlled its visited state.
 - Rejected external allow-listed hosts, HTTP downgrade routes, protocol-relative routes, mismatched ports, URL credentials, control characters, and backslashes.
 - Added built-in request-level diagnostics for invalid routes, invalid privacy, unknown groups, and rendering exceptions.
+- Prevented false repair success when WordPress does not persist `supc_create_page_id`.
+- Prevented published posts or custom post types from being treated as Create pages.
+- Prevented silent first-ID selection when multiple shortcode pages exist.
+- Prevented repeated orphan insertion attempts after managed-page validation failure.
+- Added result-specific administrator notice severity and accessible table captions and column scopes.
 
 ### Security
 
@@ -64,3 +73,4 @@
 - Invalid privacy metadata fails closed without disabling healthy adapters.
 - Administrator health output excludes user data, content data, native routes, raw exception messages, identity evidence, and clinical information.
 - Repair controls are restricted to File 22-owned Create-page mapping and cannot edit or delete unrelated pages or native-module records.
+- Concurrent File 22 repair requests are serialized by a short-lived atomic lock.
