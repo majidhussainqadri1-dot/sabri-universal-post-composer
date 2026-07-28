@@ -8,7 +8,6 @@
 	<exclude-pattern>tests/*</exclude-pattern>
 	<arg name="extensions" value="php"/>
 	<arg value="sp"/>
-	<rule ref="PSR12"/>
 	<rule ref="WordPress.Security.EscapeOutput"/>
 	<rule ref="WordPress.Security.NonceVerification"/>
 	<rule ref="WordPress.Security.ValidatedSanitizedInput"/>
