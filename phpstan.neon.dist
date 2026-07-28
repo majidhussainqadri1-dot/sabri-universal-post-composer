@@ -13,4 +13,5 @@ parameters:
         - includes/admin/class-system-check-page.php
     bootstrapFiles:
         - tests/bootstrap.php
+        - tests/phpstan-wordpress-stubs.php
     reportUnmatchedIgnoredErrors: false
