@@ -62,9 +62,11 @@ The user-facing law is:
 
 ## Administrator health
 
-Authorized administrators can open `Tools → Composer Health` to view normalized System Check rows and privacy-safe adapter metadata. The page excludes user data, content data, native routes, raw exception messages, identity evidence, and clinical information.
+Authorized administrators can open `Tools → Composer Health` to view normalized System Check rows and privacy-safe adapter metadata. Static Adapter Health is role-independent; current Create-surface invocation diagnostics are explicitly limited to the signed-in administrator and do not replace the staging role matrix.
 
-The only repair operation is limited to File 22's Create-page mapping. It supports a no-write dry run and may only retain a valid mapping, map an existing published shortcode page, or create a new File 22-managed page on an unoccupied approved slug. It never edits or deletes unrelated pages or native-module records.
+Create-page inspection is read-only and memoized per request. It distinguishes `ready`, `repairable`, `ambiguous`, and `missing` states. Multiple shortcode pages require explicit administrator selection rather than silent first-match mapping.
+
+The bounded repair operation verifies option persistence, uses a short-lived mutation lock, performs at most one managed-page insertion attempt, and accepts a new page only after exact page type, slug, publication, shortcode, permalink, and File 22 ownership checks. It never edits or deletes unrelated pages or native-module records.
 
 ## Development workflow
 
