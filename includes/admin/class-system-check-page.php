@@ -12,7 +12,6 @@ namespace Sabri\UniversalComposer\Admin;
 use Sabri\UniversalComposer\Contracts\Diagnostic_Adapter;
 use Sabri\UniversalComposer\Core\Page_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
-use Sabri\UniversalComposer\Presentation\Create_Surface;
 use Throwable;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -25,10 +24,7 @@ final class System_Check_Page {
 	private const REPAIR_ACTION = 'supc_repair_create_page';
 	private const NONCE_ACTION = 'supc_repair_create_page';
 
-	public function __construct(
-		private Registry $registry,
-		private Create_Surface $create_surface
-	) {
+	public function __construct( private Registry $registry ) {
 	}
 
 	public function register(): void {
@@ -266,16 +262,17 @@ final class System_Check_Page {
 	}
 
 	private function request_notice(): string {
-		$code = isset( $_GET['supc_notice'] ) ? sanitize_key( wp_unslash( (string) $_GET['supc_notice'] ) ) : '';
+		$raw  = filter_input( INPUT_GET, 'supc_notice', FILTER_UNSAFE_RAW );
+		$code = is_string( $raw ) ? sanitize_key( wp_unslash( $raw ) ) : '';
 		$messages = array(
-			'dry_run_ready'           => __( 'Dry run: the current Create page mapping is valid. No change is required.', 'sabri-universal-post-composer' ),
-			'dry_run_repairable'      => __( 'Dry run: an existing published shortcode page can be mapped safely. No change was made.', 'sabri-universal-post-composer' ),
-			'dry_run_missing'         => __( 'Dry run: no valid Create page exists. A managed page can be created by the repair operation.', 'sabri-universal-post-composer' ),
-			'no_change'               => __( 'The current Create page mapping was already valid. No change was made.', 'sabri-universal-post-composer' ),
-			'mapped_existing'         => __( 'File 22 was safely mapped to an existing published shortcode page.', 'sabri-universal-post-composer' ),
-			'created_managed_page'    => __( 'A new File 22-managed Create page was created and mapped.', 'sabri-universal-post-composer' ),
-			'repair_failed'           => __( 'The Create page mapping could not be repaired. Review System Check and WordPress logs.', 'sabri-universal-post-composer' ),
-			'invalid_request'         => __( 'The repair request was invalid and no change was made.', 'sabri-universal-post-composer' ),
+			'dry_run_ready'        => __( 'Dry run: the current Create page mapping is valid. No change is required.', 'sabri-universal-post-composer' ),
+			'dry_run_repairable'   => __( 'Dry run: an existing published shortcode page can be mapped safely. No change was made.', 'sabri-universal-post-composer' ),
+			'dry_run_missing'      => __( 'Dry run: no valid Create page exists. A managed page can be created by the repair operation.', 'sabri-universal-post-composer' ),
+			'no_change'            => __( 'The current Create page mapping was already valid. No change was made.', 'sabri-universal-post-composer' ),
+			'mapped_existing'      => __( 'File 22 was safely mapped to an existing published shortcode page.', 'sabri-universal-post-composer' ),
+			'created_managed_page' => __( 'A new File 22-managed Create page was created and mapped.', 'sabri-universal-post-composer' ),
+			'repair_failed'        => __( 'The Create page mapping could not be repaired. Review System Check and WordPress logs.', 'sabri-universal-post-composer' ),
+			'invalid_request'      => __( 'The repair request was invalid and no change was made.', 'sabri-universal-post-composer' ),
 		);
 
 		return $messages[ $code ] ?? '';
