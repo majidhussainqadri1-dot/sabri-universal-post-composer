@@ -48,31 +48,86 @@ final class Page_Resolver {
 			return 0;
 		}
 
-		foreach ( array( 'create', 'create-content', 'platform-create', 'sabri-create' ) as $slug ) {
-			if ( get_page_by_path( $slug, OBJECT, 'page' ) ) {
-				continue;
-			}
+		$page_id = self::create_managed_page();
+		self::$resolved_page_id = $page_id;
+		return $page_id;
+	}
 
-			$page_id = wp_insert_post(
-				array(
-					'post_title'   => __( 'Create', 'sabri-universal-post-composer' ),
-					'post_name'    => $slug,
-					'post_content' => '[' . self::SHORTCODE . ']',
-					'post_status'  => 'publish',
-					'post_type'    => 'page',
-					'meta_input'   => array( '_supc_managed_page' => 1 ),
-				),
-				true
+	/**
+	 * Inspect the current mapping without writing options or posts.
+	 *
+	 * @return array{status:string,configured_page_id:int,discovered_page_id:int}
+	 */
+	public static function inspect(): array {
+		$configured = absint( get_option( 'supc_create_page_id', 0 ) );
+		if ( self::is_valid_page( $configured ) ) {
+			return array(
+				'status'               => 'ready',
+				'configured_page_id'   => $configured,
+				'discovered_page_id'   => $configured,
 			);
-
-			if ( ! is_wp_error( $page_id ) ) {
-				self::$resolved_page_id = (int) $page_id;
-				return self::$resolved_page_id;
-			}
 		}
 
-		self::$resolved_page_id = 0;
-		return 0;
+		$existing = self::find_shortcode_page();
+		return array(
+			'status'               => $existing > 0 ? 'repairable' : 'missing',
+			'configured_page_id'   => $configured,
+			'discovered_page_id'   => $existing,
+		);
+	}
+
+	/**
+	 * Repair only File 22's Create-page mapping. Existing unrelated pages are
+	 * never edited, overwritten, trashed, or deleted.
+	 *
+	 * @return array{result:string,page_id:int}
+	 */
+	public static function repair_mapping( bool $create = true ): array {
+		$inspection = self::inspect();
+		if ( 'ready' === $inspection['status'] ) {
+			self::$resolved_page_id = (int) $inspection['configured_page_id'];
+			return array(
+				'result'  => 'no_change',
+				'page_id' => self::$resolved_page_id,
+			);
+		}
+
+		if ( 'repairable' === $inspection['status'] ) {
+			$page_id = (int) $inspection['discovered_page_id'];
+			update_option( 'supc_create_page_id', $page_id, false );
+			self::$resolved_page_id = $page_id;
+			return array(
+				'result'  => 'mapped_existing',
+				'page_id' => $page_id,
+			);
+		}
+
+		if ( ! $create ) {
+			return array(
+				'result'  => 'would_create_managed_page',
+				'page_id' => 0,
+			);
+		}
+
+		$page_id = self::create_managed_page();
+		if ( $page_id <= 0 ) {
+			self::$resolved_page_id = 0;
+			return array(
+				'result'  => 'repair_failed',
+				'page_id' => 0,
+			);
+		}
+
+		update_option( 'supc_create_page_id', $page_id, false );
+		self::$resolved_page_id = $page_id;
+		return array(
+			'result'  => 'created_managed_page',
+			'page_id' => $page_id,
+		);
+	}
+
+	public static function reset_cache(): void {
+		self::$resolved_page_id = null;
 	}
 
 	public static function url(): string {
@@ -121,6 +176,32 @@ final class Page_Resolver {
 		foreach ( $pages as $page_id ) {
 			$content = (string) get_post_field( 'post_content', (int) $page_id );
 			if ( has_shortcode( $content, self::SHORTCODE ) ) {
+				return (int) $page_id;
+			}
+		}
+
+		return 0;
+	}
+
+	private static function create_managed_page(): int {
+		foreach ( array( 'create', 'create-content', 'platform-create', 'sabri-create' ) as $slug ) {
+			if ( get_page_by_path( $slug, OBJECT, 'page' ) ) {
+				continue;
+			}
+
+			$page_id = wp_insert_post(
+				array(
+					'post_title'   => __( 'Create', 'sabri-universal-post-composer' ),
+					'post_name'    => $slug,
+					'post_content' => '[' . self::SHORTCODE . ']',
+					'post_status'  => 'publish',
+					'post_type'    => 'page',
+					'meta_input'   => array( '_supc_managed_page' => 1 ),
+				),
+				true
+			);
+
+			if ( ! is_wp_error( $page_id ) ) {
 				return (int) $page_id;
 			}
 		}
