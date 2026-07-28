@@ -10,9 +10,11 @@ Universal, role-aware creation gateway for the Sabri Social Homeopathy Platform.
 
 == Description ==
 
-File 22 provides an adapter-driven creation facade. Permanent content, moderation, secure storage, consent evidence, identity evidence, clinical records, and canonical URLs remain owned by the relevant native platform modules.
+File 22 provides an adapter-driven creation facade and guarded server-side workflow orchestrator. Permanent content, moderation, secure storage, durable idempotency, consent evidence, identity evidence, clinical records, and canonical URLs remain owned by the relevant native platform modules.
 
 Sabri Membership Core 1.0.1 or later is mandatory. Development follows a staging-first, security-first, and rollback-safe workflow.
+
+Phase 22E provides internal PHP functions for versioned schema discovery, native draft creation or resumption, validation, same-origin preview, idempotent submission, status, and canonical URL retrieval. It does not expose a public REST, AJAX, or browser form endpoint and does not persist File 22-owned workflow payloads.
 
 == Current Status ==
 
@@ -30,4 +32,6 @@ Do not install on the live website. Development builds are for controlled stagin
 * Added versioned base, workflow, and diagnostic adapter contracts.
 * Added fail-soft adapter isolation, canonical key validation, deterministic ordering, and request caching.
 * Added Safe Mode integration and a File 20 shell contract.
+* Added accessible Universal Create gateway and administrator health controls.
+* Added guarded native workflow schema, draft, validation, preview, idempotent submission, status, and canonical URL operations.
 * Added PHPUnit, PHPStan, WordPress coding standards, and repository-contract checks.
