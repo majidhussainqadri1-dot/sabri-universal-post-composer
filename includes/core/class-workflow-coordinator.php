@@ -31,7 +31,7 @@ final class Workflow_Coordinator {
 	}
 
 	/** @return array<string,mixed>|WP_Error */
-	public function schema( int $user_id, string $adapter_key ) {
+	public function schema( int $user_id, string $adapter_key ): array|WP_Error {
 		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
@@ -50,7 +50,7 @@ final class Workflow_Coordinator {
 	}
 
 	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
-	public function create_draft( int $user_id, string $adapter_key, ?string $native_reference, array $payload ) {
+	public function create_draft( int $user_id, string $adapter_key, ?string $native_reference, array $payload ): array|WP_Error {
 		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
@@ -78,7 +78,7 @@ final class Workflow_Coordinator {
 	}
 
 	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
-	public function validate( int $user_id, string $adapter_key, array $payload ) {
+	public function validate( int $user_id, string $adapter_key, array $payload ): array|WP_Error {
 		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
@@ -103,7 +103,7 @@ final class Workflow_Coordinator {
 	}
 
 	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
-	public function preview( int $user_id, string $adapter_key, array $payload ) {
+	public function preview( int $user_id, string $adapter_key, array $payload ): array|WP_Error {
 		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
@@ -130,7 +130,7 @@ final class Workflow_Coordinator {
 	}
 
 	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
-	public function submit( int $user_id, string $adapter_key, string $idempotency_key, array $payload ) {
+	public function submit( int $user_id, string $adapter_key, string $idempotency_key, array $payload ): array|WP_Error {
 		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
@@ -152,7 +152,7 @@ final class Workflow_Coordinator {
 	}
 
 	/** @return array<string,mixed>|WP_Error */
-	public function status( int $user_id, string $adapter_key, string $native_reference ) {
+	public function status( int $user_id, string $adapter_key, string $native_reference ): array|WP_Error {
 		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
@@ -169,7 +169,7 @@ final class Workflow_Coordinator {
 	}
 
 	/** @return string|WP_Error */
-	public function canonical_url( int $user_id, string $adapter_key, string $native_reference ) {
+	public function canonical_url( int $user_id, string $adapter_key, string $native_reference ): string|WP_Error {
 		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
@@ -191,7 +191,7 @@ final class Workflow_Coordinator {
 	}
 
 	/** @return Workflow_Adapter|WP_Error */
-	private function resolve_adapter( int $user_id, string $adapter_key ) {
+	private function resolve_adapter( int $user_id, string $adapter_key ): Workflow_Adapter|WP_Error {
 		if ( Safe_Mode::disabled() ) {
 			return $this->error( 'workflow_disabled', 'Workflow orchestration is temporarily disabled.', $adapter_key );
 		}
@@ -218,11 +218,11 @@ final class Workflow_Coordinator {
 	}
 
 	/** @param array<string,mixed>|WP_Error $result @return array<string,mixed>|WP_Error */
-	private function normalize_status_result( $result, string $adapter_key ) {
+	private function normalize_status_result( array|WP_Error $result, string $adapter_key ): array|WP_Error {
 		if ( $result instanceof WP_Error ) {
 			return $result;
 		}
-		if ( ! is_array( $result ) || ! $this->valid_native_reference( (string) ( $result['native_reference'] ?? '' ) ) ) {
+		if ( ! $this->valid_native_reference( (string) ( $result['native_reference'] ?? '' ) ) ) {
 			return $this->error( 'invalid_native_result', 'The native workflow result is invalid.', $adapter_key );
 		}
 		$status = sanitize_key( (string) ( $result['status'] ?? '' ) );
