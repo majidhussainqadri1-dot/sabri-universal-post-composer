@@ -142,6 +142,7 @@ jobs:
             tests/AdminSystemCheckTest.php
             tests/PageResolverRepairTest.php
             tests/WorkflowCoordinatorTest.php
+            tests/phpstan-wordpress-stubs.php
             docs/ARCHITECTURE.md docs/ADAPTER-CONTRACT.md docs/DECISION-LOG.md docs/SECURITY.md
             docs/PRIVACY.md docs/ACCESSIBILITY.md docs/MIGRATION.md docs/ROLLBACK.md
             docs/STAGING-ACCEPTANCE.md docs/COMPATIBILITY-MATRIX.md docs/ERROR-CODES.md
@@ -157,6 +158,8 @@ jobs:
             docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
             docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md
             docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md
+            docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
+            docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
@@ -188,9 +191,16 @@ jobs:
           grep -q 'REPAIR_LOCK_OPTION' includes/core/class-page-resolver.php
           grep -q 'scope="col"' includes/admin/class-system-check-page.php
           grep -q 'Static Adapter Health' includes/admin/class-system-check-page.php
+          grep -q 'workflow_api_version' includes/contracts/interface-workflow-adapter.php
           grep -q 'class Workflow_Coordinator' includes/core/class-workflow-coordinator.php
-          grep -q 'invalid_idempotency_key' includes/core/class-workflow-coordinator.php
+          grep -q 'native_drafts_unsupported' includes/core/class-workflow-coordinator.php
+          grep -q 'supc_native_workflow_error' includes/core/class-workflow-coordinator.php
+          grep -q 'IDEMPOTENCY_PATTERN' includes/core/class-workflow-coordinator.php
+          grep -q 'MAX_PREVIEW_TTL' includes/core/class-workflow-coordinator.php
           grep -q 'supc_workflow_submit' includes/core/functions.php
           grep -q 'Guarded Native Workflow Orchestration Foundation' docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md
+          grep -q 'Phase 22E Post-Implementation Review' docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
+          grep -q 'Phase 22E Post-Correction Verification' docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md
           grep -q 'includes/core/class-workflow-coordinator.php' MANIFEST.md
-          grep -q 'docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md' MANIFEST.md
+          grep -q 'docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md' MANIFEST.md
+          grep -q 'docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md' MANIFEST.md
