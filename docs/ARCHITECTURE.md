@@ -16,43 +16,38 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 | Learning lessons | File 05 |
 | Encyclopedia entries | File 06 |
 | Video records | File 10 |
-| Reels | File 11 using the File 10 video object contract |
+| Reels | File 11 through the File 10 video contract |
 | Secure PDF storage and document records | File 12 |
-| Marketplace records and seller-contact policy | File 18 |
+| Marketplace records and verified seller-contact policy | File 18 |
 | Notification delivery | File 19 |
 | Private clinical records | Future Clinical Records module |
-| Patient consent evidence | Dedicated native privacy owner; never the generic composer upload table |
+| Patient consent evidence | Dedicated native privacy owner |
 
 ## Dependency model
 
-### Hard dependency
+File 00 is a mandatory hard dependency. Activation fails closed if the required Membership Core version or API is unavailable.
 
-File 00 is the central identity and permission authority. A companion plugin must not bypass it.
+File 20 is a production integration, but File 22 remains safe when the shell is absent. File 21 and all other modules are adapter-specific dependencies. An unavailable adapter is hidden without disabling unrelated healthy adapters.
 
-### Production integration
+## Permission order
 
-File 20 is expected for the global Create entry point. The composer must continue to fail safely if the shell is unavailable.
+1. File 22 Safe Mode and File 20 Safe Mode.
+2. Membership Core availability.
+3. Account status and suspension decision.
+4. Required central WordPress capability.
+5. Adapter-specific restriction.
 
-### Adapter-specific dependencies
-
-Each adapter declares its own native module and minimum supported version. An unavailable adapter is hidden without disabling other healthy content types.
+An adapter may restrict access; it may never expand or bypass the central decision.
 
 ## Canonical record law
 
-One native record may be projected into Home, News, a profile timeline, search, and a module archive. File 22 must not create duplicate permanent records for these surfaces.
+One native record may be projected into Home, News, a profile timeline, search, and a module archive. File 22 must not create duplicate permanent records for those surfaces.
 
-## Runtime lifecycle
+## Registration lifecycle
 
-1. WordPress loads File 22 safely.
-2. Native modules register adapters on `supc_register_adapters`.
-3. The registry exposes only available adapters authorized for the current user.
-4. File 20 resolves the Create URL and visibility through official filters.
-5. File 22 delegates draft creation, validation, submission, storage, moderation, and canonical routing to the native owner.
-6. Notifications are emitted through native or File 19 integration after an idempotent native result exists.
+Native modules may call `supc_register_adapter()` after File 22 loads. The compatibility events `supc_register_adapters` and `supc_registry_ready` fire on `init`, but direct registration remains available to late-loading modules.
 
 ## State dimensions
-
-A future implementation must keep these dimensions separate:
 
 - Composer session: `new`, `editing`, `autosaved`, `offline_pending`, `conflicted`, `abandoned`, `completed`.
 - Review: `not_required`, `draft`, `submitted`, `under_review`, `changes_requested`, `approved`, `rejected`, `withdrawn`.
@@ -61,6 +56,6 @@ A future implementation must keep these dimensions separate:
 
 Corrections and retractions are immutable editorial events, not overloaded composer states.
 
-## Release model
+## Core release boundary
 
-Core 1.0 is not blocked by unavailable future modules. Core release requires the registry, File 00 permission integration, File 20 shell integration, File 21 social adapter, safe drafts, validation, preview routing, audit, accessibility, migration, and rollback. Other adapters are certified independently when their native modules are ready.
+Core 1.0 requires File 00 permission integration, File 20 shell integration, File 21 social adapter, safe drafts, validation, preview routing, audit, accessibility, migration, rollback, and staging acceptance. Future adapters are certified independently when their native modules are ready.
