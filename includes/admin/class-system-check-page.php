@@ -23,6 +23,8 @@ final class System_Check_Page {
 	private const CAPABILITY = 'manage_options';
 	private const REPAIR_ACTION = 'supc_repair_create_page';
 	private const NONCE_ACTION = 'supc_repair_create_page';
+	private const ALLOWED_GROUPS = array( 'publishing', 'knowledge', 'media', 'commerce', 'other' );
+	private const ALLOWED_PRIVACY = array( 'public', 'private', 'sensitive' );
 
 	public function __construct( private Registry $registry ) {
 	}
@@ -47,23 +49,24 @@ final class System_Check_Page {
 			wp_die( esc_html__( 'You are not allowed to view this page.', 'sabri-universal-post-composer' ) );
 		}
 
+		$inspection   = Page_Resolver::inspect();
 		$rows         = $this->system_rows();
 		$adapter_rows = $this->adapter_rows();
-		$inspection   = Page_Resolver::inspect();
 		$notice       = $this->request_notice();
 		?>
 		<div class="wrap">
 			<h1><?php echo esc_html__( 'Universal Composer Health', 'sabri-universal-post-composer' ); ?></h1>
 			<p><?php echo esc_html__( 'Read-only health information for File 22 and its registered native-module adapters. No user content, URLs, identity data, or clinical data is displayed.', 'sabri-universal-post-composer' ); ?></p>
+			<p><?php echo esc_html__( 'Static Adapter Health is role-independent. Create-surface invocation diagnostics in System Check are limited to the currently signed-in administrator and do not replace the staging role matrix.', 'sabri-universal-post-composer' ); ?></p>
 
-			<?php if ( '' !== $notice ) : ?>
-				<div class="notice notice-info is-dismissible"><p><?php echo esc_html( $notice ); ?></p></div>
+			<?php if ( '' !== $notice['text'] ) : ?>
+				<div class="notice <?php echo esc_attr( 'notice-' . $notice['type'] ); ?> is-dismissible"><p><?php echo esc_html( $notice['text'] ); ?></p></div>
 			<?php endif; ?>
 
 			<h2><?php echo esc_html__( 'System Check', 'sabri-universal-post-composer' ); ?></h2>
 			<?php $this->render_system_table( $rows ); ?>
 
-			<h2><?php echo esc_html__( 'Adapter Health', 'sabri-universal-post-composer' ); ?></h2>
+			<h2><?php echo esc_html__( 'Static Adapter Health', 'sabri-universal-post-composer' ); ?></h2>
 			<?php $this->render_adapter_table( $adapter_rows ); ?>
 
 			<h2><?php echo esc_html__( 'Create Page Mapping', 'sabri-universal-post-composer' ); ?></h2>
@@ -71,19 +74,31 @@ final class System_Check_Page {
 				<?php
 				echo esc_html(
 					sprintf(
-						/* translators: 1: mapping status, 2: configured page ID, 3: discovered page ID. */
-						__( 'Status: %1$s. Configured page ID: %2$d. Discovered shortcode page ID: %3$d.', 'sabri-universal-post-composer' ),
+						/* translators: 1: mapping status, 2: configured page ID, 3: discovered page ID, 4: candidate count. */
+						__( 'Status: %1$s. Configured page ID: %2$d. Discovered shortcode page ID: %3$d. Candidate count: %4$d.', 'sabri-universal-post-composer' ),
 						(string) $inspection['status'],
 						(int) $inspection['configured_page_id'],
-						(int) $inspection['discovered_page_id']
+						(int) $inspection['discovered_page_id'],
+						count( $inspection['candidate_page_ids'] )
 					)
 				);
 				?>
 			</p>
-			<p><?php echo esc_html__( 'The repair operation can only remap File 22 to an existing published shortcode page or create a new File 22-managed Create page. It never edits, deletes, or overwrites unrelated pages.', 'sabri-universal-post-composer' ); ?></p>
+			<p><?php echo esc_html__( 'The repair operation can only remap File 22 to an existing published shortcode page or create one new File 22-managed Create page. It never edits, deletes, or overwrites unrelated pages.', 'sabri-universal-post-composer' ); ?></p>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::REPAIR_ACTION ); ?>">
 				<?php wp_nonce_field( self::NONCE_ACTION ); ?>
+				<?php if ( 'ambiguous' === $inspection['status'] ) : ?>
+					<p>
+						<label for="supc-candidate-page-id"><strong><?php echo esc_html__( 'Select the canonical Create page', 'sabri-universal-post-composer' ); ?></strong></label><br>
+						<select id="supc-candidate-page-id" name="supc_candidate_page_id" required>
+							<option value=""><?php echo esc_html__( 'Choose a page ID', 'sabri-universal-post-composer' ); ?></option>
+							<?php foreach ( $inspection['candidate_page_ids'] as $candidate_id ) : ?>
+								<option value="<?php echo esc_attr( (string) $candidate_id ); ?>"><?php echo esc_html( sprintf( __( 'Page ID %d', 'sabri-universal-post-composer' ), $candidate_id ) ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</p>
+				<?php endif; ?>
 				<button type="submit" class="button button-secondary" name="supc_mode" value="dry_run"><?php echo esc_html__( 'Dry Run', 'sabri-universal-post-composer' ); ?></button>
 				<button type="submit" class="button button-primary" name="supc_mode" value="repair"><?php echo esc_html__( 'Repair Create Page Mapping', 'sabri-universal-post-composer' ); ?></button>
 			</form>
@@ -97,13 +112,14 @@ final class System_Check_Page {
 		}
 
 		check_admin_referer( self::NONCE_ACTION );
-		$mode = isset( $_POST['supc_mode'] ) ? sanitize_key( wp_unslash( (string) $_POST['supc_mode'] ) ) : '';
+		$mode              = isset( $_POST['supc_mode'] ) ? sanitize_key( wp_unslash( (string) $_POST['supc_mode'] ) ) : '';
+		$selected_page_id  = isset( $_POST['supc_candidate_page_id'] ) ? absint( wp_unslash( $_POST['supc_candidate_page_id'] ) ) : 0;
 
 		if ( 'dry_run' === $mode ) {
 			$result = Page_Resolver::inspect();
 			$code   = 'dry_run_' . sanitize_key( (string) $result['status'] );
 		} elseif ( 'repair' === $mode ) {
-			$result = Page_Resolver::repair_mapping( true );
+			$result = Page_Resolver::repair_mapping( true, $selected_page_id );
 			$code   = sanitize_key( (string) $result['result'] );
 		} else {
 			$code = 'invalid_request';
@@ -163,25 +179,60 @@ final class System_Check_Page {
 		$rows = array();
 		foreach ( $this->registry->all() as $key => $adapter ) {
 			try {
+				$status     = 'pass';
+				$codes      = array();
+				$group      = sanitize_key( $adapter->group() );
+				$privacy    = sanitize_key( $adapter->privacy_classification() );
+				$native     = sanitize_key( $adapter->native_module() );
+				$capability = sanitize_key( $adapter->required_capability() );
+				$minimum    = sanitize_text_field( $adapter->minimum_native_version() );
+
+				if ( SUPC_ADAPTER_API_VERSION !== $adapter->api_version() ) {
+					$status  = $this->worse_status( $status, 'fail' );
+					$codes[] = 'incompatible_adapter_api';
+				}
+				if ( ! in_array( $group, self::ALLOWED_GROUPS, true ) ) {
+					$status  = $this->worse_status( $status, 'warning' );
+					$codes[] = 'unknown_group';
+				}
+				if ( ! in_array( $privacy, self::ALLOWED_PRIVACY, true ) ) {
+					$status  = $this->worse_status( $status, 'fail' );
+					$codes[] = 'invalid_privacy';
+				}
+				if ( '' === $native || $native !== $adapter->native_module() ) {
+					$status  = $this->worse_status( $status, 'fail' );
+					$codes[] = 'invalid_native_module';
+				}
+				if ( '' === $capability || $capability !== $adapter->required_capability() ) {
+					$status  = $this->worse_status( $status, 'fail' );
+					$codes[] = 'invalid_required_capability';
+				}
+				if ( 1 !== preg_match( '/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/', $minimum ) ) {
+					$status  = $this->worse_status( $status, 'warning' );
+					$codes[] = 'invalid_minimum_native_version';
+				}
+
 				$available = $adapter->is_available();
-				$status    = $available ? 'pass' : 'warning';
-				$codes     = $available ? array() : array( 'native_unavailable' );
+				if ( ! $available ) {
+					$status  = $this->worse_status( $status, 'warning' );
+					$codes[] = 'native_unavailable';
+				}
 
 				if ( $adapter instanceof Diagnostic_Adapter ) {
 					$health = $adapter->health_report();
 					$status = $this->worse_status( $status, $this->normalize_status( (string) ( $health['status'] ?? $status ) ) );
-					$codes  = array_values( array_unique( array_merge( $codes, $this->normalize_codes( $health['codes'] ?? array() ) ) ) );
+					$codes  = array_merge( $codes, $this->normalize_codes( $health['codes'] ?? array() ) );
 				}
 
 				$rows[] = array(
 					'key'            => sanitize_key( $key ),
-					'native_module'  => sanitize_key( $adapter->native_module() ),
+					'native_module'  => $native,
 					'api_version'    => sanitize_text_field( $adapter->api_version() ),
-					'minimum_native' => sanitize_text_field( $adapter->minimum_native_version() ),
-					'group'          => sanitize_key( $adapter->group() ),
-					'privacy'        => sanitize_key( $adapter->privacy_classification() ),
+					'minimum_native' => $minimum,
+					'group'          => $group,
+					'privacy'        => $privacy,
 					'status'         => $status,
-					'codes'          => implode( ', ', $codes ),
+					'codes'          => implode( ', ', array_values( array_unique( $codes ) ) ),
 				);
 			} catch ( Throwable $error ) {
 				$rows[] = array(
@@ -210,7 +261,8 @@ final class System_Check_Page {
 		}
 		?>
 		<table class="widefat striped">
-			<thead><tr><th><?php echo esc_html__( 'Check', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Status', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Count', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Codes', 'sabri-universal-post-composer' ); ?></th></tr></thead>
+			<caption class="screen-reader-text"><?php echo esc_html__( 'File 22 system checks and diagnostic codes', 'sabri-universal-post-composer' ); ?></caption>
+			<thead><tr><th scope="col"><?php echo esc_html__( 'Check', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Status', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Count', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Codes', 'sabri-universal-post-composer' ); ?></th></tr></thead>
 			<tbody>
 			<?php foreach ( $rows as $row ) : ?>
 				<tr><td><code><?php echo esc_html( $row['key'] ); ?></code></td><td><?php echo esc_html( strtoupper( $row['status'] ) ); ?></td><td><?php echo esc_html( (string) $row['count'] ); ?></td><td><?php echo esc_html( implode( ', ', $row['codes'] ) ); ?></td></tr>
@@ -230,7 +282,8 @@ final class System_Check_Page {
 		}
 		?>
 		<table class="widefat striped">
-			<thead><tr><th><?php echo esc_html__( 'Adapter', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Native Module', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'API', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Minimum Native', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Group', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Privacy', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Status', 'sabri-universal-post-composer' ); ?></th><th><?php echo esc_html__( 'Codes', 'sabri-universal-post-composer' ); ?></th></tr></thead>
+			<caption class="screen-reader-text"><?php echo esc_html__( 'Role-independent static adapter contract and native availability health', 'sabri-universal-post-composer' ); ?></caption>
+			<thead><tr><th scope="col"><?php echo esc_html__( 'Adapter', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Native Module', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'API', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Minimum Native', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Group', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Privacy', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Status', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Codes', 'sabri-universal-post-composer' ); ?></th></tr></thead>
 			<tbody>
 			<?php foreach ( $rows as $row ) : ?>
 				<tr><td><code><?php echo esc_html( $row['key'] ); ?></code></td><td><code><?php echo esc_html( $row['native_module'] ); ?></code></td><td><?php echo esc_html( $row['api_version'] ); ?></td><td><?php echo esc_html( $row['minimum_native'] ); ?></td><td><?php echo esc_html( $row['group'] ); ?></td><td><?php echo esc_html( $row['privacy'] ); ?></td><td><?php echo esc_html( strtoupper( $row['status'] ) ); ?></td><td><?php echo esc_html( $row['codes'] ); ?></td></tr>
@@ -269,20 +322,37 @@ final class System_Check_Page {
 		return array_values( array_unique( $normalized ) );
 	}
 
-	private function request_notice(): string {
-		$raw      = filter_input( INPUT_GET, 'supc_notice', FILTER_UNSAFE_RAW );
-		$code     = is_string( $raw ) ? sanitize_key( wp_unslash( $raw ) ) : '';
-		$messages = array(
-			'dry_run_ready'        => __( 'Dry run: the current Create page mapping is valid. No change is required.', 'sabri-universal-post-composer' ),
-			'dry_run_repairable'   => __( 'Dry run: an existing published shortcode page can be mapped safely. No change was made.', 'sabri-universal-post-composer' ),
-			'dry_run_missing'      => __( 'Dry run: no valid Create page exists. A managed page can be created by the repair operation.', 'sabri-universal-post-composer' ),
-			'no_change'            => __( 'The current Create page mapping was already valid. No change was made.', 'sabri-universal-post-composer' ),
-			'mapped_existing'      => __( 'File 22 was safely mapped to an existing published shortcode page.', 'sabri-universal-post-composer' ),
-			'created_managed_page' => __( 'A new File 22-managed Create page was created and mapped.', 'sabri-universal-post-composer' ),
-			'repair_failed'        => __( 'The Create page mapping could not be repaired. Review System Check and WordPress logs.', 'sabri-universal-post-composer' ),
-			'invalid_request'      => __( 'The repair request was invalid and no change was made.', 'sabri-universal-post-composer' ),
+	/**
+	 * @return array{text:string,type:string}
+	 */
+	public function notice_for_code( string $code ): array {
+		$notices = array(
+			'dry_run_ready'                 => array( 'type' => 'success', 'text' => __( 'Dry run: the current Create page mapping is valid. No change is required.', 'sabri-universal-post-composer' ) ),
+			'dry_run_repairable'            => array( 'type' => 'info', 'text' => __( 'Dry run: one existing published shortcode page can be mapped safely. No change was made.', 'sabri-universal-post-composer' ) ),
+			'dry_run_ambiguous'             => array( 'type' => 'warning', 'text' => __( 'Dry run: multiple published shortcode pages were found. Select the canonical page before repair.', 'sabri-universal-post-composer' ) ),
+			'dry_run_missing'               => array( 'type' => 'warning', 'text' => __( 'Dry run: no valid Create page exists. A managed page can be created by the repair operation.', 'sabri-universal-post-composer' ) ),
+			'no_change'                     => array( 'type' => 'success', 'text' => __( 'The current Create page mapping was already valid. No change was made.', 'sabri-universal-post-composer' ) ),
+			'mapped_existing'               => array( 'type' => 'success', 'text' => __( 'File 22 was safely mapped to the selected existing published shortcode page.', 'sabri-universal-post-composer' ) ),
+			'created_managed_page'          => array( 'type' => 'success', 'text' => __( 'A new File 22-managed Create page was created, validated, and mapped.', 'sabri-universal-post-composer' ) ),
+			'ambiguous_selection_required'  => array( 'type' => 'warning', 'text' => __( 'Multiple shortcode pages exist. Select the canonical Create page and run repair again.', 'sabri-universal-post-composer' ) ),
+			'invalid_candidate'             => array( 'type' => 'error', 'text' => __( 'The selected page is not a valid published Create-page candidate. No mapping was changed.', 'sabri-universal-post-composer' ) ),
+			'mapping_persistence_failed'    => array( 'type' => 'error', 'text' => __( 'The page was found or created, but WordPress did not persist the Create-page mapping.', 'sabri-universal-post-composer' ) ),
+			'repair_locked'                 => array( 'type' => 'warning', 'text' => __( 'Another Create-page repair is already running. No second repair was started.', 'sabri-universal-post-composer' ) ),
+			'managed_slug_unavailable'      => array( 'type' => 'error', 'text' => __( 'All approved managed Create-page slugs are occupied. No page was created.', 'sabri-universal-post-composer' ) ),
+			'managed_page_insert_failed'    => array( 'type' => 'error', 'text' => __( 'WordPress could not insert the managed Create page.', 'sabri-universal-post-composer' ) ),
+			'managed_page_validation_failed'=> array( 'type' => 'error', 'text' => __( 'WordPress inserted an object that failed File 22 ownership or page validation. No mapping was accepted.', 'sabri-universal-post-composer' ) ),
+			'invalid_request'               => array( 'type' => 'error', 'text' => __( 'The repair request was invalid and no change was made.', 'sabri-universal-post-composer' ) ),
 		);
 
-		return $messages[ $code ] ?? '';
+		return $notices[ $code ] ?? array( 'type' => 'info', 'text' => '' );
+	}
+
+	/**
+	 * @return array{text:string,type:string}
+	 */
+	private function request_notice(): array {
+		$raw  = filter_input( INPUT_GET, 'supc_notice', FILTER_UNSAFE_RAW );
+		$code = is_string( $raw ) ? sanitize_key( wp_unslash( $raw ) ) : '';
+		return $this->notice_for_code( $code );
 	}
 }
