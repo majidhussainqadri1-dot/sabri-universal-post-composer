@@ -22,11 +22,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          review='docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md'
-          verification='docs/PHASE-22D-POST-CORRECTION-VERIFICATION-2026-07-29.md'
-          test -f "$review"
-          test -f "$verification"
-          grep -q 'Phase 22D Post-Implementation Review' "$review"
-          grep -q 'Phase 22D Post-Correction Verification' "$verification"
-          grep -q "$review" MANIFEST.md
-          grep -q "$verification" MANIFEST.md
+          first_review='docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md'
+          first_verification='docs/PHASE-22D-POST-CORRECTION-VERIFICATION-2026-07-29.md'
+          second_review='docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md'
+          second_verification='docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md'
+          for file in "$first_review" "$first_verification" "$second_review" "$second_verification"; do
+            test -f "$file"
+            grep -q "$file" MANIFEST.md
+          done
+          grep -q 'Phase 22D Post-Implementation Review' "$first_review"
+          grep -q 'Phase 22D Post-Correction Verification' "$first_verification"
+          grep -q 'Phase 22D Second Review Corrections' "$second_review"
+          grep -q 'Phase 22D Second Post-Correction Verification' "$second_verification"
