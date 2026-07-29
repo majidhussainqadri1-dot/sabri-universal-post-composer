@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Sabri\UniversalComposer\Core;
 
 use Sabri\UniversalComposer\Contracts\Adapter;
+use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
 use Throwable;
 use WP_Error;
 
@@ -20,6 +21,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Registry {
 	/** @var array<string, Adapter> */
 	private array $adapters = array();
+
+	/**
+	 * Immutable registration-time workflow metadata. Runtime authorization uses
+	 * this snapshot before invoking any native adapter method.
+	 *
+	 * @var array<string, array{workflow_api_version:string,required_capability:string,supports_native_drafts:bool}>
+	 */
+	private array $workflow_contracts = array();
 
 	/** @var array<int, array<string, Adapter>> */
 	private array $available_cache = array();
@@ -51,7 +60,20 @@ final class Registry {
 				return $this->registration_error( 'api_mismatch', $key, 'Adapter API version is incompatible.' );
 			}
 
+			$capability = trim( $adapter->required_capability() );
+			if ( $adapter instanceof Workflow_Adapter && ( '' === $capability || sanitize_key( $capability ) !== $capability ) ) {
+				return $this->registration_error( 'invalid_required_capability', $key, 'Workflow adapter capability is not canonical.' );
+			}
+
 			$this->adapters[ $key ] = $adapter;
+			if ( $adapter instanceof Workflow_Adapter ) {
+				$this->workflow_contracts[ $key ] = array(
+					'workflow_api_version'   => trim( $adapter->workflow_api_version() ),
+					'required_capability'    => $capability,
+					'supports_native_drafts' => $adapter->supports_native_drafts(),
+				);
+			}
+
 			$this->flush_cache();
 			return true;
 		} catch ( Throwable $error ) {
@@ -65,7 +87,7 @@ final class Registry {
 			return false;
 		}
 
-		unset( $this->adapters[ $key ] );
+		unset( $this->adapters[ $key ], $this->workflow_contracts[ $key ] );
 		$this->flush_cache();
 		return true;
 	}
@@ -76,6 +98,13 @@ final class Registry {
 		}
 
 		return $this->adapters[ $key ] ?? null;
+	}
+
+	/**
+	 * @return array{workflow_api_version:string,required_capability:string,supports_native_drafts:bool}|null
+	 */
+	public function workflow_contract( string $key ): ?array {
+		return $this->workflow_contracts[ $key ] ?? null;
 	}
 
 	/**
@@ -105,7 +134,7 @@ final class Registry {
 		$available = array();
 		foreach ( $this->all() as $key => $adapter ) {
 			try {
-				if ( $adapter->is_available() && $this->permissions->can_use_adapter( $user_id, $adapter ) ) {
+				if ( $this->permissions->can_use_adapter( $user_id, $adapter ) && $adapter->is_available() ) {
 					$available[ $key ] = $adapter;
 				}
 			} catch ( Throwable $error ) {
@@ -139,7 +168,11 @@ final class Registry {
 		foreach ( $this->all() as $key => $adapter ) {
 			try {
 				$capability = trim( $adapter->required_capability() );
-				if ( '' !== $capability && ! user_can( $user_id, $capability ) ) {
+				if ( ! $this->permissions->can_use_capability( $user_id, $capability ) ) {
+					continue;
+				}
+
+				if ( ! $adapter->can_create( $user_id ) ) {
 					continue;
 				}
 
@@ -148,10 +181,8 @@ final class Registry {
 					continue;
 				}
 
-				if ( $this->permissions->can_use_adapter( $user_id, $adapter ) ) {
-					$this->state_cache[ $user_id ] = 'available';
-					return 'available';
-				}
+				$this->state_cache[ $user_id ] = 'available';
+				return 'available';
 			} catch ( Throwable $error ) {
 				$has_unavailable = true;
 				$this->runtime_error( $key, 'state_exception', $error );
