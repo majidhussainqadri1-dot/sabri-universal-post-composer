@@ -1,42 +1,64 @@
 # System Check
 
-File 22 contributes privacy-safe rows through the `supc_system_check_report` filter and exposes them to authorized administrators at:
+File 22 contributes privacy-safe rows through `supc_system_check_report` and displays them to authorized administrators at:
 
 `Tools → Composer Health`
 
 ## Core checks
 
-- Membership Core contract availability;
-- Create page mapping, ambiguity, and publication status;
-- adapter registration/runtime error count;
-- current-administrator Create-surface route, privacy, group, and render diagnostics;
-- role-independent static adapter metadata and native availability;
-- native adapter health reports when an adapter implements `Diagnostic_Adapter`.
+System Check reports controlled codes for:
 
-## Scope boundary
+- Membership Core version and status API availability;
+- canonical Create-page mapping, ambiguity, and publication state;
+- adapter registration/runtime errors;
+- File 22 public PHP API version, owner, complete function ownership, and collision state;
+- File 20 Create contract version, owner, function ownership, required functions, and readiness;
+- release-critical File 21 `social_publication` owner, version, capability, group, privacy, Diagnostic Adapter, full Workflow Adapter, native drafts, role-neutral schema, and subject-aware schema extension;
+- current-administrator Create-surface presentation diagnostics.
 
-Static Adapter Health does not call `can_create()` or `start_url()`. It validates adapter metadata and native availability independently of the currently signed-in role.
+A failed row must include at least one controlled code. Raw `reason`, exception objects, native messages, and arbitrary adapter fields are not displayed.
 
-Create-surface invocation diagnostics are intentionally limited to the current administrator because native routes may be role-specific. They do not replace the Founder, Administrator, verified doctor, permitted doctor, patient, student, suspended, rejected, and logged-out staging matrix.
+## Static adapter and workflow contract health
+
+Static health is role-independent. It validates:
+
+- canonical adapter metadata;
+- native availability;
+- privacy-safe Diagnostic Adapter codes;
+- exact Workflow API;
+- native-draft declaration;
+- role-neutral base `schema()`;
+- presence of the optional subject-aware schema extension.
+
+Static health does not call `can_create()`, `start_url()`, or `schema_for_user()`. It never uses the current administrator's role-specific schema as a global health result.
+
+The table separately displays:
+
+- base Adapter API;
+- Workflow API;
+- native-draft support;
+- subject-schema extension support;
+- minimum native version;
+- group, privacy, final status, and controlled codes.
+
+## Current-user presentation diagnostics
+
+Create-surface diagnostics are intentionally limited to the signed-in administrator because routes and cards may be role-specific. They do not replace staging tests for Founder, Administrator, verified doctor, permitted unverified doctor, student, patient, editorial-only, roleless, logged-out, pending, rejected, suspended, and expired-document accounts.
 
 ## Privacy boundary
 
-The administrator dashboard may display:
+The dashboard may display only canonical machine identifiers, versions, controlled status values, controlled codes, and Create-page candidate IDs needed for explicit repair selection.
 
-- canonical adapter key;
-- native module key;
-- adapter API version;
-- declared minimum native version;
-- controlled group and privacy classification;
-- `pass`, `warning`, or `fail` status;
-- privacy-safe diagnostic codes;
-- Create-page candidate IDs when explicit administrator selection is required.
+It must not display or expose through the report filter:
 
-It does not display user IDs, names, email addresses, phone numbers, identity evidence, patient data, content titles, content bodies, draft payloads, native workflow URLs, exception messages, or clinical information.
+- user ID, name, email, phone, role list, identity evidence, or detailed document state;
+- content title/body, post ID, URL, native reference, raw idempotency key, payload, or moderation notes;
+- patient/clinical data or consent evidence;
+- native message/data, exception class/message, path, SQL, stack, token, nonce, credential, or secret.
 
 ## Create-page states
 
-- `ready` — the configured object is a valid published WordPress page with the shortcode and usable permalink;
+- `ready` — configured object is a valid published page containing the shortcode and a usable permalink;
 - `repairable` — exactly one valid candidate exists;
 - `ambiguous` — multiple valid candidates exist and automatic repair is prohibited;
 - `missing` — no valid candidate exists.
@@ -45,22 +67,20 @@ Inspection is memoized once per request and performs no write.
 
 ## Repair boundary
 
-System Check remains read-only. The only Phase 22D mutation is a separate capability-protected and nonce-protected Create-page mapping repair.
+The dashboard is read-only except for the separate capability- and nonce-protected mapping repair:
 
-The operation supports:
+1. **Dry Run** — reports state without writing.
+2. **Explicit Candidate Mapping** — maps one validated published candidate; ambiguity requires administrator selection.
+3. **Managed Page Creation** — inserts one File 22-owned page on the first free approved slug when no candidate exists.
 
-1. **Dry Run** — reports the current state and changes nothing.
-2. **Explicit Candidate Mapping** — maps one valid candidate; an ambiguous state requires administrator selection.
-3. **Managed Page Creation** — creates one File 22-managed page on the first unoccupied approved slug when no candidate exists.
+A short atomic lock prevents concurrent repair. Mapping persistence is read back before success. A managed page must preserve exact page type, slug, publication, shortcode, permalink, and File 22 ownership metadata.
 
-A mutation lock prevents concurrent File 22 repairs. Mapping persistence is read back before success is reported. A managed page must retain exact post type, slug, publication status, shortcode, permalink, and ownership metadata after insertion.
-
-The repair operation never edits, overwrites, trashes, or deletes an unrelated page. It never repairs another module's tables, posts, media, settings, permissions, or content.
+The repair never edits, overwrites, trashes, or deletes unrelated pages and never changes another module's posts, tables, media, settings, permissions, or content.
 
 ## Accessibility
 
-System and adapter tables include screen-reader captions and scoped column headers. Repair outcomes use success, information, warning, or error notice severity according to the result.
+System and adapter tables have screen-reader captions and scoped headers. The subject-schema support column is explicit. Repair controls have labels, and result notices use success, information, warning, or error severity according to the outcome.
 
-## Future checks
+## Acceptance boundary
 
-Future separately reviewed phases may add native schema compatibility, background jobs, temporary orchestration storage, stale sessions, idempotency reconciliation, and File 20 visibility-contract verification. Those checks are not claimed by Phase 22D.
+System Check is operational evidence, not release approval. Complete Files 00/20/21/22 staging, role/IDOR/cache/browser/accessibility/RTL, backup restoration, rollback, independent review, and Founder authorization remain mandatory.
