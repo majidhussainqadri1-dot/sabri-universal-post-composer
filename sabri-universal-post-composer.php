@@ -34,6 +34,7 @@ require_once SUPC_PATH . 'includes/core/class-permission-resolver.php';
 require_once SUPC_PATH . 'includes/core/class-page-resolver.php';
 require_once SUPC_PATH . 'includes/core/class-registry.php';
 require_once SUPC_PATH . 'includes/integration/class-shell-bridge.php';
+require_once SUPC_PATH . 'includes/integration/class-core-adapter-requirements.php';
 require_once SUPC_PATH . 'includes/core/class-plugin.php';
 require_once SUPC_PATH . 'includes/core/functions.php';
 
