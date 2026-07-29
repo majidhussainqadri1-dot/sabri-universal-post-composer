@@ -20,17 +20,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Plugin {
 	private static ?self $instance = null;
-
 	private Permission_Resolver $permissions;
-
 	private Registry $registry;
-
 	private Workflow_Coordinator $workflow_coordinator;
-
 	private Create_Surface $create_surface;
-
 	private System_Check_Page $system_check_page;
-
 	private bool $booted = false;
 
 	private function __construct() {
@@ -45,7 +39,6 @@ final class Plugin {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
-
 		return self::$instance;
 	}
 
@@ -56,7 +49,6 @@ final class Plugin {
 
 		$this->booted = true;
 		load_plugin_textdomain( 'sabri-universal-post-composer', false, dirname( plugin_basename( SUPC_FILE ) ) . '/languages' );
-
 		add_shortcode( 'sabri_universal_composer', array( $this, 'render_shortcode' ) );
 		add_action( 'init', array( $this, 'announce_registry' ), 20 );
 		add_action( 'template_redirect', array( $this, 'protect_create_surface' ), 0 );
@@ -71,10 +63,7 @@ final class Plugin {
 	}
 
 	public function announce_registry(): void {
-		/**
-		 * Compatibility event. Late-loading modules should call
-		 * supc_register_adapter() directly and are not limited to this event.
-		 */
+		/** Late-loading modules may also call supc_register_adapter() directly. */
 		do_action( 'supc_register_adapters', $this->registry );
 		do_action( 'supc_registry_ready', $this->registry );
 	}
@@ -88,16 +77,16 @@ final class Plugin {
 	}
 
 	public function render_shortcode(): string {
+		// Template/widget/direct do_shortcode() invocation may not be detectable at
+		// template_redirect. Enforce the private response boundary again here.
+		$this->send_private_surface_headers();
 		return $this->create_surface->render();
 	}
 
 	public function protect_create_surface(): void {
-		if ( ! $this->is_create_surface_request() ) {
-			return;
+		if ( $this->is_create_surface_request() ) {
+			$this->send_private_surface_headers();
 		}
-
-		nocache_headers();
-		header( 'X-Robots-Tag: noindex, nofollow, noarchive', true );
 	}
 
 	/**
@@ -110,7 +99,6 @@ final class Plugin {
 			$robots['nofollow']  = true;
 			$robots['noarchive'] = true;
 		}
-
 		return $robots;
 	}
 
@@ -142,88 +130,58 @@ final class Plugin {
 		return $rows;
 	}
 
+	private function send_private_surface_headers(): void {
+		nocache_headers();
+		if ( ! headers_sent() ) {
+			header( 'X-Robots-Tag: noindex, nofollow, noarchive', true );
+		}
+		do_action( 'supc_private_surface_headers_applied' );
+	}
+
 	private function is_create_surface_request(): bool {
 		if ( Page_Resolver::is_create_request() ) {
 			return true;
 		}
-
 		global $post;
 		return $post instanceof \WP_Post && has_shortcode( (string) $post->post_content, 'sabri_universal_composer' );
 	}
 
-	/**
-	 * @return array<string, mixed>
-	 */
+	/** @return array<string, mixed> */
 	private function public_api_contract_row(): array {
 		$required_functions = array(
-			'supc_register_adapter',
-			'supc_unregister_adapter',
-			'supc_adapter_available',
-			'supc_adapter_matches',
-			'supc_workflow_schema',
-			'supc_workflow_create_draft',
-			'supc_workflow_validate',
-			'supc_workflow_preview',
-			'supc_workflow_submit',
-			'supc_workflow_status',
-			'supc_workflow_canonical_url',
-			'supc_generate_idempotency_key',
+			'supc_register_adapter', 'supc_unregister_adapter', 'supc_adapter_available',
+			'supc_adapter_matches', 'supc_workflow_schema', 'supc_workflow_create_draft',
+			'supc_workflow_validate', 'supc_workflow_preview', 'supc_workflow_submit',
+			'supc_workflow_status', 'supc_workflow_canonical_url', 'supc_generate_idempotency_key',
 		);
 		$codes   = array();
 		$version = $this->runtime_constant( 'SUPC_PUBLIC_API_VERSION' );
 		$owner   = $this->runtime_constant( 'SUPC_PUBLIC_API_OWNER' );
 		$owned   = $this->runtime_constant( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' );
-		if ( '1.0.0' !== $version ) {
-			$codes[] = 'public_api_version_mismatch';
-		}
-		if ( 'sabri-universal-post-composer' !== $owner ) {
-			$codes[] = 'public_api_owner_mismatch';
-		}
-		if ( true !== $owned ) {
-			$codes[] = 'public_api_function_collision';
-		}
+		if ( '1.0.0' !== $version ) { $codes[] = 'public_api_version_mismatch'; }
+		if ( 'sabri-universal-post-composer' !== $owner ) { $codes[] = 'public_api_owner_mismatch'; }
+		if ( true !== $owned ) { $codes[] = 'public_api_function_collision'; }
 		foreach ( $required_functions as $function ) {
-			if ( ! function_exists( $function ) ) {
-				$codes[] = 'public_api_incomplete';
-				break;
-			}
+			if ( ! function_exists( $function ) ) { $codes[] = 'public_api_incomplete'; break; }
 		}
-		return array(
-			'key'    => 'public_api_contract',
-			'status' => array() === $codes ? 'pass' : 'fail',
-			'count'  => count( $codes ),
-			'codes'  => array_values( array_unique( $codes ) ),
-		);
+		return array( 'key' => 'public_api_contract', 'status' => array() === $codes ? 'pass' : 'fail', 'count' => count( $codes ), 'codes' => array_values( array_unique( $codes ) ) );
 	}
 
-	/**
-	 * @return array<string, mixed>
-	 */
+	/** @return array<string, mixed> */
 	private function file20_contract_row(): array {
 		$codes   = array();
 		$version = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' );
 		$owner   = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
 		$owned   = $this->runtime_constant( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' );
-		if ( '1.0.1' !== $version ) {
-			$codes[] = 'file20_contract_version_mismatch';
-		}
-		if ( 'sabri-unified-application-shell' !== $owner ) {
-			$codes[] = 'file20_contract_owner_mismatch';
-		}
-		if ( true !== $owned ) {
-			$codes[] = 'file20_contract_collision';
-		}
+		if ( '1.0.1' !== $version ) { $codes[] = 'file20_contract_version_mismatch'; }
+		if ( 'sabri-unified-application-shell' !== $owner ) { $codes[] = 'file20_contract_owner_mismatch'; }
+		if ( true !== $owned ) { $codes[] = 'file20_contract_collision'; }
 		if ( ! function_exists( 'sabri_shell_create_contract_available' ) || ! function_exists( 'sabri_shell_create_visible_for_current_user' ) ) {
 			$codes[] = 'file20_contract_functions_missing';
 		} elseif ( ! sabri_shell_create_contract_available() ) {
 			$codes[] = 'file20_contract_unavailable';
 		}
-		return array(
-			'key'    => 'file20_create_contract',
-			'status' => array() === $codes ? 'pass' : 'fail',
-			'count'  => count( $codes ),
-			'codes'  => array_values( array_unique( $codes ) ),
-		);
+		return array( 'key' => 'file20_create_contract', 'status' => array() === $codes ? 'pass' : 'fail', 'count' => count( $codes ), 'codes' => array_values( array_unique( $codes ) ) );
 	}
 
 	private function runtime_constant( string $name ): mixed {
