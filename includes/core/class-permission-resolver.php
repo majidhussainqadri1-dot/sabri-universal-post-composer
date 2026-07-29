@@ -52,13 +52,17 @@ final class Permission_Resolver {
 		return in_array( $status, array( 'approved', 'verified' ), true );
 	}
 
-	public function can_use_adapter( int $user_id, Adapter $adapter ): bool {
+	public function can_use_capability( int $user_id, string $capability ): bool {
 		if ( ! $this->account_is_eligible( $user_id ) ) {
 			return false;
 		}
 
-		$capability = trim( $adapter->required_capability() );
-		if ( '' !== $capability && ! user_can( $user_id, $capability ) ) {
+		$capability = trim( $capability );
+		return '' === $capability || user_can( $user_id, $capability );
+	}
+
+	public function can_use_adapter( int $user_id, Adapter $adapter ): bool {
+		if ( ! $this->can_use_capability( $user_id, $adapter->required_capability() ) ) {
 			return false;
 		}
 
