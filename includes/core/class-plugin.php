@@ -92,7 +92,7 @@ final class Plugin {
 	}
 
 	public function protect_create_surface(): void {
-		if ( ! Page_Resolver::is_create_request() ) {
+		if ( ! $this->is_create_surface_request() ) {
 			return;
 		}
 
@@ -105,7 +105,7 @@ final class Plugin {
 	 * @return array<string, bool>
 	 */
 	public function filter_create_robots( array $robots ): array {
-		if ( Page_Resolver::is_create_request() ) {
+		if ( $this->is_create_surface_request() ) {
 			$robots['noindex']   = true;
 			$robots['nofollow']  = true;
 			$robots['noarchive'] = true;
@@ -123,6 +123,7 @@ final class Plugin {
 		$rows[] = array(
 			'key'    => 'membership_core',
 			'status' => $this->permissions->core_available() ? 'pass' : 'fail',
+			'codes'  => $this->permissions->core_available() ? array() : array( 'membership_core_unavailable' ),
 		);
 		$rows[] = array(
 			'key'    => 'create_page',
@@ -133,8 +134,89 @@ final class Plugin {
 			'key'    => 'adapter_errors',
 			'status' => array() === $this->registry->errors() ? 'pass' : 'warning',
 			'count'  => count( $this->registry->errors() ),
+			'codes'  => array_values( array_unique( array_map( static fn ( array $error ): string => sanitize_key( (string) ( $error['code'] ?? 'adapter_error' ) ), $this->registry->errors() ) ) ),
 		);
+		$rows[] = $this->public_api_contract_row();
+		$rows[] = $this->file20_contract_row();
 		$rows[] = $this->create_surface->system_check_row( get_current_user_id() );
 		return $rows;
+	}
+
+	private function is_create_surface_request(): bool {
+		if ( Page_Resolver::is_create_request() ) {
+			return true;
+		}
+
+		global $post;
+		return $post instanceof \WP_Post && has_shortcode( (string) $post->post_content, 'sabri_universal_composer' );
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function public_api_contract_row(): array {
+		$required_functions = array(
+			'supc_register_adapter',
+			'supc_unregister_adapter',
+			'supc_adapter_available',
+			'supc_adapter_matches',
+			'supc_workflow_schema',
+			'supc_workflow_create_draft',
+			'supc_workflow_validate',
+			'supc_workflow_preview',
+			'supc_workflow_submit',
+			'supc_workflow_status',
+			'supc_workflow_canonical_url',
+			'supc_generate_idempotency_key',
+		);
+		$codes = array();
+		if ( ! defined( 'SUPC_PUBLIC_API_VERSION' ) || '1.0.0' !== (string) SUPC_PUBLIC_API_VERSION ) {
+			$codes[] = 'public_api_version_mismatch';
+		}
+		if ( ! defined( 'SUPC_PUBLIC_API_OWNER' ) || 'sabri-universal-post-composer' !== (string) SUPC_PUBLIC_API_OWNER ) {
+			$codes[] = 'public_api_owner_mismatch';
+		}
+		if ( ! defined( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' ) || true !== SUPC_PUBLIC_API_FUNCTIONS_OWNED ) {
+			$codes[] = 'public_api_function_collision';
+		}
+		foreach ( $required_functions as $function ) {
+			if ( ! function_exists( $function ) ) {
+				$codes[] = 'public_api_incomplete';
+				break;
+			}
+		}
+		return array(
+			'key'    => 'public_api_contract',
+			'status' => array() === $codes ? 'pass' : 'fail',
+			'count'  => count( $codes ),
+			'codes'  => array_values( array_unique( $codes ) ),
+		);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function file20_contract_row(): array {
+		$codes = array();
+		if ( ! defined( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' ) || '1.0.1' !== (string) SABRI_SHELL_CREATE_CONTRACT_VERSION ) {
+			$codes[] = 'file20_contract_version_mismatch';
+		}
+		if ( ! defined( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' ) || 'sabri-unified-application-shell' !== (string) SABRI_SHELL_CREATE_CONTRACT_OWNER ) {
+			$codes[] = 'file20_contract_owner_mismatch';
+		}
+		if ( ! defined( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' ) || true !== SABRI_SHELL_CREATE_FUNCTIONS_OWNED ) {
+			$codes[] = 'file20_contract_collision';
+		}
+		if ( ! function_exists( 'sabri_shell_create_contract_available' ) || ! function_exists( 'sabri_shell_create_visible_for_current_user' ) ) {
+			$codes[] = 'file20_contract_functions_missing';
+		} elseif ( ! sabri_shell_create_contract_available() ) {
+			$codes[] = 'file20_contract_unavailable';
+		}
+		return array(
+			'key'    => 'file20_create_contract',
+			'status' => array() === $codes ? 'pass' : 'fail',
+			'count'  => count( $codes ),
+			'codes'  => array_values( array_unique( $codes ) ),
+		);
 	}
 }
