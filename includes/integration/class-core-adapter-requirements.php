@@ -33,6 +33,7 @@ final class Core_Adapter_Requirements {
 	public const REQUIRED_CREATE_CAPABILITY    = 'sabri_feed_create_posts';
 	public const REQUIRED_GROUP                = 'publishing';
 	public const REQUIRED_PRIVACY_CLASS        = 'public';
+	public const SUBJECT_SCHEMA_API_VERSION    = '1.0.0';
 
 	public function __construct( private Registry $registry ) {
 	}
@@ -85,6 +86,12 @@ final class Core_Adapter_Requirements {
 			if ( ! $adapter instanceof Workflow_Adapter ) {
 				$codes[] = 'workflow_contract_missing';
 			}
+			if ( self::SUBJECT_SCHEMA_API_VERSION !== $this->runtime_constant( 'SUPC_SUBJECT_SCHEMA_API_VERSION' ) ) {
+				$codes[] = 'subject_schema_api_mismatch';
+			}
+			if ( ! is_callable( array( $adapter, 'schema_for_user' ) ) ) {
+				$codes[] = 'subject_schema_contract_missing';
+			}
 
 			$contract = $this->registry->workflow_contract( self::SOCIAL_PUBLICATION_KEY );
 			if ( null === $contract ) {
@@ -105,6 +112,9 @@ final class Core_Adapter_Requirements {
 				$workflow = ( new Workflow_Coordinator( $this->registry, new Permission_Resolver() ) )->contract_health( self::SOCIAL_PUBLICATION_KEY );
 				if ( 'pass' !== $workflow['status'] ) {
 					$codes = array_merge( $codes, $workflow['codes'] );
+				}
+				if ( 'yes' !== $workflow['subject_schema_extension'] ) {
+					$codes[] = 'subject_schema_contract_missing';
 				}
 			}
 
@@ -156,5 +166,9 @@ final class Core_Adapter_Requirements {
 			'native_module'  => self::FILE21_NATIVE_MODULE,
 			'minimum_native' => self::MINIMUM_FILE21_VERSION,
 		);
+	}
+
+	private function runtime_constant( string $name ): mixed {
+		return defined( $name ) ? constant( $name ) : null;
 	}
 }
