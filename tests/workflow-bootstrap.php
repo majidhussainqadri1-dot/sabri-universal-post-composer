@@ -11,6 +11,12 @@ if ( ! defined( 'SUPC_WORKFLOW_API_VERSION' ) ) {
 	define( 'SUPC_WORKFLOW_API_VERSION', '1.0.0' );
 }
 
+if ( ! function_exists( 'wp_json_encode' ) ) {
+	function wp_json_encode( mixed $value, int $flags = 0, int $depth = 512 ): string|false {
+		return json_encode( $value, $flags, $depth );
+	}
+}
+
 require_once dirname( __DIR__ ) . '/includes/contracts/interface-workflow-adapter.php';
 require_once dirname( __DIR__ ) . '/includes/core/class-workflow-coordinator.php';
 require_once dirname( __DIR__ ) . '/includes/core/class-plugin.php';
