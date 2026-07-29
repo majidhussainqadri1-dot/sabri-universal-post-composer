@@ -11,6 +11,7 @@ parameters:
         - includes/core/class-plugin.php
         - includes/core/functions.php
         - includes/presentation/class-create-surface.php
+        - includes/integration/class-shell-bridge.php
         - includes/integration/class-core-adapter-requirements.php
         - includes/admin/class-system-check-page.php
     bootstrapFiles:
