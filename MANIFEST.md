@@ -47,6 +47,8 @@
 - `docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md`
 - `docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
 - `docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md`
+- `docs/PHASE-22E-SECOND-REVIEW-CORRECTIONS-2026-07-29.md`
+- `docs/PHASE-22E-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md`
 - `docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
 - `docs/PRIVACY.md`
 - `docs/ROLLBACK.md`
@@ -62,6 +64,7 @@
 - `phpstan.neon.dist`
 - `phpunit.xml.dist`
 - `tests/`
+- `tests/workflow-bootstrap.php`
 
 Development-only files are excluded from a future production ZIP by `.distignore`.
 
