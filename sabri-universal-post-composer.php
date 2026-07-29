@@ -22,6 +22,7 @@ define( 'SUPC_VERSION', '0.1.0-dev' );
 define( 'SUPC_SCHEMA_VERSION', '0.1.0' );
 define( 'SUPC_ADAPTER_API_VERSION', '1.0.0' );
 define( 'SUPC_WORKFLOW_API_VERSION', '1.0.0' );
+define( 'SUPC_SUBJECT_SCHEMA_API_VERSION', '1.0.0' );
 define( 'SUPC_MIN_SMC_VERSION', '1.0.1' );
 define( 'SUPC_FILE', __FILE__ );
 define( 'SUPC_PATH', plugin_dir_path( __FILE__ ) );
