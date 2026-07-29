@@ -169,14 +169,17 @@ final class Plugin {
 			'supc_workflow_canonical_url',
 			'supc_generate_idempotency_key',
 		);
-		$codes = array();
-		if ( ! defined( 'SUPC_PUBLIC_API_VERSION' ) || '1.0.0' !== (string) SUPC_PUBLIC_API_VERSION ) {
+		$codes   = array();
+		$version = $this->runtime_constant( 'SUPC_PUBLIC_API_VERSION' );
+		$owner   = $this->runtime_constant( 'SUPC_PUBLIC_API_OWNER' );
+		$owned   = $this->runtime_constant( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' );
+		if ( '1.0.0' !== $version ) {
 			$codes[] = 'public_api_version_mismatch';
 		}
-		if ( ! defined( 'SUPC_PUBLIC_API_OWNER' ) || 'sabri-universal-post-composer' !== (string) SUPC_PUBLIC_API_OWNER ) {
+		if ( 'sabri-universal-post-composer' !== $owner ) {
 			$codes[] = 'public_api_owner_mismatch';
 		}
-		if ( ! defined( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' ) || true !== SUPC_PUBLIC_API_FUNCTIONS_OWNED ) {
+		if ( true !== $owned ) {
 			$codes[] = 'public_api_function_collision';
 		}
 		foreach ( $required_functions as $function ) {
@@ -197,14 +200,17 @@ final class Plugin {
 	 * @return array<string, mixed>
 	 */
 	private function file20_contract_row(): array {
-		$codes = array();
-		if ( ! defined( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' ) || '1.0.1' !== (string) SABRI_SHELL_CREATE_CONTRACT_VERSION ) {
+		$codes   = array();
+		$version = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' );
+		$owner   = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
+		$owned   = $this->runtime_constant( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' );
+		if ( '1.0.1' !== $version ) {
 			$codes[] = 'file20_contract_version_mismatch';
 		}
-		if ( ! defined( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' ) || 'sabri-unified-application-shell' !== (string) SABRI_SHELL_CREATE_CONTRACT_OWNER ) {
+		if ( 'sabri-unified-application-shell' !== $owner ) {
 			$codes[] = 'file20_contract_owner_mismatch';
 		}
-		if ( ! defined( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' ) || true !== SABRI_SHELL_CREATE_FUNCTIONS_OWNED ) {
+		if ( true !== $owned ) {
 			$codes[] = 'file20_contract_collision';
 		}
 		if ( ! function_exists( 'sabri_shell_create_contract_available' ) || ! function_exists( 'sabri_shell_create_visible_for_current_user' ) ) {
@@ -218,5 +224,9 @@ final class Plugin {
 			'count'  => count( $codes ),
 			'codes'  => array_values( array_unique( $codes ) ),
 		);
+	}
+
+	private function runtime_constant( string $name ): mixed {
+		return defined( $name ) ? constant( $name ) : null;
 	}
 }
