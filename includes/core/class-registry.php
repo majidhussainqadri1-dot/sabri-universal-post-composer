@@ -77,8 +77,9 @@ final class Registry {
 			$this->flush_cache();
 			return true;
 		} catch ( Throwable $error ) {
+			unset( $error );
 			$key = 'unknown_' . count( $this->errors );
-			return $this->runtime_error( $key, 'registration_exception', $error );
+			return $this->runtime_error( $key, 'registration_exception' );
 		}
 	}
 
@@ -119,6 +120,10 @@ final class Registry {
 	/**
 	 * Return only healthy adapters the user can actually invoke.
 	 *
+	 * Central account and capability checks always run before native availability.
+	 * Native availability is then resolved before adapter-specific authorization so
+	 * an offline integration is never mislabeled as a permission denial.
+	 *
 	 * @return array<string, Adapter>
 	 */
 	public function available_for_user( int $user_id ): array {
@@ -134,11 +139,20 @@ final class Registry {
 		$available = array();
 		foreach ( $this->all() as $key => $adapter ) {
 			try {
-				if ( $this->permissions->can_use_adapter( $user_id, $adapter ) && $adapter->is_available() ) {
-					$available[ $key ] = $adapter;
+				$capability = trim( $adapter->required_capability() );
+				if ( ! $this->permissions->can_use_capability( $user_id, $capability ) ) {
+					continue;
 				}
+				if ( ! $adapter->is_available() ) {
+					continue;
+				}
+				if ( ! $adapter->can_create( $user_id ) ) {
+					continue;
+				}
+				$available[ $key ] = $adapter;
 			} catch ( Throwable $error ) {
-				$this->runtime_error( $key, 'availability_exception', $error );
+				unset( $error );
+				$this->runtime_error( $key, 'availability_exception' );
 			}
 		}
 
@@ -171,21 +185,20 @@ final class Registry {
 				if ( ! $this->permissions->can_use_capability( $user_id, $capability ) ) {
 					continue;
 				}
-
-				if ( ! $adapter->can_create( $user_id ) ) {
-					continue;
-				}
-
 				if ( ! $adapter->is_available() ) {
 					$has_unavailable = true;
+					continue;
+				}
+				if ( ! $adapter->can_create( $user_id ) ) {
 					continue;
 				}
 
 				$this->state_cache[ $user_id ] = 'available';
 				return 'available';
 			} catch ( Throwable $error ) {
+				unset( $error );
 				$has_unavailable = true;
-				$this->runtime_error( $key, 'state_exception', $error );
+				$this->runtime_error( $key, 'state_exception' );
 			}
 		}
 
@@ -194,7 +207,7 @@ final class Registry {
 	}
 
 	/**
-	 * Compatibility query used by the Create surface. True now means that the
+	 * Compatibility query used by the Create surface. True means that the
 	 * central gate permits a registered workflow but its native service is not
 	 * available; adapter-specific authorization denial remains false.
 	 */
@@ -224,6 +237,7 @@ final class Registry {
 			$label = strcasecmp( $left->label(), $right->label() );
 			return 0 !== $label ? $label : strcmp( $left->key(), $right->key() );
 		} catch ( Throwable $error ) {
+			unset( $error );
 			return 0;
 		}
 	}
@@ -234,19 +248,17 @@ final class Registry {
 			'message' => $message,
 		);
 
-		do_action( 'supc_adapter_registration_error', $key, $code );
-		return new WP_Error( 'supc_' . $code, $message, array( 'adapter' => $key ) );
+		do_action( 'supc_adapter_registration_error', sanitize_key( $key ), $code );
+		return new WP_Error( 'supc_' . $code, $message, array( 'adapter' => sanitize_key( $key ) ) );
 	}
 
-	private function runtime_error( string $key, string $code, Throwable $error ): WP_Error {
+	private function runtime_error( string $key, string $code ): WP_Error {
 		$this->errors[ $key ] = array(
 			'code'        => $code,
-			'exception'   => get_class( $error ),
-			'message'     => $error->getMessage(),
 			'occurred_at' => gmdate( 'c' ),
 		);
 
-		do_action( 'supc_adapter_runtime_error', $key, $code );
+		do_action( 'supc_adapter_runtime_error', sanitize_key( $key ), $code );
 		return new WP_Error( 'supc_' . $code, __( 'The content adapter is temporarily unavailable.', 'sabri-universal-post-composer' ) );
 	}
 }
