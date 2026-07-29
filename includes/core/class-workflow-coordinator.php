@@ -43,6 +43,10 @@ final class Workflow_Coordinator {
 	}
 
 	/**
+	 * Return the schema for the authenticated subject. Adapters that expose the
+	 * optional `schema_for_user( int $user_id )` extension receive the subject;
+	 * all other adapters retain the version 1.0 role-neutral schema contract.
+	 *
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public function schema( int $user_id, string $adapter_key ): array|WP_Error {
@@ -51,25 +55,26 @@ final class Workflow_Coordinator {
 			return $adapter;
 		}
 
-		return $this->schema_for_adapter( $adapter, $adapter_key );
+		return $this->schema_for_adapter( $adapter, $adapter_key, $user_id );
 	}
 
 	/**
-	 * Role-independent, privacy-safe workflow contract inspection.
-	 * Native adapters must expose a role-neutral schema contract; user-specific
-	 * authorization remains a separate runtime decision.
+	 * Role-independent, privacy-safe workflow contract inspection. This always
+	 * validates the adapter's base `schema()` declaration and never borrows the
+	 * current administrator as a representative application subject.
 	 *
-	 * @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string}
+	 * @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string,subject_schema_extension:string}
 	 */
 	public function contract_health( string $adapter_key ): array {
 		$adapter  = $this->registry->get( $adapter_key );
 		$contract = $this->registry->workflow_contract( $adapter_key );
 		if ( ! $adapter instanceof Workflow_Adapter || null === $contract ) {
 			return array(
-				'status'                 => 'pass',
-				'codes'                  => array(),
-				'workflow_api_version'   => 'not_applicable',
-				'supports_native_drafts' => 'not_applicable',
+				'status'                   => 'pass',
+				'codes'                    => array(),
+				'workflow_api_version'     => 'not_applicable',
+				'supports_native_drafts'   => 'not_applicable',
+				'subject_schema_extension' => 'not_applicable',
 			);
 		}
 
@@ -93,15 +98,16 @@ final class Workflow_Coordinator {
 		}
 
 		return array(
-			'status'                 => $status,
-			'codes'                  => array_values( array_unique( $codes ) ),
-			'workflow_api_version'   => $contract['workflow_api_version'],
-			'supports_native_drafts' => $contract['supports_native_drafts'] ? 'yes' : 'no',
+			'status'                   => $status,
+			'codes'                    => array_values( array_unique( $codes ) ),
+			'workflow_api_version'     => $contract['workflow_api_version'],
+			'supports_native_drafts'   => $contract['supports_native_drafts'] ? 'yes' : 'no',
+			'subject_schema_extension' => is_callable( array( $adapter, 'schema_for_user' ) ) ? 'yes' : 'no',
 		);
 	}
 
 	/**
-	 * @param array<string, mixed> $payload Validated draft payload.
+	 * @param array<string, mixed> $payload Draft payload.
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public function create_draft( int $user_id, string $adapter_key, ?string $native_reference, array $payload ): array|WP_Error {
@@ -114,12 +120,11 @@ final class Workflow_Coordinator {
 		if ( null === $contract || ! $contract['supports_native_drafts'] ) {
 			return $this->error( 'native_drafts_unsupported', 'The native workflow does not support direct draft orchestration.', $adapter_key );
 		}
-
 		if ( null !== $native_reference && ! $this->valid_native_reference( $native_reference ) ) {
 			return $this->error( 'invalid_native_reference', 'The native draft reference is invalid.', $adapter_key );
 		}
 
-		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, false );
+		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, false, $user_id );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
@@ -158,7 +163,7 @@ final class Workflow_Coordinator {
 			return $adapter;
 		}
 
-		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true );
+		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true, $user_id );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
@@ -198,7 +203,7 @@ final class Workflow_Coordinator {
 			return $adapter;
 		}
 
-		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true );
+		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true, $user_id );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
@@ -241,7 +246,7 @@ final class Workflow_Coordinator {
 			return $this->error( 'invalid_idempotency_key', 'The submission idempotency key is invalid.', $adapter_key );
 		}
 
-		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true );
+		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true, $user_id );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
@@ -338,11 +343,16 @@ final class Workflow_Coordinator {
 	/**
 	 * @return array<string, mixed>|WP_Error
 	 */
-	private function schema_for_adapter( Workflow_Adapter $adapter, string $adapter_key ): array|WP_Error {
+	private function schema_for_adapter( Workflow_Adapter $adapter, string $adapter_key, int $user_id = 0 ): array|WP_Error {
 		try {
 			$version = trim( $adapter->schema_version() );
-			$schema  = $adapter->schema();
-			$fields  = $schema['fields'] ?? null;
+			$schema  = $user_id > 0 && is_callable( array( $adapter, 'schema_for_user' ) )
+				? call_user_func( array( $adapter, 'schema_for_user' ), $user_id )
+				: $adapter->schema();
+			if ( ! is_array( $schema ) ) {
+				return $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key );
+			}
+			$fields = $schema['fields'] ?? null;
 			if ( ! $this->valid_version( $version ) || ! isset( $schema['version'] ) || $version !== $schema['version'] || ! is_array( $fields ) || ! $this->bounded_array( $schema, self::MAX_SCHEMA_BYTES ) ) {
 				return $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key );
 			}
@@ -410,12 +420,12 @@ final class Workflow_Coordinator {
 	/**
 	 * @param array<string, mixed> $payload Workflow payload.
 	 */
-	private function validate_payload_contract( Workflow_Adapter $adapter, array $payload, string $adapter_key, bool $require_required ): ?WP_Error {
+	private function validate_payload_contract( Workflow_Adapter $adapter, array $payload, string $adapter_key, bool $require_required, int $user_id ): ?WP_Error {
 		$base_error = $this->validate_payload( $payload, $adapter_key );
 		if ( $base_error instanceof WP_Error ) {
 			return $base_error;
 		}
-		$schema = $this->schema_for_adapter( $adapter, $adapter_key );
+		$schema = $this->schema_for_adapter( $adapter, $adapter_key, $user_id );
 		if ( $schema instanceof WP_Error ) {
 			return $schema;
 		}
