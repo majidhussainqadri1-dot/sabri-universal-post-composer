@@ -66,8 +66,8 @@ jobs:
           php-version: '8.3'
           coverage: none
           tools: composer:v2
-      - name: Resolve lock file without installing
-        run: composer update --lock --no-install --no-interaction --no-progress --prefer-dist
+      - name: Resolve exact dependency lock without installing
+        run: composer update --no-install --no-interaction --no-progress --prefer-dist
       - name: Upload exact dependency lock
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -87,7 +87,7 @@ jobs:
           ref: ${{ env.EXPECTED_SHA }}
       - name: Verify exact source head
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49e92b4886f43607fa02 # v2.37.1
         with:
           php-version: '8.3'
           coverage: none
@@ -151,6 +151,8 @@ jobs:
           tools: composer:v2
       - run: composer install --no-interaction --no-progress --prefer-dist --quiet
       - run: composer test
+      - name: Run isolated public API collision contract
+        run: php tests/run-public-api-collision-test.php
 
   repository-contract:
     name: Repository contract
@@ -194,6 +196,8 @@ jobs:
             tests/AdminSystemCheckTest.php
             tests/PageResolverRepairTest.php
             tests/WorkflowCoordinatorTest.php
+            tests/PluginPrivacyTest.php
+            tests/run-public-api-collision-test.php
             tests/phpstan-wordpress-stubs.php
             docs/ARCHITECTURE.md docs/ADAPTER-CONTRACT.md docs/DECISION-LOG.md docs/SECURITY.md
             docs/PRIVACY.md docs/ACCESSIBILITY.md docs/MIGRATION.md docs/ROLLBACK.md
@@ -226,3 +230,4 @@ jobs:
           grep -q 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' includes/core/functions.php
           grep -q 'file20_create_contract' includes/core/class-plugin.php
           grep -q 'workflow_contract_missing' includes/integration/class-core-adapter-requirements.php
+          grep -q 'noncanonical_shortcode_surface' tests/PluginPrivacyTest.php
