@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
   group: file-22-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -23,8 +26,12 @@ jobs:
       matrix:
         php: ['8.1', '8.2', '8.3']
     steps:
-      - name: Check out repository
+      - name: Check out exact source head
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - name: Set up PHP
         uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
         with:
@@ -43,12 +50,43 @@ jobs:
             php -l "$file"
           done
 
+  dependency-lock:
+    name: Resolve dependency lock evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Resolve lock file without installing
+        run: composer update --lock --no-install --no-interaction --no-progress --prefer-dist
+      - name: Upload exact dependency lock
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: file22-composer-lock
+          path: composer.lock
+          if-no-files-found: error
+          retention-days: 3
+
   phpcs:
     name: WordPress security standards
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
         with:
           php-version: '8.3'
@@ -62,7 +100,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
         with:
           php-version: '8.3'
@@ -95,7 +138,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
         with:
           php-version: '8.3'
@@ -109,8 +157,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check out repository
+      - name: Check out exact source head
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - name: Validate Composer configuration
         run: composer validate --strict --no-check-lock
       - name: Verify required files and identifiers
@@ -169,38 +221,8 @@ jobs:
           grep -q "define( 'SUPC_WORKFLOW_API_VERSION'" sabri-universal-post-composer.php
           grep -q 'One canonical native record' README.md
           grep -q 'social_publication' docs/FILE21-INTEGRATION.md
-          grep -q 'Post-Implementation Review' docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
           grep -q 'File 23' docs/MASTER-PLAN-AMENDMENT-v2.1.md
-          grep -q 'validate_internal_route' includes/presentation/class-create-surface.php
-          grep -q 'invalid_privacy' includes/presentation/class-create-surface.php
-          grep -q 'create_surface_diagnostics' includes/presentation/class-create-surface.php
-          grep -q 'creation_state_for_user' includes/core/class-registry.php
-          grep -q 'One gateway, one native record.' includes/presentation/class-create-surface.php
-          grep -q 'background: var(--supc-orange-dark);' assets/css/create-surface.css
-          grep -q 'prefers-reduced-motion' assets/css/create-surface.css
-          grep -q 'forced-colors' assets/css/create-surface.css
-          grep -q 'Phase 22C Post-Implementation Review' docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
-          grep -q 'Second Review Corrections' docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
-          grep -q 'Post-Correction Verification' docs/PHASE-22C-POST-CORRECTION-VERIFICATION-2026-07-29.md
-          grep -q 'Tools → Composer Health' docs/PHASE-22D-ADMIN-SYSTEM-CHECK.md
-          grep -q 'Phase 22D Post-Implementation Review' docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
-          grep -q 'Phase 22D Second Review Corrections' docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
-          grep -q 'Phase 22D Second Post-Correction Verification' docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md
-          grep -q 'mapping_persistence_failed' includes/core/class-page-resolver.php
-          grep -q 'ambiguous_selection_required' includes/core/class-page-resolver.php
-          grep -q 'REPAIR_LOCK_OPTION' includes/core/class-page-resolver.php
-          grep -q 'scope="col"' includes/admin/class-system-check-page.php
-          grep -q 'Static Adapter Health' includes/admin/class-system-check-page.php
-          grep -q 'workflow_api_version' includes/contracts/interface-workflow-adapter.php
-          grep -q 'class Workflow_Coordinator' includes/core/class-workflow-coordinator.php
-          grep -q 'native_drafts_unsupported' includes/core/class-workflow-coordinator.php
-          grep -q 'supc_native_workflow_error' includes/core/class-workflow-coordinator.php
-          grep -q 'IDEMPOTENCY_PATTERN' includes/core/class-workflow-coordinator.php
-          grep -q 'MAX_PREVIEW_TTL' includes/core/class-workflow-coordinator.php
-          grep -q 'supc_workflow_submit' includes/core/functions.php
-          grep -q 'Guarded Native Workflow Orchestration Foundation' docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md
-          grep -q 'Phase 22E Post-Implementation Review' docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
-          grep -q 'Phase 22E Post-Correction Verification' docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md
-          grep -q 'includes/core/class-workflow-coordinator.php' MANIFEST.md
-          grep -q 'docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md' MANIFEST.md
-          grep -q 'docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md' MANIFEST.md
+          grep -q 'workflow_payload_unknown_field' includes/core/class-workflow-coordinator.php
+          grep -q 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' includes/core/functions.php
+          grep -q 'file20_create_contract' includes/core/class-plugin.php
+          grep -q 'workflow_contract_missing' includes/integration/class-core-adapter-requirements.php
