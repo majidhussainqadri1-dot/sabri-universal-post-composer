@@ -2,6 +2,22 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Cumulative corrective reconciliation
+
+- Reconciled Phases 22B–22E into one Draft PR targeting canonical `main`.
+- Protected every page or post that renders `[sabri_universal_composer]` with no-cache and noindex/nofollow/noarchive controls, including noncanonical and ambiguous shortcode pages.
+- Added complete File 22 public PHP API version, owner, function-ownership, collision, and current-subject contracts.
+- Corrected native availability/adapter authorization ordering so an offline File 21 integration is not mislabeled as permission denial.
+- Required File 21's release-critical adapter to implement Diagnostic Adapter, full Workflow Adapter, native drafts, role-neutral base schema, and subject-aware schema extension.
+- Added `SUPC_SUBJECT_SCHEMA_API_VERSION` and interactive `schema_for_user( int $user_id )` support without changing the frozen Workflow Adapter interface.
+- Bound payload validation to the authenticated subject's schema, including unknown-field, required-field, type, choice, range, date, datetime, email, URL, checkbox, and opaque-reference enforcement.
+- Added File 20 Create contract and File 22 public API rows to System Check with actionable controlled codes.
+- Added subject-schema support to Static Adapter and Workflow Contract Health.
+- Removed raw exception classes/messages from registry and File 21 requirement diagnostics.
+- Added exact-head checkout verification to every CI job and dependency-lock evidence generation.
+- Added isolated public API collision, noncanonical shortcode privacy, File 21 route-only rejection, unavailable-state, schema-bound payload, and subject-schema regression tests.
+- Expanded controlled staging acceptance to cover installation/load order, role/status/document matrix, IDOR, cache/indexing, browsers, accessibility, Urdu RTL, backup restoration, and rollback.
+
 ### Added
 
 - Mandatory Sabri Membership Core activation and permission boundary.
@@ -41,30 +57,28 @@
 - Adapter registration is available through `supc_register_adapter()` and is not limited to a one-shot hook.
 - File 21 version `1.0.3` is the frozen minimum owner for the first release-critical social publication adapter.
 - File 21 must implement the diagnostic contract and declare the canonical `sabri_feed_create_posts` capability.
-- Wrong owner, wrong capability, wrong group/privacy class, old declared version, and old actual runtime version are release failures rather than warnings.
+- Wrong owner, wrong capability, wrong group/privacy class, old declared version, old actual runtime version, route-only integration, and missing subject schema are release failures.
 - A duplicate `social_publication` key is not accepted as successful File 21 registration.
 - File 21 fallback removal requires the exact File 20 producer contract and current-user Create visibility; a version string alone is insufficient.
 - WordPress readme no longer declares a stable development tag.
 - Create group order is controlled independently of cross-group adapter priority.
 - Create typography inherits the active Shell or theme instead of forcing a separate font stack.
-- Invalid privacy classifications now hide only the invalid adapter and fail System Check instead of being relabeled.
-- Permission denial and native integration failure now render distinct states.
-- An unavailable native module is no longer reported as a user permission denial.
+- Invalid privacy classifications hide only the invalid adapter and fail System Check instead of being relabeled.
+- Permission denial and native integration failure render distinct states.
 - Create-page inspection is separated from mutation, memoized per request, and reports `ready`, `repairable`, `ambiguous`, or `missing`.
 - Managed-page repair performs one insertion attempt and accepts only an exact validated File 22-owned page.
-- Full workflow operations recheck Safe Mode, Membership Core eligibility, central capability, adapter availability, and adapter-specific authorization rather than trusting a prior gateway decision.
+- Full workflow operations recheck Safe Mode, Membership Core eligibility, central capability, native availability, and adapter-specific authorization rather than trusting a prior gateway decision.
 
 ### Fixed
 
 - Prevented double-prefixing when adapters return a full `dashicons-*` class.
 - Added RTL mirroring for the presentational Continue arrow.
 - Added keyboard-focus fallback in addition to `:focus-visible`.
-- Corrected the isolated PHPStan target after the first Phase 22C run included unrelated Page Resolver WordPress symbols.
 - Corrected insufficient contrast for the Sign In action and explicitly controlled its visited state.
 - Rejected external allow-listed hosts, HTTP downgrade routes, protocol-relative routes, mismatched ports, URL credentials, control characters, and backslashes.
 - Added built-in request-level diagnostics for invalid routes, invalid privacy, unknown groups, and rendering exceptions.
 - Prevented false repair success when WordPress does not persist `supc_create_page_id`.
-- Prevented published posts or custom post types from being treated as Create pages.
+- Prevented published posts or custom post types from being treated as canonical Create pages.
 - Prevented silent first-ID selection when multiple shortcode pages exist.
 - Prevented repeated orphan insertion attempts after managed-page validation failure.
 - Added result-specific administrator notice severity and accessible table captions and column scopes.
@@ -80,5 +94,5 @@
 - Administrator health output excludes user data, content data, native routes, raw exception messages, identity evidence, and clinical information.
 - Repair controls are restricted to File 22-owned Create-page mapping and cannot edit or delete unrelated pages or native-module records.
 - Concurrent File 22 repair requests are serialized by a short-lived atomic lock.
-- Phase 22E does not expose an HTTP endpoint or persist workflow payloads; native exception diagnostics exclude payloads and raw exception messages.
+- Phase 22E exposes no HTTP endpoint and persists no workflow payloads.
 - Native modules remain responsible for secure draft storage, protected evidence, durable idempotency reconciliation, moderation, publication, and canonical records.
