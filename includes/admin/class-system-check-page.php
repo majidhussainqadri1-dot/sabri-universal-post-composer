@@ -59,7 +59,7 @@ final class System_Check_Page {
 		<div class="wrap">
 			<h1><?php echo esc_html__( 'Universal Composer Health', 'sabri-universal-post-composer' ); ?></h1>
 			<p><?php echo esc_html__( 'Read-only health information for File 22 and its registered native-module adapters. No user content, URLs, identity data, or clinical data is displayed.', 'sabri-universal-post-composer' ); ?></p>
-			<p><?php echo esc_html__( 'Static Adapter Health is role-independent. Create-surface invocation diagnostics in System Check are limited to the currently signed-in administrator and do not replace the staging role matrix.', 'sabri-universal-post-composer' ); ?></p>
+			<p><?php echo esc_html__( 'Static adapter and workflow contract health validates the role-neutral base schema. Subject-aware schema support is reported separately. Create-surface invocation diagnostics are limited to the currently signed-in administrator and do not replace the staging role matrix.', 'sabri-universal-post-composer' ); ?></p>
 
 			<?php if ( '' !== $notice['text'] ) : ?>
 				<div class="notice <?php echo esc_attr( 'notice-' . $notice['type'] ); ?> is-dismissible"><p><?php echo esc_html( $notice['text'] ); ?></p></div>
@@ -68,7 +68,7 @@ final class System_Check_Page {
 			<h2><?php echo esc_html__( 'System Check', 'sabri-universal-post-composer' ); ?></h2>
 			<?php $this->render_system_table( $rows ); ?>
 
-			<h2><?php echo esc_html__( 'Static Adapter Health', 'sabri-universal-post-composer' ); ?></h2>
+			<h2><?php echo esc_html__( 'Static Adapter and Workflow Contract Health', 'sabri-universal-post-composer' ); ?></h2>
 			<?php $this->render_adapter_table( $adapter_rows ); ?>
 
 			<h2><?php echo esc_html__( 'Create Page Mapping', 'sabri-universal-post-composer' ); ?></h2>
@@ -231,30 +231,32 @@ final class System_Check_Page {
 				$codes    = array_merge( $codes, $workflow['codes'] );
 
 				$rows[] = array(
-					'key'                    => sanitize_key( $key ),
-					'native_module'          => $native,
-					'api_version'            => sanitize_text_field( $adapter->api_version() ),
-					'workflow_api_version'   => sanitize_text_field( $workflow['workflow_api_version'] ),
-					'supports_native_drafts' => sanitize_text_field( $workflow['supports_native_drafts'] ),
-					'minimum_native'         => $minimum,
-					'group'                  => $group,
-					'privacy'                => $privacy,
-					'status'                 => $status,
-					'codes'                  => implode( ', ', array_values( array_unique( $codes ) ) ),
+					'key'                      => sanitize_key( $key ),
+					'native_module'            => $native,
+					'api_version'              => sanitize_text_field( $adapter->api_version() ),
+					'workflow_api_version'     => sanitize_text_field( $workflow['workflow_api_version'] ),
+					'supports_native_drafts'   => sanitize_text_field( $workflow['supports_native_drafts'] ),
+					'subject_schema_extension' => sanitize_text_field( $workflow['subject_schema_extension'] ),
+					'minimum_native'           => $minimum,
+					'group'                    => $group,
+					'privacy'                  => $privacy,
+					'status'                   => $status,
+					'codes'                    => implode( ', ', array_values( array_unique( $codes ) ) ),
 				);
 			} catch ( Throwable $error ) {
 				unset( $error );
 				$rows[] = array(
-					'key'                    => sanitize_key( $key ),
-					'native_module'          => '',
-					'api_version'            => '',
-					'workflow_api_version'   => '',
-					'supports_native_drafts' => '',
-					'minimum_native'         => '',
-					'group'                  => '',
-					'privacy'                => '',
-					'status'                 => 'fail',
-					'codes'                  => 'diagnostic_exception',
+					'key'                      => sanitize_key( $key ),
+					'native_module'            => '',
+					'api_version'              => '',
+					'workflow_api_version'     => '',
+					'supports_native_drafts'   => '',
+					'subject_schema_extension' => '',
+					'minimum_native'           => '',
+					'group'                    => '',
+					'privacy'                  => '',
+					'status'                   => 'fail',
+					'codes'                    => 'diagnostic_exception',
 				);
 			}
 		}
@@ -293,11 +295,11 @@ final class System_Check_Page {
 		}
 		?>
 		<table class="widefat striped">
-			<caption class="screen-reader-text"><?php echo esc_html__( 'Role-independent static adapter and workflow contract health', 'sabri-universal-post-composer' ); ?></caption>
-			<thead><tr><th scope="col"><?php echo esc_html__( 'Adapter', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Native Module', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'API', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Workflow API', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Native Drafts', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Minimum Native', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Group', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Privacy', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Status', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Codes', 'sabri-universal-post-composer' ); ?></th></tr></thead>
+			<caption class="screen-reader-text"><?php echo esc_html__( 'Role-independent static adapter and workflow contract health with subject-aware schema support', 'sabri-universal-post-composer' ); ?></caption>
+			<thead><tr><th scope="col"><?php echo esc_html__( 'Adapter', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Native Module', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'API', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Workflow API', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Native Drafts', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Subject Schema', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Minimum Native', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Group', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Privacy', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Status', 'sabri-universal-post-composer' ); ?></th><th scope="col"><?php echo esc_html__( 'Codes', 'sabri-universal-post-composer' ); ?></th></tr></thead>
 			<tbody>
 			<?php foreach ( $rows as $row ) : ?>
-				<tr><td><code><?php echo esc_html( $row['key'] ); ?></code></td><td><code><?php echo esc_html( $row['native_module'] ); ?></code></td><td><?php echo esc_html( $row['api_version'] ); ?></td><td><?php echo esc_html( $row['workflow_api_version'] ); ?></td><td><?php echo esc_html( $row['supports_native_drafts'] ); ?></td><td><?php echo esc_html( $row['minimum_native'] ); ?></td><td><?php echo esc_html( $row['group'] ); ?></td><td><?php echo esc_html( $row['privacy'] ); ?></td><td><?php echo esc_html( strtoupper( $row['status'] ) ); ?></td><td><?php echo esc_html( $row['codes'] ); ?></td></tr>
+				<tr><td><code><?php echo esc_html( $row['key'] ); ?></code></td><td><code><?php echo esc_html( $row['native_module'] ); ?></code></td><td><?php echo esc_html( $row['api_version'] ); ?></td><td><?php echo esc_html( $row['workflow_api_version'] ); ?></td><td><?php echo esc_html( $row['supports_native_drafts'] ); ?></td><td><?php echo esc_html( $row['subject_schema_extension'] ); ?></td><td><?php echo esc_html( $row['minimum_native'] ); ?></td><td><?php echo esc_html( $row['group'] ); ?></td><td><?php echo esc_html( $row['privacy'] ); ?></td><td><?php echo esc_html( strtoupper( $row['status'] ) ); ?></td><td><?php echo esc_html( $row['codes'] ); ?></td></tr>
 			<?php endforeach; ?>
 			</tbody>
 		</table>
