@@ -1,6 +1,6 @@
 <?php
 /**
- * Optional full workflow adapter contract.
+ * Full native workflow orchestration contract.
  *
  * @package SabriUniversalPostComposer
  */
@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Used when File 22 directly orchestrates native drafts and submission.
  */
 interface Workflow_Adapter extends Adapter {
+	public function workflow_api_version(): string;
+
 	public function schema_version(): string;
 
 	public function supports_native_drafts(): bool;
@@ -56,5 +58,9 @@ interface Workflow_Adapter extends Adapter {
 	 */
 	public function status( int $user_id, string $native_reference );
 
-	public function canonical_url( string $native_reference ): string;
+	/**
+	 * Resolve a canonical URL only after native ownership/visibility checks for
+	 * the authenticated subject.
+	 */
+	public function canonical_url( int $user_id, string $native_reference ): string;
 }

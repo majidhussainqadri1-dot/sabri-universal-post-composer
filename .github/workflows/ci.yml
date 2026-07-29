@@ -130,6 +130,7 @@ jobs:
             includes/core/class-safe-mode.php
             includes/core/class-plugin.php
             includes/core/class-registry.php
+            includes/core/class-workflow-coordinator.php
             includes/core/functions.php
             includes/presentation/class-create-surface.php
             includes/integration/class-shell-bridge.php
@@ -140,6 +141,8 @@ jobs:
             tests/AccessibilityContrastTest.php
             tests/AdminSystemCheckTest.php
             tests/PageResolverRepairTest.php
+            tests/WorkflowCoordinatorTest.php
+            tests/phpstan-wordpress-stubs.php
             docs/ARCHITECTURE.md docs/ADAPTER-CONTRACT.md docs/DECISION-LOG.md docs/SECURITY.md
             docs/PRIVACY.md docs/ACCESSIBILITY.md docs/MIGRATION.md docs/ROLLBACK.md
             docs/STAGING-ACCEPTANCE.md docs/COMPATIBILITY-MATRIX.md docs/ERROR-CODES.md
@@ -154,12 +157,16 @@ jobs:
             docs/PHASE-22D-POST-CORRECTION-VERIFICATION-2026-07-29.md
             docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
             docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md
+            docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md
+            docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
+            docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
           done
           grep -q 'Plugin Name: Sabri Universal Post Composer' sabri-universal-post-composer.php
           grep -q "define( 'SUPC_ADAPTER_API_VERSION'" sabri-universal-post-composer.php
+          grep -q "define( 'SUPC_WORKFLOW_API_VERSION'" sabri-universal-post-composer.php
           grep -q 'One canonical native record' README.md
           grep -q 'social_publication' docs/FILE21-INTEGRATION.md
           grep -q 'Post-Implementation Review' docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
@@ -184,6 +191,16 @@ jobs:
           grep -q 'REPAIR_LOCK_OPTION' includes/core/class-page-resolver.php
           grep -q 'scope="col"' includes/admin/class-system-check-page.php
           grep -q 'Static Adapter Health' includes/admin/class-system-check-page.php
-          grep -q 'includes/admin/class-system-check-page.php' MANIFEST.md
-          grep -q 'docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md' MANIFEST.md
-          grep -q 'docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md' MANIFEST.md
+          grep -q 'workflow_api_version' includes/contracts/interface-workflow-adapter.php
+          grep -q 'class Workflow_Coordinator' includes/core/class-workflow-coordinator.php
+          grep -q 'native_drafts_unsupported' includes/core/class-workflow-coordinator.php
+          grep -q 'supc_native_workflow_error' includes/core/class-workflow-coordinator.php
+          grep -q 'IDEMPOTENCY_PATTERN' includes/core/class-workflow-coordinator.php
+          grep -q 'MAX_PREVIEW_TTL' includes/core/class-workflow-coordinator.php
+          grep -q 'supc_workflow_submit' includes/core/functions.php
+          grep -q 'Guarded Native Workflow Orchestration Foundation' docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md
+          grep -q 'Phase 22E Post-Implementation Review' docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
+          grep -q 'Phase 22E Post-Correction Verification' docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md
+          grep -q 'includes/core/class-workflow-coordinator.php' MANIFEST.md
+          grep -q 'docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md' MANIFEST.md
+          grep -q 'docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md' MANIFEST.md

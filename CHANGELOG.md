@@ -29,6 +29,11 @@
 - Explicit administrator selection when multiple valid Create-page candidates exist.
 - Short-lived atomic Create-page repair lock and post-insert ownership validation.
 - PHPUnit contracts for option-write failure, ambiguity, non-page mappings, repair locking, slug mutation, ownership metadata, one-attempt insertion, inspection memoization, and administrator-table accessibility.
+- Phase 22E guarded server-side `Workflow_Adapter` coordinator for schema, native drafts, validation, preview, idempotent submission, status, and canonical URL operations.
+- Public PHP workflow integration functions and a two-UUID idempotency-key generator.
+- Payload type, nesting, and 1 MiB encoded-size boundaries before native invocation.
+- Controlled native-reference, workflow-status, preview URL, and canonical URL result validation.
+- PHPUnit contracts for authorization, payload safety, idempotency, same-origin URLs, native exceptions, and invalid native statuses.
 
 ### Changed
 
@@ -47,6 +52,7 @@
 - An unavailable native module is no longer reported as a user permission denial.
 - Create-page inspection is separated from mutation, memoized per request, and reports `ready`, `repairable`, `ambiguous`, or `missing`.
 - Managed-page repair performs one insertion attempt and accepts only an exact validated File 22-owned page.
+- Full workflow operations recheck Safe Mode, Membership Core eligibility, central capability, adapter availability, and adapter-specific authorization rather than trusting a prior gateway decision.
 
 ### Fixed
 
@@ -74,3 +80,5 @@
 - Administrator health output excludes user data, content data, native routes, raw exception messages, identity evidence, and clinical information.
 - Repair controls are restricted to File 22-owned Create-page mapping and cannot edit or delete unrelated pages or native-module records.
 - Concurrent File 22 repair requests are serialized by a short-lived atomic lock.
+- Phase 22E does not expose an HTTP endpoint or persist workflow payloads; native exception diagnostics exclude payloads and raw exception messages.
+- Native modules remain responsible for secure draft storage, protected evidence, durable idempotency reconciliation, moderation, publication, and canonical records.
