@@ -1,4 +1,4 @@
-# Source Manifest — Phases 22A–22E
+# Source Manifest — Cumulative Phases 22A–22E Corrections
 
 ## Runtime
 
@@ -56,18 +56,35 @@
 - `docs/STAGING-ACCEPTANCE.md`
 - `docs/SYSTEM-CHECK.md`
 
-## Development-only files
+Historical Phase 22E review records remain immutable evidence for the earlier Phase 22E runtime. They do not approve the cumulative corrective runtime and are explicitly superseded by the forthcoming cumulative independent review and post-correction verification.
 
-- `.github/`
+## Development and QA files
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/corrective-lock-sync.yml`
+- `.github/workflows/phase22d-review-evidence.yml`
+- `.github/workflows/phase22e-review-evidence.yml`
 - `composer.json`
+- `composer.lock`
 - `phpcs.xml.dist`
 - `phpstan.neon.dist`
 - `phpunit.xml.dist`
-- `tests/`
+- `tests/bootstrap.php`
 - `tests/workflow-bootstrap.php`
+- `tests/AccessibilityContrastTest.php`
+- `tests/AdminSystemCheckTest.php`
+- `tests/CoreAdapterRequirementsTest.php`
+- `tests/CreateSurfaceTest.php`
+- `tests/PageResolverRepairTest.php`
+- `tests/PluginPrivacyTest.php`
+- `tests/RegistryTest.php`
+- `tests/SubjectSchemaTest.php`
+- `tests/WorkflowCoordinatorTest.php`
+- `tests/run-public-api-collision-test.php`
+- `tests/phpstan-wordpress-stubs.php`
 
-Development-only files are excluded from a future production ZIP by `.distignore`.
+Development files are excluded from a future production ZIP according to `.distignore`. The committed Composer lock freezes development-tool resolution for exact-head QA.
 
 ## Release boundary
 
-A release ZIP, SHA-256 checksum, machine-generated exact package manifest, staging acceptance record, and production approval have not been declared. Phases 22A, 22B, 22C, 22D, and 22E remain stacked development Drafts and must pass their merge order, cross-plugin staging, Founder acceptance, backup, and rollback gates before release packaging.
+No release ZIP, production checksum, machine-generated package manifest, staging acceptance record, or production approval has been declared. Draft PR #6 targets canonical `main` and remains unmerged. Files 00/20/21/22 staging, complete role/IDOR/cache/browser/accessibility/RTL acceptance, backup restoration, rollback proof, independent cumulative review, post-correction verification, and explicit Founder authorization remain mandatory.
