@@ -11,7 +11,7 @@ namespace Sabri\UniversalComposer\Core;
 
 use Sabri\UniversalComposer\Integration\Core_Adapter_Requirements;
 use Sabri\UniversalComposer\Integration\Shell_Bridge;
-use Throwable;
+use Sabri\UniversalComposer\Presentation\Create_Surface;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -22,10 +22,13 @@ final class Plugin {
 
 	private Registry $registry;
 
+	private Create_Surface $create_surface;
+
 	private bool $booted = false;
 
 	private function __construct() {
-		$this->registry = new Registry( new Permission_Resolver() );
+		$this->registry       = new Registry( new Permission_Resolver() );
+		$this->create_surface = new Create_Surface( $this->registry );
 	}
 
 	public static function instance(): self {
@@ -50,6 +53,7 @@ final class Plugin {
 		add_filter( 'wp_robots', array( $this, 'filter_create_robots' ) );
 		add_filter( 'supc_system_check_report', array( $this, 'append_system_check' ) );
 
+		$this->create_surface->register();
 		( new Shell_Bridge( $this->registry ) )->register();
 		( new Core_Adapter_Requirements( $this->registry ) )->register();
 		do_action( 'supc_booted', $this->registry );
@@ -69,63 +73,7 @@ final class Plugin {
 	}
 
 	public function render_shortcode(): string {
-		if ( Safe_Mode::disabled() ) {
-			return '<div class="supc-notice supc-notice--disabled"><p>'
-				. esc_html__( 'Content creation is temporarily unavailable.', 'sabri-universal-post-composer' )
-				. '</p></div>';
-		}
-
-		if ( ! is_user_logged_in() ) {
-			$login_url = wp_login_url( Page_Resolver::url() );
-			return sprintf(
-				'<div class="supc-notice supc-notice--login"><p>%1$s</p><p><a class="button" href="%2$s">%3$s</a></p></div>',
-				esc_html__( 'Sign in to create authorized platform content.', 'sabri-universal-post-composer' ),
-				esc_url( $login_url ),
-				esc_html__( 'Sign In', 'sabri-universal-post-composer' )
-			);
-		}
-
-		$user_id   = get_current_user_id();
-		$available = $this->registry->available_for_user( $user_id );
-		if ( array() === $available ) {
-			return '<div class="supc-notice supc-notice--empty"><p>'
-				. esc_html__( 'No authorized content type is currently available for this account.', 'sabri-universal-post-composer' )
-				. '</p></div>';
-		}
-
-		$items = '';
-		foreach ( $available as $key => $adapter ) {
-			try {
-				$url = wp_validate_redirect( $adapter->start_url( $user_id ), '' );
-				if ( '' === $url ) {
-					do_action( 'supc_adapter_invalid_start_url', $key );
-					continue;
-				}
-
-				$items .= sprintf(
-					'<li class="supc-type" data-supc-type="%1$s"><a class="supc-type-link" href="%2$s"><span class="supc-type-label">%3$s</span><span class="supc-type-description">%4$s</span></a></li>',
-					esc_attr( $key ),
-					esc_url( $url ),
-					esc_html( $adapter->label() ),
-					esc_html( $adapter->description() )
-				);
-			} catch ( Throwable $error ) {
-				do_action( 'supc_adapter_render_error', $key, get_class( $error ) );
-			}
-		}
-
-		if ( '' === $items ) {
-			return '<div class="supc-notice supc-notice--empty"><p>'
-				. esc_html__( 'No creation route is currently available.', 'sabri-universal-post-composer' )
-				. '</p></div>';
-		}
-
-		$heading_id = wp_unique_id( 'supc-heading-' );
-		return '<section class="supc-shell" aria-labelledby="' . esc_attr( $heading_id ) . '">'
-			. '<h2 id="' . esc_attr( $heading_id ) . '">' . esc_html__( 'Create', 'sabri-universal-post-composer' ) . '</h2>'
-			. '<p>' . esc_html__( 'Choose an authorized content type. The native module remains the permanent data owner.', 'sabri-universal-post-composer' ) . '</p>'
-			. '<ul class="supc-type-list">' . $items . '</ul>'
-			. '</section>';
+		return $this->create_surface->render();
 	}
 
 	public function protect_create_surface(): void {
@@ -169,6 +117,7 @@ final class Plugin {
 			'status' => array() === $this->registry->errors() ? 'pass' : 'warning',
 			'count'  => count( $this->registry->errors() ),
 		);
+		$rows[] = $this->create_surface->system_check_row( get_current_user_id() );
 		return $rows;
 	}
 }

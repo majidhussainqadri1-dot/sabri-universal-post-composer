@@ -1,4 +1,4 @@
-# Source Manifest — Phase 22A
+# Source Manifest — Phases 22A–22C
 
 ## Runtime
 
@@ -14,6 +14,9 @@
 - `includes/core/class-plugin.php`
 - `includes/core/functions.php`
 - `includes/integration/class-shell-bridge.php`
+- `includes/integration/class-core-adapter-requirements.php`
+- `includes/presentation/class-create-surface.php`
+- `assets/css/create-surface.css`
 
 ## Public documentation
 
@@ -21,7 +24,25 @@
 - `readme.txt`
 - `LICENSE.md`
 - `CHANGELOG.md`
-- `docs/`
+- `docs/ARCHITECTURE.md`
+- `docs/ADAPTER-CONTRACT.md`
+- `docs/ACCESSIBILITY.md`
+- `docs/COMPATIBILITY-MATRIX.md`
+- `docs/DECISION-LOG.md`
+- `docs/ERROR-CODES.md`
+- `docs/FILE21-INTEGRATION.md`
+- `docs/MASTER-PLAN-AMENDMENT-v2.1.md`
+- `docs/MIGRATION.md`
+- `docs/PHASE-22C-CREATE-SURFACE.md`
+- `docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
+- `docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md`
+- `docs/PHASE-22C-POST-CORRECTION-VERIFICATION-2026-07-29.md`
+- `docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
+- `docs/PRIVACY.md`
+- `docs/ROLLBACK.md`
+- `docs/SECURITY.md`
+- `docs/STAGING-ACCEPTANCE.md`
+- `docs/SYSTEM-CHECK.md`
 
 ## Development-only files
 
@@ -32,4 +53,8 @@
 - `phpunit.xml.dist`
 - `tests/`
 
-Development-only files are excluded from a future production ZIP by `.distignore`. A release ZIP, SHA-256 checksum, and machine-generated exact file manifest have not yet been declared because this PR remains a development draft.
+Development-only files are excluded from a future production ZIP by `.distignore`.
+
+## Release boundary
+
+A release ZIP, SHA-256 checksum, machine-generated exact package manifest, staging acceptance record, and production approval have not been declared. Phases 22A, 22B, and 22C remain stacked development Drafts and must pass their merge order, cross-plugin staging, Founder acceptance, backup, and rollback gates before release packaging.

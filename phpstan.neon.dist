@@ -6,6 +6,7 @@ parameters:
         - includes/core/class-safe-mode.php
         - includes/core/class-permission-resolver.php
         - includes/core/class-registry.php
+        - includes/presentation/class-create-surface.php
         - includes/integration/class-core-adapter-requirements.php
     bootstrapFiles:
         - tests/bootstrap.php
