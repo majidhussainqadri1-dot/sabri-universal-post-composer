@@ -4,170 +4,161 @@ Every content type is owned by a native module. File 22 coordinates discovery an
 
 ## Base Adapter
 
-The base adapter supplies:
+The base adapter supplies exact API version, canonical key, label, description, group, icon, deterministic priority, native owner and minimum version, central capability, privacy class, native availability, adapter-specific authorization, and a safe native start route.
 
-- exact adapter API version;
-- canonical machine key;
-- label and description;
-- group, icon, and deterministic priority;
-- native module identifier and minimum version;
-- central required capability;
-- privacy classification;
-- native availability;
-- adapter-specific authorization restriction;
-- safe start URL.
+The canonical key must match `^[a-z][a-z0-9_]{2,63}$`. Invalid and duplicate keys fail closed.
 
-The canonical key must match `^[a-z][a-z0-9_]{2,63}$`. Invalid keys are rejected, never silently rewritten.
+## Authorization and availability separation
+
+For an eligible authenticated subject, File 22 resolves an adapter in this order:
+
+1. File 22/File 20 Safe Mode;
+2. valid subject and canonical key;
+3. Membership Core eligibility;
+4. registered adapter/workflow metadata;
+5. exact API version;
+6. central WordPress capability;
+7. native `is_available()`;
+8. adapter-specific `can_create()`;
+9. requested native operation.
+
+A native service that is offline, disabled, missing a required class, or missing its route is `unavailable`, not `permission denied`. Adapter policy may narrow permission but cannot expand a central denial. Rejected, suspended, expired-document, roleless, logged-out, or otherwise ineligible subjects do not execute native adapter methods.
 
 ## Workflow Adapter
 
 A full workflow adapter additionally supplies:
 
-- exact direct workflow API version;
-- schema version;
-- native-draft support declaration;
-- versioned schema;
-- create or resume draft with an explicit native reference;
-- side-effect-free validation;
+- exact Workflow API version;
+- schema version and native-draft declaration;
+- role-neutral static schema;
+- create/resume draft;
+- validation;
 - private preview;
 - idempotent submission;
-- native status mapping;
-- subject-aware canonical URL resolution.
+- native status;
+- subject-aware canonical URL.
 
-Phase 22E exposes these operations only through guarded server-side PHP functions. It does not expose a REST, AJAX, or form endpoint.
+`workflow_api_version()` must equal `SUPC_WORKFLOW_API_VERSION` (`1.0.0`). Workflow API, central capability, and native-draft support are captured at registration.
 
-`workflow_api_version()` must exactly equal `SUPC_WORKFLOW_API_VERSION`. The current frozen value is `1.0.0`. Workflow API version, required capability, and native-draft support are captured as registration-time metadata so central authorization can run before native runtime methods.
+Phase 22E exposes only guarded server-side PHP functions. It does not expose REST, AJAX, or a browser write controller.
+
+## Public PHP API ownership
+
+The complete `supc_*` function family is owned only when all of these markers agree:
+
+- `SUPC_PUBLIC_API_VERSION = 1.0.0`;
+- `SUPC_PUBLIC_API_OWNER = sabri-universal-post-composer`;
+- `SUPC_PUBLIC_API_FUNCTIONS_OWNED = true`.
+
+Any pre-existing function or marker collision prevents the entire File 22 public function family from being declared. A partial mixed-version API is prohibited. Interactive functions bind to `get_current_user_id()`. The backward-compatible subject parameter on `supc_adapter_available()` is ignored and cannot query another account.
 
 ## Authenticated-subject boundary
 
-Public interactive workflow functions do not accept a user ID. They bind to `get_current_user_id()`.
+Public workflow functions accept no user ID. A future service/background API must be separate, capability-protected, auditable, and independently reviewed.
 
-A future privileged background or service execution contract must be separate, explicitly capability-protected, and auditable. It must not reuse the interactive functions to impersonate another account.
+`canonical_url()` receives `( int $user_id, string $native_reference )`. The native owner must enforce ownership or visibility. An opaque reference is never authorization proof.
 
-`canonical_url()` has the contract:
+## Static and subject-aware schema contract
+
+`schema()` is a role-neutral, data-free static contract. Static System Check always validates this base declaration and never borrows the current administrator as a representative subject.
+
+A release-critical role-dependent adapter may additionally expose:
 
 ```php
-canonical_url( int $user_id, string $native_reference ): string
+schema_for_user( int $user_id ): array
 ```
 
-The native owner must verify ownership or visibility for that authenticated subject. An empty string is returned on native denial and File 22 converts it into a controlled error. Guessing another user's reference must never disclose its URL.
+File 22 advertises this optional extension through `SUPC_SUBJECT_SCHEMA_API_VERSION = 1.0.0`. Interactive schema retrieval and payload validation use `schema_for_user()` when available. File 21 must use it so Founder/Administrator-only publication types never appear in a doctor's schema.
 
-## Authorization and availability order
-
-Runtime operations use this order:
-
-1. File 22/File 20 Safe Mode;
-2. valid authenticated subject and canonical adapter key;
-3. Membership Core account eligibility;
-4. registered workflow contract snapshot;
-5. exact workflow API version;
-6. central required capability;
-7. adapter-specific authorization;
-8. native availability;
-9. requested native operation.
-
-A suspended, rejected, expired-document, or otherwise ineligible account must not cause native adapter runtime methods to execute. An adapter may narrow central permission but cannot broaden it.
+Both schema variants must use the same `schema_version()` and normalized field vocabulary.
 
 ## Schema envelope
 
-`schema()` must return `version` and `fields`. The encoded schema may not exceed 256 KiB. File 22 returns only normalized `version` and `fields`.
+A schema contains only `version` and `fields`, is at most 256 KiB, contains at most 100 fields, and uses canonical field keys.
 
-A schema may contain at most 100 fields. Field keys must be canonical. Allowed field types are:
+Allowed types:
 
-- `text`;
-- `textarea`;
-- `select`;
-- `multiselect`;
-- `checkbox`;
-- `number`;
-- `date`;
-- `datetime`;
-- `url`;
-- `email`;
+- `text`, `textarea`;
+- `select`, `multiselect`;
+- `checkbox`, `number`;
+- `date`, `datetime`;
+- `url`, `email`;
 - `opaque_reference`.
 
-Allowed field properties are limited to:
+Allowed properties:
 
 - `type`;
-- `label_code`;
-- `description_code`;
+- `label_code`, optional `description_code`;
 - `required`;
-- `privacy_class`;
-- `minimum`;
-- `maximum`;
-- `choices`.
+- `privacy_class` (`public`, `private`, or `sensitive`);
+- numeric `minimum`/`maximum`;
+- bounded canonical `choices`.
 
-`privacy_class` must be `public`, `private`, or `sensitive`. Labels and descriptions are canonical codes rather than arbitrary native prose. Data-bearing defaults, raw HTML, arbitrary metadata, unsupported nested structures, invalid numeric bounds, more than 100 choices, and unknown properties are rejected.
+Unknown properties, data-bearing defaults, raw HTML, arbitrary metadata, malformed codes, invalid bounds, unsupported nesting, more than 100 choices, and oversized schemas are rejected.
 
-## Draft envelope
+## Schema-bound payload enforcement
 
-`create_draft()` may be called only when the registration-time `supports_native_drafts` contract is true. The native result must explicitly contain:
+Before native mutation, File 22 enforces the authenticated subject's schema:
 
-- valid opaque `native_reference`;
-- `status`, limited to `draft` or `pending_review`.
+- undeclared fields are rejected;
+- required fields are enforced for validate, preview, and submit;
+- values must match their declared scalar/array type;
+- select/multiselect values must exist in `choices`;
+- numeric bounds are enforced;
+- email, URL, date, datetime, checkbox, and opaque-reference formats are validated;
+- objects, resources, closures, non-finite floats, excessive nesting, and encoded payloads over 1 MiB are rejected.
 
-A missing status and publication/scheduling/failure statuses are invalid for draft creation. File 22 does not create a shadow draft.
+`create_draft()` may accept a partial payload, but every supplied field must still be declared and type-valid. Files and protected evidence remain in native storage and are represented only by opaque references or separately reviewed secure upload tokens.
 
-## Validation envelope
+## Draft, validation, preview, submission, and status envelopes
 
-`validate()` must return a boolean `valid` value. Optional `errors` and `warnings` must be canonical bounded code collections, not free-form messages or payload values.
+Draft result:
 
-The normalized result contains only `valid`, `errors`, and `warnings`.
+- valid `native_reference`;
+- explicit status `draft` or `pending_review`.
 
-## Preview envelope
+Validation result:
 
-`preview()` must return:
+- boolean `valid`;
+- bounded canonical `errors` and `warnings` codes only.
 
-- `preview_url`, as a relative internal path or absolute same-origin HTTPS URL;
-- integer `expires_at`, in the future and no more than 30 minutes from the orchestration call.
+Preview result:
 
-Raw preview HTML and long-lived preview URLs are not accepted.
+- relative internal or absolute same-origin HTTPS URL;
+- integer future expiry no more than 30 minutes from the call.
 
-## Submission and status envelopes
+Submit/status result:
 
-`submit()` and `status()` must return:
+- valid native reference;
+- status limited to `draft`, `pending_review`, `scheduled`, `published`, `rejected`, or `failed`;
+- optional same-origin HTTPS canonical URL.
 
-- `native_reference`;
-- one controlled status: `draft`, `pending_review`, `scheduled`, `published`, `rejected`, or `failed`;
-- optional same-origin HTTPS `canonical_url`.
-
-Only these approved keys are returned. The encoded native result may not exceed 1 MiB.
+File 22 returns only whitelisted envelope fields. Native payloads, arbitrary result metadata, preview HTML, and unsafe URLs are discarded or rejected.
 
 ## Native errors and diagnostics
 
-A native `WP_Error` must not expose a payload, patient narrative, filesystem path, stack detail, secret, or data-bearing error code.
+Allowed native public codes are limited to:
 
-File 22 exposes only this fixed native-error vocabulary:
+`permission_denied`, `validation_failed`, `conflict`, `rate_limited`, `temporarily_unavailable`, `not_found`, `expired`, and `invalid_reference`.
 
-- `permission_denied`;
-- `validation_failed`;
-- `conflict`;
-- `rate_limited`;
-- `temporarily_unavailable`;
-- `not_found`;
-- `expired`;
-- `invalid_reference`.
+Every other native-controlled code becomes `native_error`. Native messages/data, exception class/message, stack, path, SQL, secrets, identities, patient narratives, and full payloads are never emitted.
 
-Every other native-controlled error code becomes `native_error`. Raw native messages and data are discarded.
+## File 21 release-critical contract
 
-Native exception class names are not published. Exception diagnostics use only the canonical adapter key, controlled operation key, and fixed `native_exception` code.
+The `social_publication` adapter is release-ready only when it provides:
 
-## Diagnostic Adapter and System Check
+- exact File 21 owner, version, capability, group, and privacy class;
+- `Diagnostic_Adapter` and full `Workflow_Adapter`;
+- native draft support;
+- valid role-neutral static schema;
+- subject-aware schema extension;
+- working native availability and route;
+- privacy-safe health report.
 
-A diagnostic adapter may expose a privacy-safe health report. Reports must never contain full unpublished bodies, identity evidence, consent evidence, patient narratives, secrets, or encryption keys.
+A route-only or incomplete adapter is a release failure, not a healthy integration.
 
-Static Adapter Health additionally verifies direct workflow API compatibility, native-draft declaration, and strict schema compatibility without using a user's draft or content payload.
+## Idempotency and ownership
 
-## Payload safety
+Final submission uses two UUID-v4 values separated by a colon. The native owner provides durable reconciliation: same key and same payload returns the existing result; same key and conflicting payload fails; retries never create duplicate native records.
 
-Direct workflow payloads may contain only scalar values, `null`, and nested arrays within the controlled depth and 1 MiB encoded-size limits. Files and protected evidence must remain in native storage and be represented only by opaque native references or secure upload tokens.
-
-## Idempotency
-
-Final submission uses an immutable key consisting of two UUID-v4 values separated by a colon. File 22 may generate the key and forwards it unchanged.
-
-The native owner is responsible for durable reconciliation. If a native object exists but the File 22 response was lost, repeating the same key returns the existing mapping instead of creating another object. A key reused with a conflicting payload must fail safely under the native owner's durable contract.
-
-## Prohibited behavior
-
-An adapter must not grant permissions independently, duplicate native records, expose unsafe content, store protected evidence in generic File 22 storage, claim publication before a durable native result, convert retries into duplicates, return arbitrary extra native data, expose another subject's reference, encode private information into an error code, or expose direct HTTP workflow handlers without separate nonce, CSRF, authenticated-subject, rate-limit, and request-method controls.
+File 22 must never grant permission independently, duplicate native drafts/posts/media/moderation records, retain protected evidence, expose another subject's reference, or claim publication before a durable native result.
