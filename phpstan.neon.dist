@@ -1,0 +1,11 @@
+parameters:
+    level: 6
+    treatPhpDocTypesAsCertain: false
+    paths:
+        - includes/contracts
+        - includes/core/class-safe-mode.php
+        - includes/core/class-permission-resolver.php
+        - includes/core/class-registry.php
+    bootstrapFiles:
+        - tests/bootstrap.php
+    reportUnmatchedIgnoredErrors: false
