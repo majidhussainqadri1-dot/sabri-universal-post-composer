@@ -1,0 +1,96 @@
+name: File 22 Corrective Calendar Patch
+
+on:
+  push:
+    branches:
+      - fix/file22-cumulative-post-merge-corrections
+    paths:
+      - .github/workflows/corrective-calendar-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.repository == 'majidhussainqadri1-dot/sabri-universal-post-composer' && github.actor == 'majidhussainqadri1-dot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: fix/file22-cumulative-post-merge-corrections
+          fetch-depth: 0
+      - name: Apply exact reviewed replacements
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          coordinator = Path('includes/core/class-workflow-coordinator.php')
+          text = coordinator.read_text()
+          old = """\t\tif ( 'date' === $type ) {\n\t\t\treturn is_string( $value ) && ( '' === $value || 1 === preg_match( '/^\\d{4}-\\d{2}-\\d{2}$/', $value ) );\n\t\t}\n\t\tif ( 'datetime' === $type ) {\n\t\t\treturn is_string( $value ) && ( '' === $value || 1 === preg_match( '/^\\d{4}-\\d{2}-\\d{2}[T ][0-2]\\d:[0-5]\\d(?::[0-5]\\d)?(?:Z|[+-][0-2]\\d:[0-5]\\d)?$/', $value ) );\n\t\t}\n"""
+          new = """\t\tif ( 'date' === $type ) {\n\t\t\treturn is_string( $value ) && ( '' === $value || $this->valid_date_value( $value ) );\n\t\t}\n\t\tif ( 'datetime' === $type ) {\n\t\t\treturn is_string( $value ) && ( '' === $value || $this->valid_datetime_value( $value ) );\n\t\t}\n"""
+          if text.count(old) != 1:
+              raise SystemExit('Expected date/datetime validation block was not found exactly once.')
+          text = text.replace(old, new)
+
+          anchor = """\t/**\n\t * @param array<string, mixed> $definition Normalized field definition.\n\t */\n\tprivate function required_value_is_empty"""
+          helpers = r"""	private function valid_date_value( string $value ): bool {
+		$date = \DateTimeImmutable::createFromFormat( '!Y-m-d', $value, new \DateTimeZone( 'UTC' ) );
+		$errors = \DateTimeImmutable::getLastErrors();
+		return false !== $date
+			&& ( false === $errors || ( 0 === $errors['warning_count'] && 0 === $errors['error_count'] ) )
+			&& $date->format( 'Y-m-d' ) === $value;
+	}
+
+	private function valid_datetime_value( string $value ): bool {
+		$formats = array(
+			'!Y-m-d\\TH:i', '!Y-m-d\\TH:i:s', '!Y-m-d H:i', '!Y-m-d H:i:s',
+			'!Y-m-d\\TH:i\\Z', '!Y-m-d\\TH:i:s\\Z',
+			'!Y-m-d\\TH:iP', '!Y-m-d\\TH:i:sP',
+		);
+		foreach ( $formats as $format ) {
+			$date = \DateTimeImmutable::createFromFormat( $format, $value, new \DateTimeZone( 'UTC' ) );
+			$errors = \DateTimeImmutable::getLastErrors();
+			if ( false === $date || ( false !== $errors && ( $errors['warning_count'] > 0 || $errors['error_count'] > 0 ) ) ) {
+				continue;
+			}
+			$output_format = str_starts_with( $format, '!' ) ? substr( $format, 1 ) : $format;
+			if ( $date->format( $output_format ) === $value ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+""" + anchor
+          if text.count(anchor) != 1:
+              raise SystemExit('Expected helper insertion anchor was not found exactly once.')
+          text = text.replace(anchor, helpers)
+          coordinator.write_text(text)
+
+          test = Path('tests/WorkflowCoordinatorTest.php')
+          t = test.read_text()
+          old_fields = """\t\t\t'amount'   => array( 'type' => 'number', 'label_code' => 'amount_label', 'required' => false, 'privacy_class' => 'private', 'minimum' => 1, 'maximum' => 5 ),\n\t\t);\n"""
+          new_fields = """\t\t\t'amount'   => array( 'type' => 'number', 'label_code' => 'amount_label', 'required' => false, 'privacy_class' => 'private', 'minimum' => 1, 'maximum' => 5 ),\n\t\t\t'case_date' => array( 'type' => 'date', 'label_code' => 'case_date', 'required' => false, 'privacy_class' => 'private' ),\n\t\t\t'case_time' => array( 'type' => 'datetime', 'label_code' => 'case_time', 'required' => false, 'privacy_class' => 'private' ),\n\t\t);\n"""
+          if t.count(old_fields) != 1:
+              raise SystemExit('Expected schema test field block was not found exactly once.')
+          t = t.replace(old_fields, new_fields)
+
+          old_assert = """\t\t$this->assertIsArray( $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'amount' => 3 ) ) );\n\t}\n"""
+          new_assert = """\t\t$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'case_date' => '2026-02-30' ) )->code );\n\t\t$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'case_time' => '2026-07-29T29:10' ) )->code );\n\t\t$this->assertIsArray( $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'amount' => 3, 'case_date' => '2028-02-29', 'case_time' => '2026-07-29T23:10:45+05:00' ) ) );\n\t}\n"""
+          if t.count(old_assert) != 1:
+              raise SystemExit('Expected schema assertion block was not found exactly once.')
+          test.write_text(t.replace(old_assert, new_assert))
+          PY
+          php -l includes/core/class-workflow-coordinator.php
+          php -l tests/WorkflowCoordinatorTest.php
+      - name: Commit exact patch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add includes/core/class-workflow-coordinator.php tests/WorkflowCoordinatorTest.php
+          git commit -m 'Validate exact calendar dates and datetimes'
+          git push origin HEAD:fix/file22-cumulative-post-merge-corrections
