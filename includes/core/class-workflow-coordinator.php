@@ -56,6 +56,8 @@ final class Workflow_Coordinator {
 
 	/**
 	 * Role-independent, privacy-safe workflow contract inspection.
+	 * Native adapters must expose a role-neutral schema contract; user-specific
+	 * authorization remains a separate runtime decision.
 	 *
 	 * @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string}
 	 */
@@ -117,7 +119,7 @@ final class Workflow_Coordinator {
 			return $this->error( 'invalid_native_reference', 'The native draft reference is invalid.', $adapter_key );
 		}
 
-		$payload_error = $this->validate_payload( $payload, $adapter_key );
+		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, false );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
@@ -156,7 +158,7 @@ final class Workflow_Coordinator {
 			return $adapter;
 		}
 
-		$payload_error = $this->validate_payload( $payload, $adapter_key );
+		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
@@ -196,7 +198,7 @@ final class Workflow_Coordinator {
 			return $adapter;
 		}
 
-		$payload_error = $this->validate_payload( $payload, $adapter_key );
+		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
@@ -239,7 +241,7 @@ final class Workflow_Coordinator {
 			return $this->error( 'invalid_idempotency_key', 'The submission idempotency key is invalid.', $adapter_key );
 		}
 
-		$payload_error = $this->validate_payload( $payload, $adapter_key );
+		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
@@ -321,11 +323,11 @@ final class Workflow_Coordinator {
 		}
 
 		try {
-			if ( ! $adapter->can_create( $user_id ) ) {
-				return $this->error( 'workflow_permission_denied', 'The account is not authorized for this workflow.', $adapter_key );
-			}
 			if ( ! $adapter->is_available() ) {
 				return $this->error( 'native_workflow_unavailable', 'The native workflow is unavailable.', $adapter_key );
+			}
+			if ( ! $adapter->can_create( $user_id ) ) {
+				return $this->error( 'workflow_permission_denied', 'The account is not authorized for this workflow.', $adapter_key );
 			}
 			return $adapter;
 		} catch ( Throwable $error ) {
@@ -403,6 +405,109 @@ final class Workflow_Coordinator {
 			return $this->error( 'workflow_payload_too_large', 'The workflow payload exceeds the safe request limit.', $adapter_key );
 		}
 		return null;
+	}
+
+	/**
+	 * @param array<string, mixed> $payload Workflow payload.
+	 */
+	private function validate_payload_contract( Workflow_Adapter $adapter, array $payload, string $adapter_key, bool $require_required ): ?WP_Error {
+		$base_error = $this->validate_payload( $payload, $adapter_key );
+		if ( $base_error instanceof WP_Error ) {
+			return $base_error;
+		}
+		$schema = $this->schema_for_adapter( $adapter, $adapter_key );
+		if ( $schema instanceof WP_Error ) {
+			return $schema;
+		}
+		$fields = $schema['fields'];
+		foreach ( $payload as $key => $value ) {
+			if ( ! is_string( $key ) || ! isset( $fields[ $key ] ) ) {
+				return $this->error( 'workflow_payload_unknown_field', 'The workflow payload contains an undeclared field.', $adapter_key );
+			}
+			if ( ! $this->field_value_is_valid( $fields[ $key ], $value ) ) {
+				return $this->error( 'workflow_payload_field_invalid', 'The workflow payload contains a value that does not match its schema.', $adapter_key );
+			}
+		}
+		if ( $require_required ) {
+			foreach ( $fields as $key => $definition ) {
+				if ( ! empty( $definition['required'] ) && ( ! array_key_exists( $key, $payload ) || $this->required_value_is_empty( $definition, $payload[ $key ] ) ) ) {
+					return $this->error( 'workflow_payload_required_field_missing', 'The workflow payload is missing a required field.', $adapter_key );
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * @param array<string, mixed> $definition Normalized field definition.
+	 */
+	private function field_value_is_valid( array $definition, mixed $value ): bool {
+		if ( null === $value ) {
+			return empty( $definition['required'] );
+		}
+		$type = (string) $definition['type'];
+		if ( in_array( $type, array( 'text', 'textarea' ), true ) ) {
+			return is_string( $value );
+		}
+		if ( 'checkbox' === $type ) {
+			return is_bool( $value );
+		}
+		if ( 'number' === $type ) {
+			if ( ( ! is_int( $value ) && ! is_float( $value ) ) || ( is_float( $value ) && ! is_finite( $value ) ) ) {
+				return false;
+			}
+			if ( isset( $definition['minimum'] ) && $value < $definition['minimum'] ) {
+				return false;
+			}
+			return ! isset( $definition['maximum'] ) || $value <= $definition['maximum'];
+		}
+		if ( 'select' === $type ) {
+			return is_string( $value ) && isset( $definition['choices'][ $value ] );
+		}
+		if ( 'multiselect' === $type ) {
+			if ( ! is_array( $value ) || array_values( $value ) !== $value ) {
+				return false;
+			}
+			foreach ( $value as $choice ) {
+				if ( ! is_string( $choice ) || ! isset( $definition['choices'][ $choice ] ) ) {
+					return false;
+				}
+			}
+			return true;
+		}
+		if ( 'opaque_reference' === $type ) {
+			return is_string( $value ) && ( '' === $value || $this->valid_native_reference( $value ) );
+		}
+		if ( 'email' === $type ) {
+			return is_string( $value ) && ( '' === $value || ( function_exists( 'is_email' ) ? false !== is_email( $value ) : false !== filter_var( $value, FILTER_VALIDATE_EMAIL ) ) );
+		}
+		if ( 'url' === $type ) {
+			return is_string( $value ) && ( '' === $value || false !== filter_var( $value, FILTER_VALIDATE_URL ) );
+		}
+		if ( 'date' === $type ) {
+			return is_string( $value ) && ( '' === $value || 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) );
+		}
+		if ( 'datetime' === $type ) {
+			return is_string( $value ) && ( '' === $value || 1 === preg_match( '/^\d{4}-\d{2}-\d{2}[T ][0-2]\d:[0-5]\d(?::[0-5]\d)?(?:Z|[+-][0-2]\d:[0-5]\d)?$/', $value ) );
+		}
+		return false;
+	}
+
+	/**
+	 * @param array<string, mixed> $definition Normalized field definition.
+	 */
+	private function required_value_is_empty( array $definition, mixed $value ): bool {
+		if ( null === $value ) {
+			return true;
+		}
+		$type = (string) $definition['type'];
+		if ( 'checkbox' === $type ) {
+			return true !== $value;
+		}
+		if ( 'multiselect' === $type ) {
+			return ! is_array( $value ) || array() === $value;
+		}
+		return is_string( $value ) && '' === trim( $value );
 	}
 
 	/**
