@@ -6,7 +6,18 @@ use PHPUnit\Framework\TestCase;
 use Sabri\UniversalComposer\Core\Page_Resolver;
 use Sabri\UniversalComposer\Core\Plugin;
 
+if ( ! function_exists( 'nocache_headers' ) ) {
+	function nocache_headers(): void {
+		++$GLOBALS['supc_test_nocache_headers'];
+	}
+}
+
 final class PluginPrivacyTest extends TestCase {
+	protected function setUp(): void {
+		$GLOBALS['supc_test_nocache_headers'] = 0;
+		$GLOBALS['supc_test_actions_fired'] = array();
+	}
+
 	protected function tearDown(): void {
 		$GLOBALS['post'] = null;
 		$GLOBALS['supc_test_pages'] = array();
@@ -29,6 +40,23 @@ final class PluginPrivacyTest extends TestCase {
 		$this->assertTrue( $robots['noindex'] );
 		$this->assertTrue( $robots['nofollow'] );
 		$this->assertTrue( $robots['noarchive'] );
+	}
+
+	public function test_direct_shortcode_render_enforces_private_headers_without_detectable_page(): void {
+		$GLOBALS['supc_test_options'] = array();
+		$GLOBALS['supc_test_pages'] = array();
+		$GLOBALS['supc_test_is_page'] = 0;
+		$GLOBALS['post'] = null;
+		Page_Resolver::reset_cache();
+
+		$output = Plugin::instance()->render_shortcode();
+
+		$this->assertIsString( $output );
+		$this->assertSame( 1, $GLOBALS['supc_test_nocache_headers'] );
+		$this->assertContains(
+			array( 'supc_private_surface_headers_applied', array() ),
+			$GLOBALS['supc_test_actions_fired']
+		);
 	}
 
 	public function test_unrelated_page_is_not_forced_noindex(): void {
