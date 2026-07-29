@@ -24,8 +24,9 @@ File 22 owns the universal content-type selector, adapter registry, shared creat
 - **Phase 22A:** governance, contracts, central permission enforcement, page routing, Safe Mode, and automated contract tests.
 - **Phase 22B:** release-critical File 21 `social_publication` adapter acceptance, ownership diagnostics, and fail-soft gateway rules.
 - **Phase 22C:** accessible, responsive Universal Create gateway surface that routes authorized users to native workflows without duplicating content.
+- **Phase 22D:** capability-protected administrator health dashboard, privacy-safe adapter diagnostics, and bounded Create-page mapping repair with dry-run support.
 
-All three phases remain stacked Draft pull requests. No merge, staging approval, package approval, or production approval is implied.
+All phases remain stacked Draft pull requests. No merge, staging approval, package approval, or production approval is implied.
 
 ## Technical baseline
 
@@ -58,6 +59,14 @@ Unknown privacy classifications are not relabeled. The invalid adapter is omitte
 The user-facing law is:
 
 > One gateway, one native record.
+
+## Administrator health
+
+Authorized administrators can open `Tools → Composer Health` to view normalized System Check rows and privacy-safe adapter metadata. Static Adapter Health is role-independent; current Create-surface invocation diagnostics are explicitly limited to the signed-in administrator and do not replace the staging role matrix.
+
+Create-page inspection is read-only and memoized per request. It distinguishes `ready`, `repairable`, `ambiguous`, and `missing` states. Multiple shortcode pages require explicit administrator selection rather than silent first-match mapping.
+
+The bounded repair operation verifies option persistence, uses a short-lived mutation lock, performs at most one managed-page insertion attempt, and accepts a new page only after exact page type, slug, publication, shortcode, permalink, and File 22 ownership checks. It never edits or deletes unrelated pages or native-module records.
 
 ## Development workflow
 

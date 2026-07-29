@@ -1,0 +1,36 @@
+name: Phase 22D Review Evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase-22d-review-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  review-evidence:
+    name: Review and verification record
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Verify Phase 22D review records
+        shell: bash
+        run: |
+          set -euo pipefail
+          first_review='docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md'
+          first_verification='docs/PHASE-22D-POST-CORRECTION-VERIFICATION-2026-07-29.md'
+          second_review='docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md'
+          second_verification='docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md'
+          for file in "$first_review" "$first_verification" "$second_review" "$second_verification"; do
+            test -f "$file"
+            grep -q "$file" MANIFEST.md
+          done
+          grep -q 'Phase 22D Post-Implementation Review' "$first_review"
+          grep -q 'Phase 22D Post-Correction Verification' "$first_verification"
+          grep -q 'Phase 22D Second Review Corrections' "$second_review"
+          grep -q 'Phase 22D Second Post-Correction Verification' "$second_verification"

@@ -1,4 +1,4 @@
-# Source Manifest — Phases 22A–22C
+# Source Manifest — Phases 22A–22D
 
 ## Runtime
 
@@ -16,6 +16,7 @@
 - `includes/integration/class-shell-bridge.php`
 - `includes/integration/class-core-adapter-requirements.php`
 - `includes/presentation/class-create-surface.php`
+- `includes/admin/class-system-check-page.php`
 - `assets/css/create-surface.css`
 
 ## Public documentation
@@ -37,6 +38,11 @@
 - `docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
 - `docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md`
 - `docs/PHASE-22C-POST-CORRECTION-VERIFICATION-2026-07-29.md`
+- `docs/PHASE-22D-ADMIN-SYSTEM-CHECK.md`
+- `docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
+- `docs/PHASE-22D-POST-CORRECTION-VERIFICATION-2026-07-29.md`
+- `docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md`
+- `docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md`
 - `docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
 - `docs/PRIVACY.md`
 - `docs/ROLLBACK.md`
@@ -57,4 +63,4 @@ Development-only files are excluded from a future production ZIP by `.distignore
 
 ## Release boundary
 
-A release ZIP, SHA-256 checksum, machine-generated exact package manifest, staging acceptance record, and production approval have not been declared. Phases 22A, 22B, and 22C remain stacked development Drafts and must pass their merge order, cross-plugin staging, Founder acceptance, backup, and rollback gates before release packaging.
+A release ZIP, SHA-256 checksum, machine-generated exact package manifest, staging acceptance record, and production approval have not been declared. Phases 22A, 22B, 22C, and 22D remain stacked development Drafts and must pass their merge order, cross-plugin staging, Founder acceptance, backup, and rollback gates before release packaging.
