@@ -51,7 +51,7 @@ jobs:
           done
 
   dependency-lock:
-    name: Resolve dependency lock evidence
+    name: Verify committed dependency lock
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -66,13 +66,20 @@ jobs:
           php-version: '8.3'
           coverage: none
           tools: composer:v2
-      - name: Resolve exact dependency lock without installing
-        run: composer update --no-install --no-interaction --no-progress --prefer-dist
-      - name: Upload exact dependency lock
+      - name: Validate and dry-run the committed lock
+        run: |
+          set -euo pipefail
+          test -s composer.lock
+          composer validate --strict
+          composer install --dry-run --no-interaction --no-progress --prefer-dist
+          sha256sum composer.lock | tee composer-lock.sha256
+      - name: Upload exact dependency lock evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: file22-composer-lock
-          path: composer.lock
+          path: |
+            composer.lock
+            composer-lock.sha256
           if-no-files-found: error
           retention-days: 3
 
@@ -165,15 +172,15 @@ jobs:
           ref: ${{ env.EXPECTED_SHA }}
       - name: Verify exact source head
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-      - name: Validate Composer configuration
-        run: composer validate --strict --no-check-lock
+      - name: Validate Composer configuration and committed lock
+        run: composer validate --strict
       - name: Verify required files and identifiers
         shell: bash
         run: |
           set -euo pipefail
           required=(
             README.md LICENSE.md CHANGELOG.md MANIFEST.md .distignore
-            composer.json phpunit.xml.dist phpstan.neon.dist phpcs.xml.dist
+            composer.json composer.lock phpunit.xml.dist phpstan.neon.dist phpcs.xml.dist
             sabri-universal-post-composer.php
             assets/css/create-surface.css
             includes/contracts/interface-adapter.php
@@ -197,12 +204,14 @@ jobs:
             tests/PageResolverRepairTest.php
             tests/WorkflowCoordinatorTest.php
             tests/PluginPrivacyTest.php
+            tests/SubjectSchemaTest.php
+            tests/CoreAdapterRequirementsTest.php
             tests/run-public-api-collision-test.php
             tests/phpstan-wordpress-stubs.php
             docs/ARCHITECTURE.md docs/ADAPTER-CONTRACT.md docs/DECISION-LOG.md docs/SECURITY.md
             docs/PRIVACY.md docs/ACCESSIBILITY.md docs/MIGRATION.md docs/ROLLBACK.md
             docs/STAGING-ACCEPTANCE.md docs/COMPATIBILITY-MATRIX.md docs/ERROR-CODES.md
-            docs/FILE21-INTEGRATION.md docs/MASTER-PLAN-AMENDMENT-v2.1.md
+            docs/FILE21-INTEGRATION.md docs/MASTER-PLAN-AMENDMENT-v2.1.md docs/SYSTEM-CHECK.md
             docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
             docs/PHASE-22C-CREATE-SURFACE.md
             docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
@@ -223,11 +232,16 @@ jobs:
           grep -q 'Plugin Name: Sabri Universal Post Composer' sabri-universal-post-composer.php
           grep -q "define( 'SUPC_ADAPTER_API_VERSION'" sabri-universal-post-composer.php
           grep -q "define( 'SUPC_WORKFLOW_API_VERSION'" sabri-universal-post-composer.php
+          grep -q "define( 'SUPC_SUBJECT_SCHEMA_API_VERSION'" sabri-universal-post-composer.php
           grep -q 'One canonical native record' README.md
           grep -q 'social_publication' docs/FILE21-INTEGRATION.md
           grep -q 'File 23' docs/MASTER-PLAN-AMENDMENT-v2.1.md
           grep -q 'workflow_payload_unknown_field' includes/core/class-workflow-coordinator.php
+          grep -q 'schema_for_user' includes/core/class-workflow-coordinator.php
           grep -q 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' includes/core/functions.php
           grep -q 'file20_create_contract' includes/core/class-plugin.php
-          grep -q 'workflow_contract_missing' includes/integration/class-core-adapter-requirements.php
+          grep -q 'subject_schema_contract_missing' includes/integration/class-core-adapter-requirements.php
+          grep -q 'subject_schema_extension' includes/admin/class-system-check-page.php
           grep -q 'noncanonical_shortcode_surface' tests/PluginPrivacyTest.php
+          grep -q 'test_interactive_schema_and_payload_validation_use_subject_schema' tests/SubjectSchemaTest.php
+          grep -q 'Complete account, role, status, and document matrix' docs/STAGING-ACCEPTANCE.md
