@@ -54,49 +54,67 @@ if ( ! function_exists( 'supc_adapter_matches' ) ) {
 }
 
 if ( ! function_exists( 'supc_workflow_schema' ) ) {
-	/** @return array<string,mixed>|\WP_Error */
+	/**
+	 * @return array<string, mixed>|\WP_Error
+	 */
 	function supc_workflow_schema( string $adapter_key ): array|\WP_Error {
 		return Plugin::instance()->workflow_coordinator()->schema( get_current_user_id(), $adapter_key );
 	}
 }
 
 if ( ! function_exists( 'supc_workflow_create_draft' ) ) {
-	/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+	/**
+	 * @param array<string, mixed> $payload Draft payload.
+	 * @return array<string, mixed>|\WP_Error
+	 */
 	function supc_workflow_create_draft( string $adapter_key, ?string $native_reference, array $payload ): array|\WP_Error {
 		return Plugin::instance()->workflow_coordinator()->create_draft( get_current_user_id(), $adapter_key, $native_reference, $payload );
 	}
 }
 
 if ( ! function_exists( 'supc_workflow_validate' ) ) {
-	/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+	/**
+	 * @param array<string, mixed> $payload Draft payload.
+	 * @return array<string, mixed>|\WP_Error
+	 */
 	function supc_workflow_validate( string $adapter_key, array $payload ): array|\WP_Error {
 		return Plugin::instance()->workflow_coordinator()->validate( get_current_user_id(), $adapter_key, $payload );
 	}
 }
 
 if ( ! function_exists( 'supc_workflow_preview' ) ) {
-	/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+	/**
+	 * @param array<string, mixed> $payload Draft payload.
+	 * @return array<string, mixed>|\WP_Error
+	 */
 	function supc_workflow_preview( string $adapter_key, array $payload ): array|\WP_Error {
 		return Plugin::instance()->workflow_coordinator()->preview( get_current_user_id(), $adapter_key, $payload );
 	}
 }
 
 if ( ! function_exists( 'supc_workflow_submit' ) ) {
-	/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+	/**
+	 * @param array<string, mixed> $payload Final payload.
+	 * @return array<string, mixed>|\WP_Error
+	 */
 	function supc_workflow_submit( string $adapter_key, string $idempotency_key, array $payload ): array|\WP_Error {
 		return Plugin::instance()->workflow_coordinator()->submit( get_current_user_id(), $adapter_key, $idempotency_key, $payload );
 	}
 }
 
 if ( ! function_exists( 'supc_workflow_status' ) ) {
-	/** @return array<string,mixed>|\WP_Error */
+	/**
+	 * @return array<string, mixed>|\WP_Error
+	 */
 	function supc_workflow_status( string $adapter_key, string $native_reference ): array|\WP_Error {
 		return Plugin::instance()->workflow_coordinator()->status( get_current_user_id(), $adapter_key, $native_reference );
 	}
 }
 
 if ( ! function_exists( 'supc_workflow_canonical_url' ) ) {
-	/** @return string|\WP_Error */
+	/**
+	 * @return string|\WP_Error
+	 */
 	function supc_workflow_canonical_url( string $adapter_key, string $native_reference ): string|\WP_Error {
 		return Plugin::instance()->workflow_coordinator()->canonical_url( get_current_user_id(), $adapter_key, $native_reference );
 	}
