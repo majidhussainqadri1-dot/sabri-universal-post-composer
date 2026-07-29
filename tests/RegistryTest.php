@@ -35,7 +35,11 @@ final class Test_Adapter implements Adapter {
 		}
 		return $this->available;
 	}
-	public function can_create( int $user_id ): bool { return $this->authorized && $user_id > 0; }
+	public function can_create( int $user_id ): bool {
+		// Deliberately mirrors the current File 21 coupling. Registry must still
+		// classify an offline native integration as unavailable, not denied.
+		return $this->available && $this->authorized && $user_id > 0;
+	}
 	public function start_url( int $user_id ): string { return '/create/' . $this->adapter_key . '?user=' . $user_id; }
 }
 
@@ -76,7 +80,7 @@ final class RegistryTest extends TestCase {
 		$this->assertFalse( $this->registry->has_central_capability_for_user( 1 ) );
 	}
 
-	public function test_native_unavailability_is_distinct_from_permission_denial(): void {
+	public function test_native_unavailability_is_distinct_even_when_can_create_depends_on_availability(): void {
 		$this->assertTrue( $this->registry->register( new Test_Adapter( 'offline', 10, false, true ) ) );
 		$this->assertSame( array(), $this->registry->available_for_user( 1 ) );
 		$this->assertSame( 'unavailable', $this->registry->creation_state_for_user( 1 ) );
