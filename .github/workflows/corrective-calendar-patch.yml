@@ -13,7 +13,7 @@ permissions:
 # One-shot corrective workflow. Delete immediately after the patch commit.
 jobs:
   patch:
-    if: github.repository == 'majidhussainqadri1-dot/sabri-universal-post-composer' && github.actor == 'majidhussainqadri1-dot'
+    if: github.repository == 'majidhussainqadri1-dot/sabri-universal-post-composer'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -21,6 +21,10 @@ jobs:
         with:
           ref: fix/file22-cumulative-post-merge-corrections
           fetch-depth: 0
+      - name: Verify branch and repository
+        run: |
+          test "${GITHUB_REPOSITORY}" = 'majidhussainqadri1-dot/sabri-universal-post-composer'
+          test "$(git branch --show-current)" = 'fix/file22-cumulative-post-merge-corrections'
       - name: Apply exact reviewed replacements
         shell: bash
         run: |
