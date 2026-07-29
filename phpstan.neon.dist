@@ -8,6 +8,8 @@ parameters:
         - includes/core/class-page-resolver.php
         - includes/core/class-registry.php
         - includes/core/class-workflow-coordinator.php
+        - includes/core/class-plugin.php
+        - includes/core/functions.php
         - includes/presentation/class-create-surface.php
         - includes/integration/class-core-adapter-requirements.php
         - includes/admin/class-system-check-page.php
