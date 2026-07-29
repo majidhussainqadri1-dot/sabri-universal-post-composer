@@ -10,6 +10,7 @@ on:
 permissions:
   contents: write
 
+# One-shot corrective workflow. Delete immediately after the patch commit.
 jobs:
   patch:
     if: github.repository == 'majidhussainqadri1-dot/sabri-universal-post-composer' && github.actor == 'majidhussainqadri1-dot'
