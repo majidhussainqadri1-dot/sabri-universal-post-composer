@@ -52,6 +52,7 @@ final class File21_Contract_Adapter implements Workflow_Adapter, Diagnostic_Adap
 			),
 		);
 	}
+	public function schema_for_user( int $user_id ): array { unset( $user_id ); return $this->schema(); }
 	public function create_draft( int $user_id, ?string $native_reference, array $payload ) { unset( $user_id, $payload ); return array( 'native_reference' => $native_reference ?? 'draft-1', 'status' => 'draft' ); }
 	public function validate( int $user_id, array $payload ) { unset( $user_id, $payload ); return array( 'valid' => true, 'errors' => array(), 'warnings' => array() ); }
 	public function preview( int $user_id, array $payload ) { unset( $user_id, $payload ); return array( 'preview_url' => '/preview/draft-1/', 'expires_at' => time() + 300 ); }
@@ -117,6 +118,7 @@ final class CoreAdapterRequirementsTest extends TestCase {
 		$report = $this->requirements->social_publication_report();
 		$this->assertSame( 'fail', $report['status'] );
 		$this->assertContains( 'workflow_contract_missing', $report['codes'] );
+		$this->assertContains( 'subject_schema_contract_missing', $report['codes'] );
 	}
 
 	public function test_temporarily_unavailable_adapter_warns_without_fatal(): void {
