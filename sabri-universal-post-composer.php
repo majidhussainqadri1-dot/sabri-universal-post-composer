@@ -18,6 +18,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+$core_constants = array(
+	'SUPC_VERSION',
+	'SUPC_SCHEMA_VERSION',
+	'SUPC_ADAPTER_API_VERSION',
+	'SUPC_WORKFLOW_API_VERSION',
+	'SUPC_SUBJECT_SCHEMA_API_VERSION',
+	'SUPC_MIN_SMC_VERSION',
+	'SUPC_FILE',
+	'SUPC_PATH',
+	'SUPC_URL',
+);
+$core_constant_collisions = array_values( array_filter( $core_constants, 'defined' ) );
+
+if ( array() !== $core_constant_collisions ) {
+	// Never consume a foreign path, URL, version, or contract constant. The plugin
+	// remains inert and removes itself from the active set on the next admin load.
+	add_action(
+		'admin_init',
+		static function (): void {
+			if ( ! function_exists( 'deactivate_plugins' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/plugin.php';
+			}
+			deactivate_plugins( plugin_basename( __FILE__ ) );
+		}
+	);
+	add_action(
+		'admin_notices',
+		static function (): void {
+			echo '<div class="notice notice-error"><p>'
+				. esc_html__( 'Sabri Universal Post Composer was disabled because another component preclaimed one or more File 22 core constants.', 'sabri-universal-post-composer' )
+				. '</p></div>';
+		}
+	);
+	return;
+}
+
 define( 'SUPC_VERSION', '0.1.0-dev' );
 define( 'SUPC_SCHEMA_VERSION', '0.1.0' );
 define( 'SUPC_ADAPTER_API_VERSION', '1.0.0' );
