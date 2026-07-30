@@ -83,7 +83,7 @@ final class Registry {
 			}
 
 			$minimum_native_version = trim( $adapter->minimum_native_version() );
-			if ( ! $this->valid_version( $minimum_native_version ) ) {
+			if ( ! Version::valid( $minimum_native_version ) ) {
 				return $this->registration_error( 'invalid_minimum_native_version', $key, 'Adapter minimum native version is invalid.' );
 			}
 
@@ -112,7 +112,7 @@ final class Registry {
 			$workflow_contract = null;
 			if ( $adapter instanceof Workflow_Adapter ) {
 				$workflow_api_version = trim( $adapter->workflow_api_version() );
-				if ( ! $this->valid_version( $workflow_api_version ) ) {
+				if ( ! Version::valid( $workflow_api_version ) ) {
 					return $this->registration_error( 'api_mismatch', $key, 'Workflow Adapter API version is malformed.' );
 				}
 
@@ -330,10 +330,6 @@ final class Registry {
 		$right_priority = null !== $right_contract ? $right_contract['priority'] : PHP_INT_MAX;
 		$priority       = $left_priority <=> $right_priority;
 		return 0 !== $priority ? $priority : strcmp( $left_key, $right_key );
-	}
-
-	private function valid_version( string $version ): bool {
-		return 1 === preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/', $version );
 	}
 
 	private function duplicate_error_key( string $key ): string {
