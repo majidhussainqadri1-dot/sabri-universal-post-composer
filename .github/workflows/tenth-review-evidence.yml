@@ -47,6 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Revalidate the final corrected head rather than any intermediate commit.
           required=(
             .github/workflows/tenth-review-evidence.yml
             tests/TenthCompleteReviewTest.php
