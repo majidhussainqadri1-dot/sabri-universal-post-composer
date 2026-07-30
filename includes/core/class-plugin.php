@@ -229,18 +229,12 @@ final class Plugin {
 		$owner              = $this->runtime_constant( 'SUPC_PUBLIC_API_OWNER' );
 		$owned              = $this->runtime_constant( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' );
 		$collisions         = $this->runtime_constant( 'SUPC_PUBLIC_API_COLLISIONS' );
-		$functions_complete = true;
+		$functions_complete = Runtime_Trust::functions_available( self::PUBLIC_API_FUNCTIONS );
 
 		if ( '1.0.0' !== $version ) { $codes[] = 'public_api_version_mismatch'; }
 		if ( 'sabri-universal-post-composer' !== $owner ) { $codes[] = 'public_api_owner_mismatch'; }
 		if ( true !== $owned || ! is_string( $collisions ) || '' !== $collisions ) { $codes[] = 'public_api_function_collision'; }
-		foreach ( self::PUBLIC_API_FUNCTIONS as $function ) {
-			if ( ! function_exists( $function ) ) {
-				$functions_complete = false;
-				$codes[]            = 'public_api_incomplete';
-				break;
-			}
-		}
+		if ( ! $functions_complete ) { $codes[] = 'public_api_incomplete'; }
 		if (
 			$functions_complete &&
 			! Runtime_Trust::functions_declared_by_file( self::PUBLIC_API_FUNCTIONS, SUPC_PATH . 'includes/core/functions.php' )
@@ -253,38 +247,35 @@ final class Plugin {
 
 	/** @return array<string, mixed> */
 	private function file20_contract_row(): array {
-		$codes              = array();
-		$version            = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' );
-		$owner              = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
-		$owned              = $this->runtime_constant( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' );
-		$functions_complete = true;
+		$codes                 = array();
+		$version               = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' );
+		$owner                 = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
+		$owned                 = $this->runtime_constant( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' );
+		$functions_complete    = Runtime_Trust::functions_available( self::FILE20_FUNCTIONS );
+		$availability_callback = null;
 
 		if ( '1.0.1' !== $version ) { $codes[] = 'file20_contract_version_mismatch'; }
 		if ( 'sabri-unified-application-shell' !== $owner ) { $codes[] = 'file20_contract_owner_mismatch'; }
 		if ( true !== $owned ) { $codes[] = 'file20_contract_collision'; }
-		foreach ( self::FILE20_FUNCTIONS as $function ) {
-			if ( ! is_callable( $function ) ) {
-				$functions_complete = false;
-				$codes[]            = 'file20_contract_functions_missing';
-				break;
-			}
-		}
+		if ( ! $functions_complete ) { $codes[] = 'file20_contract_functions_missing'; }
 
 		$source_owned = $functions_complete
 			&& Runtime_Trust::shell_symbols_owned( self::FILE20_FUNCTIONS, self::SHELL_SAFE_MODE_CLASS );
 		if ( Runtime_Trust::shell_claimed() && ! $source_owned ) {
 			$codes[] = 'file20_contract_collision';
 		}
+		if ( $source_owned ) {
+			$availability_callback = Runtime_Trust::owned_shell_function( self::FILE20_FUNCTIONS[0] );
+		}
 
 		$trusted = '1.0.1' === $version
 			&& 'sabri-unified-application-shell' === $owner
 			&& true === $owned
-			&& $functions_complete
-			&& $source_owned;
+			&& $source_owned
+			&& $availability_callback instanceof \Closure;
 		if ( $trusted ) {
 			try {
-				$available = call_user_func( self::FILE20_FUNCTIONS[0] );
-				if ( ! (bool) $available ) {
+				if ( ! (bool) $availability_callback() ) {
 					$codes[] = 'file20_contract_unavailable';
 				}
 			} catch ( \Throwable $error ) {
