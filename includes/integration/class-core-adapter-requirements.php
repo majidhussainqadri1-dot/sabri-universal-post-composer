@@ -139,6 +139,9 @@ final class Core_Adapter_Requirements {
 			if ( version_compare( $actual, self::MINIMUM_FILE21_VERSION, '<' ) ) {
 				return $this->failure( 'native_version_too_low' );
 			}
+			if ( version_compare( $actual, $minimum, '<' ) ) {
+				return $this->failure( 'native_version_below_declared_minimum' );
+			}
 
 			$available = $adapter->is_available();
 			return array(
