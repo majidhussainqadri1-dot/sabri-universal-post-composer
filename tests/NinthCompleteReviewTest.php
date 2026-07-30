@@ -17,6 +17,11 @@ final class NinthCompleteReviewTest extends TestCase {
 		\Sabri\UnifiedShell\SafeMode::$disabled = false;
 	}
 
+	protected function tearDown(): void {
+		\Sabri\UnifiedShell\SafeMode::$throw = false;
+		\Sabri\UnifiedShell\SafeMode::$disabled = false;
+	}
+
 	public function test_public_api_functions_are_declared_by_file22_source(): void {
 		$functions = array(
 			'supc_register_adapter',
