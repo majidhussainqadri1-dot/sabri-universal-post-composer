@@ -14,9 +14,72 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Runtime_Trust {
+	private const PUBLIC_API_VERSION = '1.0.0';
+	private const PUBLIC_API_OWNER   = 'sabri-universal-post-composer';
+	private const PUBLIC_API_MARKERS = array(
+		'SUPC_PUBLIC_API_VERSION',
+		'SUPC_PUBLIC_API_OWNER',
+		'SUPC_PUBLIC_API_FUNCTIONS_OWNED',
+		'SUPC_PUBLIC_API_COLLISIONS',
+	);
+	private const PUBLIC_API_FUNCTIONS = array(
+		'supc_register_adapter',
+		'supc_unregister_adapter',
+		'supc_adapter_available',
+		'supc_adapter_matches',
+		'supc_workflow_schema',
+		'supc_workflow_create_draft',
+		'supc_workflow_validate',
+		'supc_workflow_preview',
+		'supc_workflow_submit',
+		'supc_workflow_status',
+		'supc_workflow_canonical_url',
+		'supc_generate_idempotency_key',
+	);
 	private const SHELL_DIRECTORY = 'sabri-unified-application-shell';
 	private const SHELL_FILE      = 'sabri-unified-application-shell.php';
 	private const SHELL_SLUG      = 'sabri-unified-application-shell';
+
+	/**
+	 * @return array<int,string>
+	 */
+	public static function public_api_functions(): array {
+		return self::PUBLIC_API_FUNCTIONS;
+	}
+
+	public static function public_api_claimed(): bool {
+		foreach ( self::PUBLIC_API_MARKERS as $marker ) {
+			if ( defined( $marker ) ) {
+				return true;
+			}
+		}
+
+		foreach ( self::PUBLIC_API_FUNCTIONS as $function ) {
+			if ( function_exists( $function ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public static function public_api_owned( string $expected_file ): bool {
+		if (
+			! defined( 'SUPC_PUBLIC_API_VERSION' ) ||
+			self::PUBLIC_API_VERSION !== (string) SUPC_PUBLIC_API_VERSION ||
+			! defined( 'SUPC_PUBLIC_API_OWNER' ) ||
+			self::PUBLIC_API_OWNER !== (string) SUPC_PUBLIC_API_OWNER ||
+			! defined( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' ) ||
+			true !== SUPC_PUBLIC_API_FUNCTIONS_OWNED ||
+			! defined( 'SUPC_PUBLIC_API_COLLISIONS' ) ||
+			! is_string( SUPC_PUBLIC_API_COLLISIONS ) ||
+			'' !== SUPC_PUBLIC_API_COLLISIONS
+		) {
+			return false;
+		}
+
+		return self::functions_declared_by_file( self::PUBLIC_API_FUNCTIONS, $expected_file );
+	}
 
 	/**
 	 * @param array<int,string> $functions Global function names.
@@ -51,7 +114,6 @@ final class Runtime_Trust {
 				if ( false === $source || $source !== $expected_file ) {
 					return false;
 				}
-			}
 		} catch ( \Throwable $error ) {
 			unset( $error );
 			return false;
