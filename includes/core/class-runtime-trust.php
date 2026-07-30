@@ -156,7 +156,7 @@ final class Runtime_Trust {
 			}
 
 			if ( '' !== $class_name ) {
-				if ( ! class_exists( $class_name ) ) {
+				if ( ! class_exists( $class_name, false ) ) {
 					return false;
 				}
 
@@ -180,6 +180,34 @@ final class Runtime_Trust {
 
 		try {
 			return \Closure::fromCallable( $function );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return null;
+		}
+	}
+
+	public static function owned_shell_static_method( string $class_name, string $method ): ?\Closure {
+		$package = self::shell_package();
+		if ( null === $package || '' === $class_name || '' === $method || ! class_exists( $class_name, false ) ) {
+			return null;
+		}
+
+		try {
+			$class = new \ReflectionClass( $class_name );
+			if ( ! self::source_is_inside( $class->getFileName(), $package['path'] ) || ! $class->hasMethod( $method ) ) {
+				return null;
+			}
+
+			$reflection_method = $class->getMethod( $method );
+			if (
+				! $reflection_method->isPublic() ||
+				! $reflection_method->isStatic() ||
+				! self::source_is_inside( $reflection_method->getFileName(), $package['path'] )
+			) {
+				return null;
+			}
+
+			return \Closure::fromCallable( array( $class_name, $method ) );
 		} catch ( \Throwable $error ) {
 			unset( $error );
 			return null;
