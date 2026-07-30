@@ -40,12 +40,6 @@ final class Registry {
 	 */
 	private array $workflow_contracts = array();
 
-	/** @var array<int, array<string, Adapter>> */
-	private array $available_cache = array();
-
-	/** @var array<int, string> */
-	private array $state_cache = array();
-
 	/** @var array<string, array<string, mixed>> */
 	private array $errors = array();
 
@@ -89,7 +83,7 @@ final class Registry {
 			}
 
 			$minimum_native_version = trim( $adapter->minimum_native_version() );
-			if ( 1 !== preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/', $minimum_native_version ) ) {
+			if ( ! $this->valid_version( $minimum_native_version ) ) {
 				return $this->registration_error( 'invalid_minimum_native_version', $key, 'Adapter minimum native version is invalid.' );
 			}
 
@@ -117,8 +111,13 @@ final class Registry {
 
 			$workflow_contract = null;
 			if ( $adapter instanceof Workflow_Adapter ) {
+				$workflow_api_version = trim( $adapter->workflow_api_version() );
+				if ( ! $this->valid_version( $workflow_api_version ) ) {
+					return $this->registration_error( 'api_mismatch', $key, 'Workflow Adapter API version is malformed.' );
+				}
+
 				$workflow_contract = array(
-					'workflow_api_version'   => trim( $adapter->workflow_api_version() ),
+					'workflow_api_version'   => $workflow_api_version,
 					'required_capability'    => $capability,
 					'supports_native_drafts' => $adapter->supports_native_drafts(),
 				);
@@ -198,21 +197,15 @@ final class Registry {
 	/**
 	 * Return only healthy adapters the user can actually invoke.
 	 *
-	 * Central account and immutable capability checks always run before native
-	 * compatibility and availability. Native availability is then resolved before
-	 * adapter-specific authorization so an offline integration is never mislabeled
-	 * as a permission denial. An incompatible Workflow Adapter remains registered
-	 * for diagnostics, but is never exposed as an invokable Create-surface adapter.
+	 * Authorization, Safe Mode, native availability, and adapter-specific policy
+	 * are deliberately re-evaluated on every call. Caching an allow decision can
+	 * outlive a same-request suspension, capability revocation, emergency-disable,
+	 * or native outage and would violate the fail-closed boundary.
 	 *
 	 * @return array<string, Adapter>
 	 */
 	public function available_for_user( int $user_id ): array {
-		if ( isset( $this->available_cache[ $user_id ] ) ) {
-			return $this->available_cache[ $user_id ];
-		}
-
 		if ( $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
-			$this->available_cache[ $user_id ] = array();
 			return array();
 		}
 
@@ -244,7 +237,6 @@ final class Registry {
 			}
 		}
 
-		$this->available_cache[ $user_id ] = $available;
 		return $available;
 	}
 
@@ -257,18 +249,12 @@ final class Registry {
 	 * own authorization restriction with native-module availability.
 	 */
 	public function creation_state_for_user( int $user_id ): string {
-		if ( isset( $this->state_cache[ $user_id ] ) ) {
-			return $this->state_cache[ $user_id ];
-		}
-
 		if ( $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
-			$this->state_cache[ $user_id ] = 'denied';
 			return 'denied';
 		}
 
 		$adapters = $this->all();
 		if ( array() === $adapters ) {
-			$this->state_cache[ $user_id ] = 'unavailable';
 			return 'unavailable';
 		}
 
@@ -297,7 +283,6 @@ final class Registry {
 					continue;
 				}
 
-				$this->state_cache[ $user_id ] = 'available';
 				return 'available';
 			} catch ( Throwable $error ) {
 				unset( $error );
@@ -306,8 +291,7 @@ final class Registry {
 			}
 		}
 
-		$this->state_cache[ $user_id ] = $has_unavailable ? 'unavailable' : 'denied';
-		return $this->state_cache[ $user_id ];
+		return $has_unavailable ? 'unavailable' : 'denied';
 	}
 
 	/**
@@ -327,9 +311,11 @@ final class Registry {
 		return $this->errors;
 	}
 
+	/**
+	 * Retained for API compatibility. Authorization and operational allow decisions
+	 * are no longer cached, so there is no security-sensitive state to flush.
+	 */
 	public function flush_cache(): void {
-		$this->available_cache = array();
-		$this->state_cache     = array();
 	}
 
 	private function workflow_is_compatible( string $key ): bool {
@@ -344,6 +330,10 @@ final class Registry {
 		$right_priority = null !== $right_contract ? $right_contract['priority'] : PHP_INT_MAX;
 		$priority       = $left_priority <=> $right_priority;
 		return 0 !== $priority ? $priority : strcmp( $left_key, $right_key );
+	}
+
+	private function valid_version( string $version ): bool {
+		return 1 === preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/', $version );
 	}
 
 	private function duplicate_error_key( string $key ): string {
