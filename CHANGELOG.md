@@ -2,6 +2,15 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Ninth complete-repository hardening
+
+- Added Reflection-backed source ownership for the complete File 22 public PHP API instead of trusting marker constants and function names alone.
+- Required a claimed File 20 runtime to resolve to the canonical `sabri-unified-application-shell/sabri-unified-application-shell.php` package with a valid version, coherent real paths, canonical slug, and owned Safe Mode class and Create contract functions.
+- Kept File 20 optional when absent, while making incomplete, obsolete, colliding, or foreign-source File 20 claims fail closed.
+- Prevented Administrator health checks from invoking an unowned File 20 producer and mapped source-provenance failures to existing controlled collision diagnostics.
+- Captured Membership Core availability once per System Check row so status and codes cannot disagree within one report.
+- Added canonical File 20 fixtures, runtime-provenance PHPUnit and isolated spoof tests, and a ninth exact-head evidence workflow.
+
 ### Eighth complete-repository hardening
 
 - Replaced PHP `version_compare()` with a bounded Semantic Versioning comparator that implements numeric, nonnumeric, prerelease-length, stable-release, and build-metadata precedence correctly.
