@@ -162,6 +162,8 @@ jobs:
         run: php tests/run-public-api-collision-test.php
       - name: Run isolated File 20 producer collision contract
         run: php tests/run-file20-contract-collision-test.php
+      - name: Run isolated File 20 runtime provenance contract
+        run: php tests/run-untrusted-shell-safe-mode-test.php
       - name: Run isolated canonical Membership Core contract
         run: php tests/run-untrusted-membership-core-test.php
       - name: Run isolated managed-page rollback contract
@@ -193,6 +195,7 @@ jobs:
             includes/contracts/interface-workflow-adapter.php
             includes/contracts/interface-diagnostic-adapter.php
             includes/core/class-version.php
+            includes/core/class-runtime-trust.php
             includes/core/class-permission-resolver.php
             includes/core/class-page-resolver.php
             includes/core/class-safe-mode.php
@@ -223,10 +226,15 @@ jobs:
             tests/SixthCompleteReviewTest.php
             tests/SeventhCompleteReviewTest.php
             tests/EighthCompleteReviewTest.php
+            tests/NinthCompleteReviewTest.php
             tests/fixtures/sabri-membership-core/sabri-membership-core.php
             tests/fixtures/sabri-membership-core/includes/functions.php
+            tests/fixtures/sabri-unified-application-shell/sabri-unified-application-shell.php
+            tests/fixtures/sabri-unified-application-shell/includes/class-safe-mode.php
+            tests/fixtures/sabri-unified-application-shell/includes/functions.php
             tests/run-public-api-collision-test.php
             tests/run-file20-contract-collision-test.php
+            tests/run-untrusted-shell-safe-mode-test.php
             tests/run-untrusted-membership-core-test.php
             tests/run-managed-page-rollback-test.php
             tests/phpstan-wordpress-stubs.php
@@ -244,6 +252,7 @@ jobs:
             docs/FILE22-SIXTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
             docs/FILE22-SEVENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
             docs/FILE22-EIGHTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
+            docs/FILE22-NINTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
             docs/PHASE-22C-CREATE-SURFACE.md
             docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
             docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
@@ -263,6 +272,7 @@ jobs:
             .github/workflows/sixth-review-evidence.yml
             .github/workflows/seventh-review-evidence.yml
             .github/workflows/eighth-review-evidence.yml
+            .github/workflows/ninth-review-evidence.yml
             .github/workflows/phase22d-review-evidence.yml
             .github/workflows/phase22e-review-evidence.yml
           )
@@ -280,6 +290,10 @@ jobs:
           grep -q 'workflow_registration_metadata_missing' includes/core/class-workflow-coordinator.php
           grep -q 'schema_for_user' includes/core/class-workflow-coordinator.php
           grep -q 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' includes/core/functions.php
+          grep -q 'functions_declared_by_file' includes/core/class-runtime-trust.php
+          grep -q 'shell_symbols_owned' includes/core/class-runtime-trust.php
+          grep -q 'Runtime_Trust::functions_declared_by_file' includes/core/class-plugin.php
+          grep -q 'Runtime_Trust::shell_symbols_owned' includes/core/class-safe-mode.php
           grep -q 'file20_create_contract' includes/core/class-plugin.php
           grep -q 'subject_schema_contract_missing' includes/integration/class-core-adapter-requirements.php
           grep -q 'subject_schema_extension' includes/admin/class-system-check-page.php
@@ -292,6 +306,8 @@ jobs:
           grep -q 'test_incompatible_contract_health_does_not_invoke_schema' tests/FourthCompleteReviewTest.php
           grep -q 'test_interactive_schema_and_payload_validation_use_subject_schema' tests/SubjectSchemaTest.php
           grep -q 'test_official_semver_prerelease_precedence_chain' tests/EighthCompleteReviewTest.php
+          grep -q 'test_public_api_functions_are_declared_by_file22_source' tests/NinthCompleteReviewTest.php
           grep -q 'Complete account, role, status, and document matrix' docs/STAGING-ACCEPTANCE.md
           grep -q 'EXPECTED_SHA' .github/workflows/phase22d-review-evidence.yml
           grep -q 'EXPECTED_SHA' .github/workflows/eighth-review-evidence.yml
+          grep -q 'EXPECTED_SHA' .github/workflows/ninth-review-evidence.yml
