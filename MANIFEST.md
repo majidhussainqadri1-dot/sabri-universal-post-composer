@@ -42,6 +42,7 @@
 - `docs/FILE22-FIFTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/FILE22-SIXTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/FILE22-SEVENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md`
+- `docs/FILE22-EIGHTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md`
 - `docs/MASTER-PLAN-AMENDMENT-v2.1.md`
 - `docs/MIGRATION.md`
 - `docs/PHASE-22C-CREATE-SURFACE.md`
@@ -65,7 +66,7 @@
 - `docs/STAGING-ACCEPTANCE.md`
 - `docs/SYSTEM-CHECK.md`
 
-Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and all seven 30 July 2026 post-merge independent reviews supersede outdated status wording; they do not replace controlled staging or production acceptance.
+Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and all eight independent review cycles through 31 July 2026 supersede outdated status wording; they do not replace controlled staging or production acceptance.
 
 ## Development and QA files
 
@@ -74,6 +75,7 @@ Historical phase review records remain immutable evidence for their exact earlie
 - `.github/workflows/fifth-review-evidence.yml`
 - `.github/workflows/sixth-review-evidence.yml`
 - `.github/workflows/seventh-review-evidence.yml`
+- `.github/workflows/eighth-review-evidence.yml`
 - `.github/workflows/phase22d-review-evidence.yml`
 - `.github/workflows/phase22e-review-evidence.yml`
 - `composer.json`
@@ -83,10 +85,13 @@ Historical phase review records remain immutable evidence for their exact earlie
 - `phpunit.xml.dist`
 - `tests/bootstrap.php`
 - `tests/workflow-bootstrap.php`
+- `tests/fixtures/sabri-membership-core/sabri-membership-core.php`
+- `tests/fixtures/sabri-membership-core/includes/functions.php`
 - `tests/AccessibilityContrastTest.php`
 - `tests/AdminSystemCheckTest.php`
 - `tests/CoreAdapterRequirementsTest.php`
 - `tests/CreateSurfaceTest.php`
+- `tests/EighthCompleteReviewTest.php`
 - `tests/FifthCompleteReviewTest.php`
 - `tests/FourthCompleteReviewTest.php`
 - `tests/PageResolverRepairTest.php`
