@@ -78,7 +78,9 @@ final class Plugin {
 
 	public function render_shortcode(): string {
 		// Template/widget/direct do_shortcode() invocation may not be detectable at
-		// template_redirect. Enforce the private response boundary again here.
+		// wp_enqueue_scripts or template_redirect. Enforce both the visual asset and
+		// private response boundaries again at the actual render point.
+		$this->enqueue_create_surface_assets();
 		$this->send_private_surface_headers();
 		return $this->create_surface->render();
 	}
@@ -128,6 +130,15 @@ final class Plugin {
 		$rows[] = $this->file20_contract_row();
 		$rows[] = $this->create_surface->system_check_row( get_current_user_id() );
 		return $rows;
+	}
+
+	private function enqueue_create_surface_assets(): void {
+		wp_enqueue_style(
+			'supc-create-surface',
+			SUPC_URL . 'assets/css/create-surface.css',
+			array( 'dashicons' ),
+			SUPC_VERSION
+		);
 	}
 
 	private function send_private_surface_headers(): void {
