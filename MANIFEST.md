@@ -38,6 +38,7 @@
 - `docs/FILE22-SECOND-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/FILE22-THIRD-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/FILE22-FOURTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md`
+- `docs/FILE22-FIFTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/MASTER-PLAN-AMENDMENT-v2.1.md`
 - `docs/MIGRATION.md`
 - `docs/PHASE-22C-CREATE-SURFACE.md`
@@ -61,12 +62,13 @@
 - `docs/STAGING-ACCEPTANCE.md`
 - `docs/SYSTEM-CHECK.md`
 
-Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and all four 30 July 2026 post-merge independent reviews supersede outdated status wording; they do not replace controlled staging or production acceptance.
+Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and all five 30 July 2026 post-merge independent reviews supersede outdated status wording; they do not replace controlled staging or production acceptance.
 
 ## Development and QA files
 
 - `.github/workflows/ci.yml`
 - `.github/workflows/cumulative-review-evidence.yml`
+- `.github/workflows/fifth-review-evidence.yml`
 - `.github/workflows/phase22d-review-evidence.yml`
 - `.github/workflows/phase22e-review-evidence.yml`
 - `composer.json`
@@ -80,6 +82,7 @@ Historical phase review records remain immutable evidence for their exact earlie
 - `tests/AdminSystemCheckTest.php`
 - `tests/CoreAdapterRequirementsTest.php`
 - `tests/CreateSurfaceTest.php`
+- `tests/FifthCompleteReviewTest.php`
 - `tests/FourthCompleteReviewTest.php`
 - `tests/PageResolverRepairTest.php`
 - `tests/PluginPrivacyTest.php`
@@ -91,8 +94,11 @@ Historical phase review records remain immutable evidence for their exact earlie
 - `tests/SubjectSchemaTest.php`
 - `tests/WorkflowCoordinatorTest.php`
 - `tests/ShellBridgeTest.php`
-- `tests/run-public-api-collision-test.php`
+- `tests/run-bootstrap-constant-collision-test.php`
 - `tests/run-file20-contract-collision-test.php`
+- `tests/run-late-shortcode-privacy-test.php`
+- `tests/run-public-api-collision-test.php`
+- `tests/run-public-api-marker-collision-test.php`
 - `tests/phpstan-wordpress-stubs.php`
 
 Development files are excluded from a future production ZIP according to `.distignore`. The committed Composer lock freezes development-tool resolution for exact-head QA.
