@@ -219,6 +219,7 @@ jobs:
             docs/STAGING-ACCEPTANCE.md docs/COMPATIBILITY-MATRIX.md docs/ERROR-CODES.md
             docs/FILE21-INTEGRATION.md docs/MASTER-PLAN-AMENDMENT-v2.1.md docs/SYSTEM-CHECK.md
             docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
+            docs/FILE22-CUMULATIVE-POST-CORRECTION-VERIFICATION-2026-07-30.md
             docs/PHASE-22C-CREATE-SURFACE.md
             docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
             docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
@@ -251,3 +252,4 @@ jobs:
           grep -q 'noncanonical_shortcode_surface' tests/PluginPrivacyTest.php
           grep -q 'test_interactive_schema_and_payload_validation_use_subject_schema' tests/SubjectSchemaTest.php
           grep -q 'Complete account, role, status, and document matrix' docs/STAGING-ACCEPTANCE.md
+          test -f .github/workflows/cumulative-review-evidence.yml

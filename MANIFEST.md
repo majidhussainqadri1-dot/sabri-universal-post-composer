@@ -33,6 +33,7 @@
 - `docs/DECISION-LOG.md`
 - `docs/ERROR-CODES.md`
 - `docs/FILE21-INTEGRATION.md`
+- `docs/FILE22-CUMULATIVE-POST-CORRECTION-VERIFICATION-2026-07-30.md`
 - `docs/MASTER-PLAN-AMENDMENT-v2.1.md`
 - `docs/MIGRATION.md`
 - `docs/PHASE-22C-CREATE-SURFACE.md`
@@ -61,6 +62,7 @@ Historical Phase 22E review records remain immutable evidence for the earlier Ph
 ## Development and QA files
 
 - `.github/workflows/ci.yml`
+- `.github/workflows/cumulative-review-evidence.yml`
 - `.github/workflows/phase22d-review-evidence.yml`
 - `.github/workflows/phase22e-review-evidence.yml`
 - `composer.json`
