@@ -43,7 +43,12 @@ final class Shell_Bridge {
 	public function filter_create_visibility( $allowed, $user_id = 0, $settings = array() ): bool {
 		unset( $allowed, $settings );
 
-		$user_id = is_numeric( $user_id ) ? (int) $user_id : get_current_user_id();
+		$current_user_id = get_current_user_id();
+		$supplied_id     = is_numeric( $user_id ) ? (int) $user_id : 0;
+		if ( $supplied_id > 0 && $supplied_id !== $current_user_id ) {
+			do_action( 'supc_deprecated_subject_argument_ignored', 'sabri_shell_can_show_create' );
+		}
+		$user_id = $current_user_id;
 		if ( $user_id <= 0 || Safe_Mode::disabled() || ! Page_Resolver::is_ready() ) {
 			return false;
 		}

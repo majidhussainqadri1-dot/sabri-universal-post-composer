@@ -35,30 +35,44 @@ final class Permission_Resolver {
 			return false;
 		}
 
-		$user = get_userdata( $user_id );
-		if ( ! $user ) {
+		try {
+			$user = get_userdata( $user_id );
+			if ( ! $user ) {
+				return false;
+			}
+
+			$status = (string) call_user_func( self::STATUS_CALLBACK, $user_id );
+		} catch ( \Throwable $error ) {
+			unset( $error );
 			return false;
 		}
 
-		$status = (string) call_user_func( self::STATUS_CALLBACK, $user_id );
-		if ( in_array( $status, array( 'rejected', 'suspended', 'expired_document' ), true ) ) {
-			return false;
-		}
-
-		if ( user_can( $user_id, 'manage_options' ) ) {
-			return true;
-		}
-
+		// A WordPress role or capability may narrow an approved account later,
+		// but it must never expand a pending, rejected, suspended, expired, or
+		// otherwise unknown Membership Core state.
 		return in_array( $status, array( 'approved', 'verified' ), true );
 	}
 
-	public function can_use_adapter( int $user_id, Adapter $adapter ): bool {
+	public function can_use_capability( int $user_id, string $capability ): bool {
 		if ( ! $this->account_is_eligible( $user_id ) ) {
 			return false;
 		}
 
-		$capability = trim( $adapter->required_capability() );
-		if ( '' !== $capability && ! user_can( $user_id, $capability ) ) {
+		$capability = trim( $capability );
+		if ( '' === $capability || sanitize_key( $capability ) !== $capability ) {
+			return false;
+		}
+
+		try {
+			return user_can( $user_id, $capability );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return false;
+		}
+	}
+
+	public function can_use_adapter( int $user_id, Adapter $adapter ): bool {
+		if ( ! $this->can_use_capability( $user_id, $adapter->required_capability() ) ) {
 			return false;
 		}
 

@@ -19,7 +19,7 @@ Patient Case and other sensitive drafts are server-side by default. Plaintext `l
 
 ## Public/private separation
 
-The Create page, drafts, previews, adapter diagnostics, and status endpoints are noindex, noarchive, no-cache, and excluded from public search. Public canonical content remains the responsibility of its native owner.
+The Create page, drafts, previews, adapter diagnostics, and status endpoints are noindex, noarchive, no-cache, and excluded from public search. The direct shortcode render boundary sets WordPress page/object/database no-cache constants, standard no-cache headers, `Vary: Cookie`, and the LiteSpeed no-cache signal. Public canonical content remains the responsibility of its native owner.
 
 ## Retention
 

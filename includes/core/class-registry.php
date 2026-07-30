@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Sabri\UniversalComposer\Core;
 
 use Sabri\UniversalComposer\Contracts\Adapter;
+use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
 use Throwable;
 use WP_Error;
 
@@ -21,8 +22,19 @@ final class Registry {
 	/** @var array<string, Adapter> */
 	private array $adapters = array();
 
+	/**
+	 * Immutable registration-time workflow metadata. Runtime authorization uses
+	 * this snapshot before invoking any native adapter method.
+	 *
+	 * @var array<string, array{workflow_api_version:string,required_capability:string,supports_native_drafts:bool}>
+	 */
+	private array $workflow_contracts = array();
+
 	/** @var array<int, array<string, Adapter>> */
 	private array $available_cache = array();
+
+	/** @var array<int, string> */
+	private array $state_cache = array();
 
 	/** @var array<string, array<string, mixed>> */
 	private array $errors = array();
@@ -48,12 +60,40 @@ final class Registry {
 				return $this->registration_error( 'api_mismatch', $key, 'Adapter API version is incompatible.' );
 			}
 
+			$capability = trim( $adapter->required_capability() );
+			if ( '' === $capability || sanitize_key( $capability ) !== $capability ) {
+				return $this->registration_error( 'invalid_required_capability', $key, 'Adapter capability is not canonical.' );
+			}
+
+			$native_module = trim( $adapter->native_module() );
+			if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{2,127}$/', $native_module ) ) {
+				return $this->registration_error( 'invalid_native_module', $key, 'Adapter native module is not canonical.' );
+			}
+
+			$minimum_native_version = trim( $adapter->minimum_native_version() );
+			if ( 1 !== preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/', $minimum_native_version ) ) {
+				return $this->registration_error( 'invalid_minimum_native_version', $key, 'Adapter minimum native version is invalid.' );
+			}
+
+			if ( ! in_array( $adapter->privacy_classification(), array( 'public', 'private', 'sensitive' ), true ) ) {
+				return $this->registration_error( 'invalid_privacy', $key, 'Adapter privacy classification is invalid.' );
+			}
+
 			$this->adapters[ $key ] = $adapter;
+			if ( $adapter instanceof Workflow_Adapter ) {
+				$this->workflow_contracts[ $key ] = array(
+					'workflow_api_version'   => trim( $adapter->workflow_api_version() ),
+					'required_capability'    => $capability,
+					'supports_native_drafts' => $adapter->supports_native_drafts(),
+				);
+			}
+
 			$this->flush_cache();
 			return true;
 		} catch ( Throwable $error ) {
+			unset( $error );
 			$key = 'unknown_' . count( $this->errors );
-			return $this->runtime_error( $key, 'registration_exception', $error );
+			return $this->runtime_error( $key, 'registration_exception' );
 		}
 	}
 
@@ -62,7 +102,7 @@ final class Registry {
 			return false;
 		}
 
-		unset( $this->adapters[ $key ] );
+		unset( $this->adapters[ $key ], $this->workflow_contracts[ $key ] );
 		$this->flush_cache();
 		return true;
 	}
@@ -76,6 +116,13 @@ final class Registry {
 	}
 
 	/**
+	 * @return array{workflow_api_version:string,required_capability:string,supports_native_drafts:bool}|null
+	 */
+	public function workflow_contract( string $key ): ?array {
+		return $this->workflow_contracts[ $key ] ?? null;
+	}
+
+	/**
 	 * @return array<string, Adapter>
 	 */
 	public function all(): array {
@@ -86,6 +133,10 @@ final class Registry {
 
 	/**
 	 * Return only healthy adapters the user can actually invoke.
+	 *
+	 * Central account and capability checks always run before native availability.
+	 * Native availability is then resolved before adapter-specific authorization so
+	 * an offline integration is never mislabeled as a permission denial.
 	 *
 	 * @return array<string, Adapter>
 	 */
@@ -102,11 +153,20 @@ final class Registry {
 		$available = array();
 		foreach ( $this->all() as $key => $adapter ) {
 			try {
-				if ( $adapter->is_available() && $this->permissions->can_use_adapter( $user_id, $adapter ) ) {
-					$available[ $key ] = $adapter;
+				$capability = trim( $adapter->required_capability() );
+				if ( ! $this->permissions->can_use_capability( $user_id, $capability ) ) {
+					continue;
 				}
+				if ( ! $adapter->is_available() ) {
+					continue;
+				}
+				if ( ! $adapter->can_create( $user_id ) ) {
+					continue;
+				}
+				$available[ $key ] = $adapter;
 			} catch ( Throwable $error ) {
-				$this->runtime_error( $key, 'availability_exception', $error );
+				unset( $error );
+				$this->runtime_error( $key, 'availability_exception' );
 			}
 		}
 
@@ -119,6 +179,57 @@ final class Registry {
 	}
 
 	/**
+	 * Return available, unavailable, or denied without conflating an adapter's
+	 * own authorization restriction with native-module availability.
+	 */
+	public function creation_state_for_user( int $user_id ): string {
+		if ( isset( $this->state_cache[ $user_id ] ) ) {
+			return $this->state_cache[ $user_id ];
+		}
+
+		if ( $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
+			$this->state_cache[ $user_id ] = 'denied';
+			return 'denied';
+		}
+
+		$has_unavailable = false;
+		foreach ( $this->all() as $key => $adapter ) {
+			try {
+				$capability = trim( $adapter->required_capability() );
+				if ( ! $this->permissions->can_use_capability( $user_id, $capability ) ) {
+					continue;
+				}
+				if ( ! $adapter->is_available() ) {
+					$has_unavailable = true;
+					continue;
+				}
+				if ( ! $adapter->can_create( $user_id ) ) {
+					continue;
+				}
+
+				$this->state_cache[ $user_id ] = 'available';
+				return 'available';
+			} catch ( Throwable $error ) {
+				unset( $error );
+				$has_unavailable = true;
+				$this->runtime_error( $key, 'state_exception' );
+			}
+		}
+
+		$this->state_cache[ $user_id ] = $has_unavailable ? 'unavailable' : 'denied';
+		return $this->state_cache[ $user_id ];
+	}
+
+	/**
+	 * Compatibility query used by the Create surface. True means that the
+	 * central gate permits a registered workflow but its native service is not
+	 * available; adapter-specific authorization denial remains false.
+	 */
+	public function has_central_capability_for_user( int $user_id ): bool {
+		return 'unavailable' === $this->creation_state_for_user( $user_id );
+	}
+
+	/**
 	 * @return array<string, array<string, mixed>>
 	 */
 	public function errors(): array {
@@ -127,6 +238,7 @@ final class Registry {
 
 	public function flush_cache(): void {
 		$this->available_cache = array();
+		$this->state_cache     = array();
 	}
 
 	private function compare_adapters( Adapter $left, Adapter $right ): int {
@@ -139,6 +251,7 @@ final class Registry {
 			$label = strcasecmp( $left->label(), $right->label() );
 			return 0 !== $label ? $label : strcmp( $left->key(), $right->key() );
 		} catch ( Throwable $error ) {
+			unset( $error );
 			return 0;
 		}
 	}
@@ -149,19 +262,17 @@ final class Registry {
 			'message' => $message,
 		);
 
-		do_action( 'supc_adapter_registration_error', $key, $code );
-		return new WP_Error( 'supc_' . $code, $message, array( 'adapter' => $key ) );
+		do_action( 'supc_adapter_registration_error', sanitize_key( $key ), $code );
+		return new WP_Error( 'supc_' . $code, $message, array( 'adapter' => sanitize_key( $key ) ) );
 	}
 
-	private function runtime_error( string $key, string $code, Throwable $error ): WP_Error {
+	private function runtime_error( string $key, string $code ): WP_Error {
 		$this->errors[ $key ] = array(
 			'code'        => $code,
-			'exception'   => get_class( $error ),
-			'message'     => $error->getMessage(),
 			'occurred_at' => gmdate( 'c' ),
 		);
 
-		do_action( 'supc_adapter_runtime_error', $key, $code );
+		do_action( 'supc_adapter_runtime_error', sanitize_key( $key ), $code );
 		return new WP_Error( 'supc_' . $code, __( 'The content adapter is temporarily unavailable.', 'sabri-universal-post-composer' ) );
 	}
 }

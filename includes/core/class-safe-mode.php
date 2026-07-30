@@ -25,7 +25,12 @@ final class Safe_Mode {
 
 		$callback = array( '\\Sabri\\UnifiedShell\\SafeMode', 'disabled' );
 		if ( is_callable( $callback ) ) {
-			return (bool) call_user_func( $callback );
+			try {
+				return (bool) call_user_func( $callback );
+			} catch ( \Throwable $error ) {
+				unset( $error );
+				return true;
+			}
 		}
 
 		return false;

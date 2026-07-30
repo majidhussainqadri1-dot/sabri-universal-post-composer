@@ -15,14 +15,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Page_Resolver {
 	private const SHORTCODE = 'sabri_universal_composer';
+	private const OPTION_KEY = 'supc_create_page_id';
+	private const MANAGED_META = '_supc_managed_page';
+	private const REPAIR_LOCK_OPTION = 'supc_create_page_repair_lock';
+	private const REPAIR_LOCK_TTL = 60;
+	private const APPROVED_SLUGS = array( 'create', 'create-content', 'platform-create', 'sabri-create' );
 
 	private static ?int $resolved_page_id = null;
 
+	/** @var array{status:string,configured_page_id:int,discovered_page_id:int,candidate_page_ids:array<int,int>}|null */
+	private static ?array $inspection_cache = null;
+
 	public static function activate(): void {
-		$page_id = self::resolve_page_id( true );
-		if ( $page_id > 0 ) {
-			update_option( 'supc_create_page_id', $page_id, false );
-		}
+		self::repair_mapping( true );
 	}
 
 	public static function resolve_page_id( bool $create = false ): int {
@@ -30,17 +35,15 @@ final class Page_Resolver {
 			return self::$resolved_page_id;
 		}
 
-		$configured = absint( get_option( 'supc_create_page_id', 0 ) );
-		if ( self::is_valid_page( $configured ) ) {
-			self::$resolved_page_id = $configured;
-			return $configured;
+		$inspection = self::inspect();
+		if ( 'ready' === $inspection['status'] ) {
+			self::$resolved_page_id = $inspection['configured_page_id'];
+			return self::$resolved_page_id;
 		}
 
-		$existing = self::find_shortcode_page();
-		if ( $existing > 0 ) {
-			update_option( 'supc_create_page_id', $existing, false );
-			self::$resolved_page_id = $existing;
-			return $existing;
+		if ( 'repairable' === $inspection['status'] && ! $create ) {
+			self::$resolved_page_id = $inspection['discovered_page_id'];
+			return self::$resolved_page_id;
 		}
 
 		if ( ! $create ) {
@@ -48,31 +51,124 @@ final class Page_Resolver {
 			return 0;
 		}
 
-		foreach ( array( 'create', 'create-content', 'platform-create', 'sabri-create' ) as $slug ) {
-			if ( get_page_by_path( $slug, OBJECT, 'page' ) ) {
-				continue;
-			}
-
-			$page_id = wp_insert_post(
-				array(
-					'post_title'   => __( 'Create', 'sabri-universal-post-composer' ),
-					'post_name'    => $slug,
-					'post_content' => '[' . self::SHORTCODE . ']',
-					'post_status'  => 'publish',
-					'post_type'    => 'page',
-					'meta_input'   => array( '_supc_managed_page' => 1 ),
-				),
-				true
-			);
-
-			if ( ! is_wp_error( $page_id ) ) {
-				self::$resolved_page_id = (int) $page_id;
-				return self::$resolved_page_id;
-			}
+		$result = self::repair_mapping( true );
+		if ( in_array( $result['result'], array( 'no_change', 'mapped_existing', 'created_managed_page' ), true ) ) {
+			self::$resolved_page_id = $result['page_id'];
+			return self::$resolved_page_id;
 		}
 
 		self::$resolved_page_id = 0;
 		return 0;
+	}
+
+	/**
+	 * Inspect the current mapping without writing options or posts.
+	 *
+	 * @return array{status:string,configured_page_id:int,discovered_page_id:int,candidate_page_ids:array<int,int>}
+	 */
+	public static function inspect(): array {
+		if ( null !== self::$inspection_cache ) {
+			return self::$inspection_cache;
+		}
+
+		$configured = absint( get_option( self::OPTION_KEY, 0 ) );
+		if ( self::is_valid_page( $configured ) ) {
+			self::$inspection_cache = array(
+				'status'             => 'ready',
+				'configured_page_id' => $configured,
+				'discovered_page_id' => $configured,
+				'candidate_page_ids' => array( $configured ),
+			);
+			return self::$inspection_cache;
+		}
+
+		$candidates = self::find_shortcode_pages();
+		$count      = count( $candidates );
+		$status     = 0 === $count ? 'missing' : ( 1 === $count ? 'repairable' : 'ambiguous' );
+
+		self::$inspection_cache = array(
+			'status'             => $status,
+			'configured_page_id' => $configured,
+			'discovered_page_id' => 1 === $count ? $candidates[0] : 0,
+			'candidate_page_ids' => $candidates,
+		);
+		return self::$inspection_cache;
+	}
+
+	/**
+	 * Repair only File 22's Create-page mapping. Existing unrelated pages are
+	 * never edited, overwritten, trashed, or deleted.
+	 *
+	 * @return array{result:string,page_id:int}
+	 */
+	public static function repair_mapping( bool $create = true, int $selected_page_id = 0 ): array {
+		$inspection = self::inspect();
+
+		if ( ! $create ) {
+			if ( 'ready' === $inspection['status'] ) {
+				return array( 'result' => 'no_change', 'page_id' => $inspection['configured_page_id'] );
+			}
+			if ( 'repairable' === $inspection['status'] ) {
+				return array( 'result' => 'would_map_existing', 'page_id' => $inspection['discovered_page_id'] );
+			}
+			if ( 'ambiguous' === $inspection['status'] ) {
+				return array( 'result' => 'ambiguous_selection_required', 'page_id' => 0 );
+			}
+			return array( 'result' => 'would_create_managed_page', 'page_id' => 0 );
+		}
+
+		$lock_token = self::acquire_repair_lock();
+		if ( '' === $lock_token ) {
+			return array( 'result' => 'repair_locked', 'page_id' => 0 );
+		}
+
+		try {
+			self::reset_cache();
+			$inspection = self::inspect();
+
+			if ( 'ready' === $inspection['status'] ) {
+				self::$resolved_page_id = $inspection['configured_page_id'];
+				return array( 'result' => 'no_change', 'page_id' => self::$resolved_page_id );
+			}
+
+			if ( 'repairable' === $inspection['status'] || 'ambiguous' === $inspection['status'] ) {
+				$candidates = $inspection['candidate_page_ids'];
+				$page_id    = 'repairable' === $inspection['status'] ? $inspection['discovered_page_id'] : absint( $selected_page_id );
+
+				if ( 'ambiguous' === $inspection['status'] && 0 === $page_id ) {
+					return array( 'result' => 'ambiguous_selection_required', 'page_id' => 0 );
+				}
+
+				if ( ! in_array( $page_id, $candidates, true ) || ! self::is_valid_page( $page_id ) ) {
+					return array( 'result' => 'invalid_candidate', 'page_id' => 0 );
+				}
+
+				if ( ! self::persist_mapping( $page_id ) ) {
+					return array( 'result' => 'mapping_persistence_failed', 'page_id' => $page_id );
+				}
+
+				return array( 'result' => 'mapped_existing', 'page_id' => $page_id );
+			}
+
+			$created = self::create_managed_page();
+			if ( 'managed_page_created' !== $created['result'] ) {
+				self::$resolved_page_id = 0;
+				return $created;
+			}
+
+			if ( ! self::persist_mapping( $created['page_id'] ) ) {
+				return array( 'result' => 'mapping_persistence_failed', 'page_id' => $created['page_id'] );
+			}
+
+			return array( 'result' => 'created_managed_page', 'page_id' => $created['page_id'] );
+		} finally {
+			self::release_repair_lock( $lock_token );
+		}
+	}
+
+	public static function reset_cache(): void {
+		self::$resolved_page_id = null;
+		self::$inspection_cache = null;
 	}
 
 	public static function url(): string {
@@ -95,15 +191,19 @@ final class Page_Resolver {
 	}
 
 	private static function is_valid_page( int $page_id ): bool {
-		if ( $page_id <= 0 || 'publish' !== get_post_status( $page_id ) ) {
+		if ( $page_id <= 0 || 'page' !== get_post_type( $page_id ) || 'publish' !== get_post_status( $page_id ) ) {
 			return false;
 		}
 
-		$content = (string) get_post_field( 'post_content', $page_id );
-		return has_shortcode( $content, self::SHORTCODE );
+		$content   = (string) get_post_field( 'post_content', $page_id );
+		$permalink = get_permalink( $page_id );
+		return has_shortcode( $content, self::SHORTCODE ) && is_string( $permalink ) && '' !== $permalink;
 	}
 
-	private static function find_shortcode_page(): int {
+	/**
+	 * @return array<int, int>
+	 */
+	private static function find_shortcode_pages(): array {
 		$pages = get_posts(
 			array(
 				'post_type'              => 'page',
@@ -118,13 +218,103 @@ final class Page_Resolver {
 			)
 		);
 
+		$matches = array();
 		foreach ( $pages as $page_id ) {
-			$content = (string) get_post_field( 'post_content', (int) $page_id );
-			if ( has_shortcode( $content, self::SHORTCODE ) ) {
-				return (int) $page_id;
+			$page_id = (int) $page_id;
+			if ( self::is_valid_page( $page_id ) ) {
+				$matches[] = $page_id;
 			}
 		}
 
-		return 0;
+		return $matches;
+	}
+
+	/**
+	 * @return array{result:string,page_id:int}
+	 */
+	private static function create_managed_page(): array {
+		$slug = '';
+		foreach ( self::APPROVED_SLUGS as $candidate ) {
+			if ( ! get_page_by_path( $candidate, OBJECT, 'page' ) ) {
+				$slug = $candidate;
+				break;
+			}
+		}
+
+		if ( '' === $slug ) {
+			return array( 'result' => 'managed_slug_unavailable', 'page_id' => 0 );
+		}
+
+		$page_id = wp_insert_post(
+			array(
+				'post_title'   => __( 'Create', 'sabri-universal-post-composer' ),
+				'post_name'    => $slug,
+				'post_content' => '[' . self::SHORTCODE . ']',
+				'post_status'  => 'publish',
+				'post_type'    => 'page',
+				'meta_input'   => array( self::MANAGED_META => 1 ),
+			),
+			true
+		);
+
+		if ( is_wp_error( $page_id ) ) {
+			return array( 'result' => 'managed_page_insert_failed', 'page_id' => 0 );
+		}
+
+		$page_id = (int) $page_id;
+		if ( ! self::is_valid_managed_page( $page_id, $slug ) ) {
+			return array( 'result' => 'managed_page_validation_failed', 'page_id' => $page_id );
+		}
+
+		return array( 'result' => 'managed_page_created', 'page_id' => $page_id );
+	}
+
+	private static function is_valid_managed_page( int $page_id, string $expected_slug ): bool {
+		$managed = get_post_meta( $page_id, self::MANAGED_META, true );
+		return self::is_valid_page( $page_id )
+			&& $expected_slug === (string) get_post_field( 'post_name', $page_id )
+			&& in_array( $managed, array( 1, '1' ), true );
+	}
+
+	private static function persist_mapping( int $page_id ): bool {
+		update_option( self::OPTION_KEY, $page_id, false );
+		if ( $page_id !== absint( get_option( self::OPTION_KEY, 0 ) ) ) {
+			return false;
+		}
+
+		self::reset_cache();
+		self::$resolved_page_id = $page_id;
+		return true;
+	}
+
+	private static function acquire_repair_lock(): string {
+		$existing = get_option( self::REPAIR_LOCK_OPTION, false );
+		if ( is_array( $existing ) ) {
+			$created = (int) ( $existing['created'] ?? 0 );
+			if ( $created > 0 && $created < time() - self::REPAIR_LOCK_TTL ) {
+				delete_option( self::REPAIR_LOCK_OPTION );
+				$existing = false;
+			}
+		}
+
+		if ( false !== $existing ) {
+			return '';
+		}
+
+		$token = wp_generate_uuid4();
+		$added = add_option(
+			self::REPAIR_LOCK_OPTION,
+			array( 'token' => $token, 'created' => time() ),
+			'',
+			false
+		);
+		return $added ? $token : '';
+	}
+
+	private static function release_repair_lock( string $token ): void {
+		$lock = get_option( self::REPAIR_LOCK_OPTION, false );
+		if ( is_array( $lock ) && $token === (string) ( $lock['token'] ?? '' ) ) {
+			delete_option( self::REPAIR_LOCK_OPTION );
+		}
 	}
 }
