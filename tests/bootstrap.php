@@ -11,33 +11,41 @@ define( 'SUPC_ADAPTER_API_VERSION', '1.0.0' );
 define( 'SUPC_MIN_SMC_VERSION', '1.0.1' );
 define( 'SUPC_VERSION', '0.1.0-dev' );
 define( 'SUPC_URL', 'https://example.test/wp-content/plugins/sabri-universal-post-composer/' );
-define( 'SMC_VERSION', '1.0.1' );
-define( 'SMC_FILE', __FILE__ );
-define( 'SMC_PATH', __DIR__ . '/' );
 
-$GLOBALS['supc_test_statuses']          = array( 1 => 'approved', 2 => 'suspended' );
-$GLOBALS['supc_test_capabilities']      = array( 1 => array( 'sabri_feed_create_posts' => true ) );
-$GLOBALS['supc_test_options']           = array();
-$GLOBALS['supc_test_logged_in']         = true;
-$GLOBALS['supc_test_current_user']      = 1;
-$GLOBALS['supc_test_manage_options']    = true;
-$GLOBALS['supc_test_unique_id']         = 0;
-$GLOBALS['supc_test_uuid_counter']      = 0;
-$GLOBALS['supc_test_enqueued_css']      = array();
-$GLOBALS['supc_test_actions_fired']     = array();
-$GLOBALS['supc_test_filter_values']     = array();
-$GLOBALS['supc_test_pages']             = array();
-$GLOBALS['supc_test_next_post_id']      = 100;
-$GLOBALS['supc_test_is_page']           = 0;
-$GLOBALS['supc_test_redirect']          = '';
-$GLOBALS['supc_test_redirect_success']  = true;
-$GLOBALS['supc_test_nonce_checked']     = false;
-$GLOBALS['supc_test_update_fail_keys']  = array();
-$GLOBALS['supc_test_add_option_fail']   = false;
-$GLOBALS['supc_test_insert_mutations']  = array();
-$GLOBALS['supc_test_get_posts_calls']   = 0;
+( static function (): void {
+	$membership_path = __DIR__ . '/fixtures/sabri-membership-core';
+	define( 'SMC_VERSION', '1.0.1' );
+	define( 'SMC_DB_VERSION', '1.0.1' );
+	define( 'SMC_FILE', $membership_path . '/sabri-membership-core.php' );
+	define( 'SMC_PATH', $membership_path . '/' );
+	require_once $membership_path . '/includes/functions.php';
+} )();
+
+$GLOBALS['supc_test_statuses']           = array( 1 => 'approved', 2 => 'suspended' );
+$GLOBALS['supc_test_capabilities']       = array( 1 => array( 'sabri_feed_create_posts' => true ) );
+$GLOBALS['supc_test_options']            = array();
+$GLOBALS['supc_test_logged_in']          = true;
+$GLOBALS['supc_test_current_user']       = 1;
+$GLOBALS['supc_test_manage_options']     = true;
+$GLOBALS['supc_test_unique_id']          = 0;
+$GLOBALS['supc_test_uuid_counter']       = 0;
+$GLOBALS['supc_test_enqueued_css']       = array();
+$GLOBALS['supc_test_actions_fired']      = array();
+$GLOBALS['supc_test_filter_values']      = array();
+$GLOBALS['supc_test_pages']              = array();
+$GLOBALS['supc_test_next_post_id']       = 100;
+$GLOBALS['supc_test_is_page']            = 0;
+$GLOBALS['supc_test_redirect']           = '';
+$GLOBALS['supc_test_redirect_success']   = true;
+$GLOBALS['supc_test_nonce_checked']      = false;
+$GLOBALS['supc_test_update_fail_keys']   = array();
+$GLOBALS['supc_test_add_option_fail']    = false;
+$GLOBALS['supc_test_insert_mutations']   = array();
+$GLOBALS['supc_test_get_posts_calls']    = 0;
 $GLOBALS['supc_test_delete_post_result'] = 'object';
 $GLOBALS['supc_test_deleted_posts']      = array();
+$GLOBALS['supc_test_update_post_result'] = 'id';
+$GLOBALS['supc_test_updated_posts']      = array();
 
 class WP_Error {
 	public function __construct(
@@ -115,12 +123,10 @@ function current_user_can( string $capability ): bool {
 	return user_can( get_current_user_id(), $capability );
 }
 
-function smc_user_status( int $user_id ): string {
-	return $GLOBALS['supc_test_statuses'][ $user_id ] ?? 'draft';
-}
-
 function get_option( string $key, mixed $default = false ): mixed {
-	return $GLOBALS['supc_test_options'][ $key ] ?? $default;
+	return array_key_exists( $key, $GLOBALS['supc_test_options'] )
+		? $GLOBALS['supc_test_options'][ $key ]
+		: $default;
 }
 
 function update_option( string $key, mixed $value, bool $autoload = true ): bool {
@@ -330,6 +336,30 @@ function wp_delete_post( int $post_id, bool $force_delete = false ): object|fals
 	$GLOBALS['supc_test_deleted_posts'][] = $post_id;
 	unset( $GLOBALS['supc_test_pages'][ $post_id ] );
 	return (object) array( 'ID' => $post_id );
+}
+
+function wp_update_post( array $postarr, bool $wp_error = false ): int|WP_Error {
+	unset( $wp_error );
+	$result  = (string) $GLOBALS['supc_test_update_post_result'];
+	$post_id = (int) ( $postarr['ID'] ?? 0 );
+	if ( 'error' === $result ) {
+		return new WP_Error( 'update_failed', 'Update failed.' );
+	}
+	if ( 'zero' === $result || $post_id <= 0 || ! isset( $GLOBALS['supc_test_pages'][ $post_id ] ) ) {
+		return 0;
+	}
+
+	if ( 'no_mutation' !== $result ) {
+		if ( array_key_exists( 'post_status', $postarr ) ) {
+			$GLOBALS['supc_test_pages'][ $post_id ]['status'] = (string) $postarr['post_status'];
+		}
+		if ( array_key_exists( 'post_content', $postarr ) ) {
+			$GLOBALS['supc_test_pages'][ $post_id ]['content'] = (string) $postarr['post_content'];
+		}
+	}
+
+	$GLOBALS['supc_test_updated_posts'][] = $post_id;
+	return $post_id;
 }
 
 function is_wp_error( mixed $thing ): bool {
