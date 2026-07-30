@@ -41,24 +41,23 @@ final class Safe_Mode {
 			return false;
 		}
 
-		$callback      = array( self::SHELL_SAFE_MODE_CLASS, 'disabled' );
+		$callback      = Runtime_Trust::owned_shell_static_method( self::SHELL_SAFE_MODE_CLASS, 'disabled' );
 		$trusted_shell = defined( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' )
 			&& '1.0.1' === (string) SABRI_SHELL_CREATE_CONTRACT_VERSION
 			&& defined( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' )
 			&& 'sabri-unified-application-shell' === (string) SABRI_SHELL_CREATE_CONTRACT_OWNER
 			&& defined( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' )
 			&& true === SABRI_SHELL_CREATE_FUNCTIONS_OWNED
-			&& is_callable( $callback )
-			&& Runtime_Trust::shell_symbols_owned( array(), self::SHELL_SAFE_MODE_CLASS );
+			&& null !== $callback;
 
-		// A colliding, incomplete, obsolete, or foreign-source shell runtime must
-		// never be trusted to clear the platform-wide emergency boundary.
+		// A colliding, incomplete, obsolete, inherited, or foreign-source shell
+		// runtime must never be trusted to clear the platform emergency boundary.
 		if ( ! $trusted_shell ) {
 			return true;
 		}
 
 		try {
-			return (bool) call_user_func( $callback );
+			return (bool) $callback();
 		} catch ( \Throwable $error ) {
 			unset( $error );
 			return true;
