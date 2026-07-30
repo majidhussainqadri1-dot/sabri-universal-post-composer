@@ -1,0 +1,63 @@
+name: File 22 Tenth Complete Review Evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-22-tenth-review-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  tenth-review-evidence:
+    name: Exact-head tenth review regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+      - name: Run cumulative PHPUnit suite
+        run: composer test
+      - name: Enforce public API collision Safe Mode
+        run: php tests/run-public-api-collision-test.php
+      - name: Enforce File 20 no-autoload trust boundary
+        run: php tests/run-shell-safe-mode-no-autoload-test.php
+      - name: Enforce File 20 runtime provenance
+        run: php tests/run-untrusted-shell-safe-mode-test.php
+      - name: Enforce File 20 producer provenance
+        run: php tests/run-file20-contract-collision-test.php
+      - name: Verify tenth review inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            .github/workflows/tenth-review-evidence.yml
+            tests/TenthCompleteReviewTest.php
+            tests/run-public-api-collision-test.php
+            tests/run-shell-safe-mode-no-autoload-test.php
+            tests/fixtures/sabri-unified-application-shell/includes/class-inherited-safe-mode.php
+            docs/FILE22-TENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
+          )
+          for file in "${required[@]}"; do
+            test -f "$file"
+          done
+          grep -Fq 'Registry availability bypassed Safe Mode' docs/FILE22-TENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
+          grep -Fq 'public_api_owned' includes/core/class-runtime-trust.php
+          grep -Fq 'Safe_Mode::disabled()' includes/core/class-registry.php
