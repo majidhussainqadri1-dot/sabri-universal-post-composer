@@ -56,6 +56,6 @@ jobs:
             test -f "$file"
             grep -Fq -- "- \`$file\`" MANIFEST.md
           done
-          grep -Fq 'core constant collisions' CHANGELOG.md
+          grep -Fq 'core constant is preclaimed' CHANGELOG.md
           grep -Fq 'same-origin HTTPS' docs/ADAPTER-CONTRACT.md
           grep -Fq 'private response boundary' docs/PRIVACY.md
