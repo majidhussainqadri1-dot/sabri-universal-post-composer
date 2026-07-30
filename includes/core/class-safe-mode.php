@@ -25,6 +25,18 @@ final class Safe_Mode {
 			return true;
 		}
 
+		// File 22 may not continue as an internal Composer while its declared public
+		// integration API is partial, colliding, or executable from a foreign source.
+		if (
+			Runtime_Trust::public_api_claimed() &&
+			(
+				! defined( 'SUPC_PATH' ) ||
+				! Runtime_Trust::public_api_owned( SUPC_PATH . 'includes/core/functions.php' )
+			)
+		) {
+			return true;
+		}
+
 		if ( ! Runtime_Trust::shell_claimed() ) {
 			return false;
 		}
