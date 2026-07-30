@@ -21,18 +21,31 @@ final class Runtime_Trust {
 	/**
 	 * @param array<int,string> $functions Global function names.
 	 */
+	public static function functions_available( array $functions ): bool {
+		if ( array() === $functions ) {
+			return false;
+		}
+
+		foreach ( $functions as $function ) {
+			if ( ! is_string( $function ) || '' === $function || ! function_exists( $function ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * @param array<int,string> $functions Global function names.
+	 */
 	public static function functions_declared_by_file( array $functions, string $expected_file ): bool {
 		$expected_file = realpath( $expected_file );
-		if ( false === $expected_file || array() === $functions ) {
+		if ( false === $expected_file || ! self::functions_available( $functions ) ) {
 			return false;
 		}
 
 		try {
 			foreach ( $functions as $function ) {
-				if ( ! is_string( $function ) || '' === $function || ! function_exists( $function ) ) {
-					return false;
-				}
-
 				$source = ( new \ReflectionFunction( $function ) )->getFileName();
 				$source = is_string( $source ) ? realpath( $source ) : false;
 				if ( false === $source || $source !== $expected_file ) {
@@ -95,6 +108,19 @@ final class Runtime_Trust {
 		}
 
 		return true;
+	}
+
+	public static function owned_shell_function( string $function ): ?\Closure {
+		if ( '' === $function || ! self::shell_symbols_owned( array( $function ) ) || ! is_callable( $function ) ) {
+			return null;
+		}
+
+		try {
+			return \Closure::fromCallable( $function );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return null;
+		}
 	}
 
 	/**
