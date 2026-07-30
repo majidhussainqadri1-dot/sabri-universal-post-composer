@@ -205,6 +205,10 @@ final class Registry {
 	 * @return array<string, Adapter>
 	 */
 	public function available_for_user( int $user_id ): array {
+		if ( Safe_Mode::disabled() ) {
+			return array();
+		}
+
 		if ( $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
 			return array();
 		}
@@ -246,9 +250,14 @@ final class Registry {
 
 	/**
 	 * Return available, unavailable, or denied without conflating an adapter's
-	 * own authorization restriction with native-module availability.
+	 * own authorization restriction with native-module availability. Safe Mode is
+	 * a platform-wide denial and is evaluated before account or native state.
 	 */
 	public function creation_state_for_user( int $user_id ): string {
+		if ( Safe_Mode::disabled() ) {
+			return 'denied';
+		}
+
 		if ( $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
 			return 'denied';
 		}
