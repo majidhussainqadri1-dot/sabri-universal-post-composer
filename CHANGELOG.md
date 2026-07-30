@@ -2,6 +2,15 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Seventh complete-repository hardening
+
+- Required the mandatory Membership Core status callback to originate from the declared `SMC_FILE`/`SMC_PATH` runtime before File 22 accepts it as an authorization authority.
+- Made Create-page mapping repair transactional: a failed option write restores the prior mapping and removes only the exact new File 22-managed page created by that attempt.
+- Stopped treating a `null` or `false` `wp_delete_post()` result as successful rollback evidence.
+- Added strict Semantic Versioning validation, including prerelease plus build metadata, and ignored build metadata when comparing compatibility precedence.
+- Isolated bootstrap and public-API preflight variables inside static closures so generic names do not leak into the WordPress global symbol table.
+- Added seventh-cycle PHPUnit, isolated Membership provenance/global-scope contracts, transactional repair regressions, and an exact-head evidence workflow.
+
 ### Sixth complete-repository hardening
 
 - Failed closed before loading source files when any File 22-owned class or interface is preclaimed, preventing fatal redeclaration and mixed runtimes.
