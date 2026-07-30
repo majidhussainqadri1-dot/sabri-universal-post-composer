@@ -2,6 +2,15 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Eighth complete-repository hardening
+
+- Replaced PHP `version_compare()` with a bounded Semantic Versioning comparator that implements numeric, nonnumeric, prerelease-length, stable-release, and build-metadata precedence correctly.
+- Bound version metadata to 255 bytes and rejected leading or trailing whitespace before any compatibility decision.
+- Required File 00 to expose a compatible `SMC_DB_VERSION` and the canonical `sabri-membership-core/sabri-membership-core.php` package identity in addition to coherent runtime provenance.
+- Removed the magic missing-option sentinel so failed Create-page mapping writes restore literal strings, `null`, and other prior option values exactly.
+- Added a delete-failure quarantine path that converts the exact newly inserted Create record to a nonpublic empty draft; an unremovable published shortcode triggers File 22 emergency disable and controlled evidence.
+- Added canonical Membership fixtures, official SemVer precedence regressions, exact mapping-state tests, rollback quarantine tests, and an eighth exact-head evidence workflow.
+
 ### Seventh complete-repository hardening
 
 - Required the mandatory Membership Core status callback to originate from the declared `SMC_FILE`/`SMC_PATH` runtime before File 22 accepts it as an authorization authority.
