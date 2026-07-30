@@ -2,6 +2,16 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Third post-merge hardening
+
+- Applied the immutable central capability gate before workflow compatibility and native availability classification.
+- Isolated duplicate-key collision diagnostics from the active registered adapter's runtime error slot.
+- Made equal-priority ordering deterministic by canonical adapter key instead of mutable labels.
+- Required administrator static adapter health to use immutable registration metadata for API, owner, capability, minimum version, group, and privacy.
+- Required File 21's actual native version to satisfy both the platform floor and the adapter's declared minimum.
+- Preserved newly introduced controlled registration and File 21 diagnostic codes in the administrator allowlist.
+- Added a third independent review record and focused regression coverage for authorization ordering, duplicate diagnostics, deterministic ordering, immutable administrator health, and monotonic native-version compatibility.
+
 ### Second post-merge hardening
 
 - Extended the immutable registration contract to include privacy class, group, priority, and minimum native version alongside capability and native owner.
