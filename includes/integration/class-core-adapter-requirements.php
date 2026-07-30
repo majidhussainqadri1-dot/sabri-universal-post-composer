@@ -14,6 +14,7 @@ use Sabri\UniversalComposer\Contracts\Diagnostic_Adapter;
 use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
 use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
+use Sabri\UniversalComposer\Core\Version;
 use Sabri\UniversalComposer\Core\Workflow_Coordinator;
 use Throwable;
 
@@ -27,13 +28,13 @@ if ( ! defined( 'ABSPATH' ) ) {
  * a missing File 21 adapter does not fatal the public website.
  */
 final class Core_Adapter_Requirements {
-	public const SOCIAL_PUBLICATION_KEY        = 'social_publication';
-	public const FILE21_NATIVE_MODULE          = 'sabri-complete-home-news-feed';
-	public const MINIMUM_FILE21_VERSION        = '1.0.3';
-	public const REQUIRED_CREATE_CAPABILITY    = 'sabri_feed_create_posts';
-	public const REQUIRED_GROUP                = 'publishing';
-	public const REQUIRED_PRIVACY_CLASS        = 'public';
-	public const SUBJECT_SCHEMA_API_VERSION    = '1.0.0';
+	public const SOCIAL_PUBLICATION_KEY     = 'social_publication';
+	public const FILE21_NATIVE_MODULE       = 'sabri-complete-home-news-feed';
+	public const MINIMUM_FILE21_VERSION     = '1.0.3';
+	public const REQUIRED_CREATE_CAPABILITY = 'sabri_feed_create_posts';
+	public const REQUIRED_GROUP             = 'publishing';
+	public const REQUIRED_PRIVACY_CLASS     = 'public';
+	public const SUBJECT_SCHEMA_API_VERSION = '1.0.0';
 
 	public function __construct( private Registry $registry ) {
 	}
@@ -70,9 +71,9 @@ final class Core_Adapter_Requirements {
 			if ( self::FILE21_NATIVE_MODULE !== $base_contract['native_module'] ) {
 				$codes[] = 'native_module_mismatch';
 			}
-			if ( ! $this->valid_version( $minimum ) ) {
+			if ( ! Version::valid( $minimum ) ) {
 				$codes[] = 'invalid_minimum_native_version';
-			} elseif ( version_compare( $minimum, self::MINIMUM_FILE21_VERSION, '<' ) ) {
+			} elseif ( ! Version::at_least( $minimum, self::MINIMUM_FILE21_VERSION ) ) {
 				$codes[] = 'minimum_native_version_too_low';
 			}
 			if ( self::REQUIRED_CREATE_CAPABILITY !== $base_contract['required_capability'] ) {
@@ -133,13 +134,13 @@ final class Core_Adapter_Requirements {
 			if ( '' === $actual ) {
 				return $this->failure( 'native_version_unreported' );
 			}
-			if ( ! $this->valid_version( $actual ) ) {
+			if ( ! Version::valid( $actual ) ) {
 				return $this->failure( 'native_version_invalid' );
 			}
-			if ( version_compare( $actual, self::MINIMUM_FILE21_VERSION, '<' ) ) {
+			if ( ! Version::at_least( $actual, self::MINIMUM_FILE21_VERSION ) ) {
 				return $this->failure( 'native_version_too_low' );
 			}
-			if ( version_compare( $actual, $minimum, '<' ) ) {
+			if ( ! Version::at_least( $actual, $minimum ) ) {
 				return $this->failure( 'native_version_below_declared_minimum' );
 			}
 
@@ -180,9 +181,5 @@ final class Core_Adapter_Requirements {
 
 	private function runtime_constant( string $name ): mixed {
 		return defined( $name ) ? constant( $name ) : null;
-	}
-
-	private function valid_version( string $version ): bool {
-		return 1 === preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/', $version );
 	}
 }
