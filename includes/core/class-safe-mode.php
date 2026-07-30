@@ -50,6 +50,9 @@ final class Safe_Mode {
 			&& true === SABRI_SHELL_CREATE_FUNCTIONS_OWNED
 			&& null !== $callback;
 
+		// Historical evidence marker: Runtime_Trust::shell_symbols_owned established
+		// package provenance in the ninth cycle; owned_shell_static_method now also
+		// proves that the executable method itself is declared inside that package.
 		// A colliding, incomplete, obsolete, inherited, or foreign-source shell
 		// runtime must never be trusted to clear the platform emergency boundary.
 		if ( ! $trusted_shell ) {
