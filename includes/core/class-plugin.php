@@ -131,10 +131,18 @@ final class Plugin {
 	}
 
 	private function send_private_surface_headers(): void {
+		foreach ( array( 'DONOTCACHEPAGE', 'DONOTCACHEOBJECT', 'DONOTCACHEDB' ) as $constant ) {
+			if ( ! defined( $constant ) ) {
+				define( $constant, true );
+			}
+		}
+
 		nocache_headers();
 		if ( ! headers_sent() ) {
 			header( 'X-Robots-Tag: noindex, nofollow, noarchive', true );
+			header( 'Vary: Cookie', false );
 		}
+		do_action( 'litespeed_control_set_nocache', 'sabri-universal-post-composer' );
 		do_action( 'supc_private_surface_headers_applied' );
 	}
 
@@ -173,13 +181,23 @@ final class Plugin {
 		$version = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' );
 		$owner   = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
 		$owned   = $this->runtime_constant( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' );
+		$trusted = '1.0.1' === $version
+			&& 'sabri-unified-application-shell' === $owner
+			&& true === $owned;
 		if ( '1.0.1' !== $version ) { $codes[] = 'file20_contract_version_mismatch'; }
 		if ( 'sabri-unified-application-shell' !== $owner ) { $codes[] = 'file20_contract_owner_mismatch'; }
 		if ( true !== $owned ) { $codes[] = 'file20_contract_collision'; }
 		if ( ! function_exists( 'sabri_shell_create_contract_available' ) || ! function_exists( 'sabri_shell_create_visible_for_current_user' ) ) {
 			$codes[] = 'file20_contract_functions_missing';
-		} elseif ( ! sabri_shell_create_contract_available() ) {
-			$codes[] = 'file20_contract_unavailable';
+		} elseif ( $trusted ) {
+			try {
+				if ( ! sabri_shell_create_contract_available() ) {
+					$codes[] = 'file20_contract_unavailable';
+				}
+			} catch ( \Throwable $error ) {
+				unset( $error );
+				$codes[] = 'file20_contract_exception';
+			}
 		}
 		return array( 'key' => 'file20_create_contract', 'status' => array() === $codes ? 'pass' : 'fail', 'count' => count( $codes ), 'codes' => array_values( array_unique( $codes ) ) );
 	}

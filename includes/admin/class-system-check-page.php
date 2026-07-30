@@ -27,6 +27,83 @@ final class System_Check_Page {
 	private const NONCE_ACTION = 'supc_repair_create_page';
 	private const ALLOWED_GROUPS = array( 'publishing', 'knowledge', 'media', 'commerce', 'other' );
 	private const ALLOWED_PRIVACY = array( 'public', 'private', 'sensitive' );
+	private const SAFE_SYSTEM_KEYS = array(
+		'membership_core',
+		'create_page',
+		'adapter_errors',
+		'public_api_contract',
+		'file20_create_contract',
+		'create_surface_diagnostics',
+		'social_publication_adapter',
+	);
+	private const SAFE_DIAGNOSTIC_CODES = array(
+		'membership_core_unavailable',
+		'create_page_ready',
+		'create_page_repairable',
+		'create_page_ambiguous',
+		'create_page_missing',
+		'invalid_key',
+		'duplicate_key',
+		'api_mismatch',
+		'invalid_required_capability',
+		'invalid_native_module',
+		'invalid_minimum_native_version',
+		'invalid_privacy',
+		'registration_exception',
+		'availability_exception',
+		'state_exception',
+		'public_api_version_mismatch',
+		'public_api_owner_mismatch',
+		'public_api_function_collision',
+		'public_api_incomplete',
+		'file20_contract_version_mismatch',
+		'file20_contract_owner_mismatch',
+		'file20_contract_collision',
+		'file20_contract_functions_missing',
+		'file20_contract_unavailable',
+		'file20_contract_exception',
+		'invalid_route',
+		'unknown_group',
+		'render_exception',
+		'incompatible_adapter_api',
+		'native_unavailable',
+		'workflow_api_mismatch',
+		'invalid_schema_contract',
+		'workflow_contract_exception',
+		'social_publication_not_registered',
+		'social_publication_contract_mismatch',
+		'social_publication_native_version_unreported',
+		'social_publication_native_version_invalid',
+		'social_publication_native_version_too_low',
+		'social_publication_temporarily_unavailable',
+		'adapter_key_mismatch',
+		'native_module_mismatch',
+		'minimum_native_version_too_low',
+		'required_capability_mismatch',
+		'group_mismatch',
+		'privacy_classification_mismatch',
+		'diagnostic_contract_missing',
+		'workflow_contract_missing',
+		'subject_schema_api_mismatch',
+		'subject_schema_contract_missing',
+		'workflow_registration_metadata_missing',
+		'workflow_capability_mismatch',
+		'native_draft_contract_missing',
+		'diagnostic_exception',
+		'native_version_pending',
+		'native_version_mismatch',
+		'native_version_unreported',
+		'configuration_missing',
+		'route_missing',
+		'dependency_missing',
+		'dependency_incompatible',
+		'safe_mode',
+		'contract_mismatch',
+		'temporarily_unavailable',
+		'schema_invalid',
+		'permission_configuration_invalid',
+		'unrecognized_diagnostic',
+	);
 
 	public function __construct( private Registry $registry ) {
 	}
@@ -161,6 +238,9 @@ final class System_Check_Page {
 			$codes  = $this->normalize_codes( $row['codes'] ?? array() );
 			if ( '' === $key ) {
 				continue;
+			}
+			if ( ! in_array( $key, self::SAFE_SYSTEM_KEYS, true ) ) {
+				$key = 'unrecognized_check';
 			}
 
 			$rows[] = array(
@@ -328,7 +408,9 @@ final class System_Check_Page {
 		foreach ( array_slice( $codes, 0, 20 ) as $code ) {
 			$code = substr( sanitize_key( (string) $code ), 0, 64 );
 			if ( '' !== $code ) {
-				$normalized[] = $code;
+				$normalized[] = in_array( $code, self::SAFE_DIAGNOSTIC_CODES, true )
+					? $code
+					: 'unrecognized_diagnostic';
 			}
 		}
 

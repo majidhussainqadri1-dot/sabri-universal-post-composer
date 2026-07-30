@@ -14,7 +14,11 @@ final class Test_Adapter implements Adapter {
 		private bool $available = true,
 		private bool $authorized = true,
 		private bool $throw_on_available = false,
-		private string $api = '1.0.0'
+		private string $api = '1.0.0',
+		private string $capability = 'publish_posts',
+		private string $native_module = 'test-module',
+		private string $minimum_native_version = '1.0.0',
+		private string $privacy = 'public'
 	) {
 	}
 
@@ -25,10 +29,10 @@ final class Test_Adapter implements Adapter {
 	public function group(): string { return 'test'; }
 	public function icon(): string { return 'admin-post'; }
 	public function priority(): int { return $this->adapter_priority; }
-	public function native_module(): string { return 'test-module'; }
-	public function minimum_native_version(): string { return '1.0.0'; }
-	public function required_capability(): string { return 'publish_posts'; }
-	public function privacy_classification(): string { return 'public'; }
+	public function native_module(): string { return $this->native_module; }
+	public function minimum_native_version(): string { return $this->minimum_native_version; }
+	public function required_capability(): string { return $this->capability; }
+	public function privacy_classification(): string { return $this->privacy; }
 	public function is_available(): bool {
 		if ( $this->throw_on_available ) {
 			throw new RuntimeException( 'Failure.' );
@@ -64,6 +68,10 @@ final class RegistryTest extends TestCase {
 		$this->assertTrue( $this->registry->register( new Test_Adapter( 'valid_key' ) ) );
 		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'valid_key' ) ) );
 		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'old_api', 10, true, true, false, '0.9.0' ) ) );
+		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'empty_capability', capability: '' ) ) );
+		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'invalid_native', native_module: 'File 21' ) ) );
+		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'invalid_version', minimum_native_version: 'latest' ) ) );
+		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'invalid_privacy', privacy: 'unknown' ) ) );
 	}
 
 	public function test_central_permission_denies_suspended_user(): void {
@@ -71,6 +79,17 @@ final class RegistryTest extends TestCase {
 		$this->assertNotEmpty( $this->registry->available_for_user( 1 ) );
 		$this->assertSame( array(), $this->registry->available_for_user( 2 ) );
 		$this->assertSame( 'denied', $this->registry->creation_state_for_user( 2 ) );
+	}
+
+	public function test_wordpress_administrator_cannot_expand_pending_membership_state(): void {
+		$GLOBALS['supc_test_statuses'][3] = 'pending';
+		$GLOBALS['supc_test_capabilities'][3] = array( 'publish_posts' => true );
+		$GLOBALS['supc_test_current_user'] = 3;
+		$GLOBALS['supc_test_manage_options'] = true;
+		$this->assertTrue( $this->registry->register( new Test_Adapter( 'pending_admin' ) ) );
+
+		$this->assertSame( array(), $this->registry->available_for_user( 3 ) );
+		$this->assertSame( 'denied', $this->registry->creation_state_for_user( 3 ) );
 	}
 
 	public function test_adapter_specific_denial_is_not_reported_as_native_unavailability(): void {

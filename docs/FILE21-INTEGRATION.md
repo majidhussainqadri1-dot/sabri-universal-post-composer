@@ -36,7 +36,7 @@ The global Create page replaces File 21's fallback CTA only when all of the foll
 - the File 22 Create page is ready;
 - File 22 Safe Mode is clear;
 - File 20 is version `1.0.1` or later;
-- File 20 declares `SABRI_SHELL_CREATE_CONTRACT_VERSION` `1.0.0` or later;
+- File 20 declares the exact `SABRI_SHELL_CREATE_CONTRACT_VERSION` `1.0.1`, canonical owner, and function-ownership marker;
 - `sabri_shell_create_contract_available()` confirms the producer contract is genuinely active.
 
 A version number alone is not sufficient evidence of the File 20 producer hook. Until every condition is true, File 21 retains its existing `/create-post/` Home/News fallback. This prevents an approved doctor from losing the only visible posting path during a partial rollout, incompatible upgrade, duplicate-key collision, Safe Mode event, or rollback.
@@ -55,7 +55,7 @@ A missing or incompatible adapter blocks File 22 Core 1.0 release acceptance. It
 
 ## Current phase boundary
 
-The first integration is a route-only base adapter. File 22's optional `Workflow_Adapter` is intentionally deferred. Autosave, preview, validation, submission, scheduling, idempotency persistence, and moderation continue inside File 21 until a separately versioned workflow integration is approved.
+The cumulative Draft integration requires File 21's complete base, diagnostic, workflow, native-draft, role-neutral schema, and subject-aware schema contracts. File 22 exposes guarded server-side orchestration only; File 21 continues to own durable autosave, preview authorization, validation policy, idempotency persistence and reconciliation, scheduling, moderation, publication, and canonical records. Neither Draft PR is staging-, merge-, or production-approved.
 
 ## Staging acceptance
 

@@ -16,7 +16,7 @@ System Check reports controlled codes for:
 - release-critical File 21 `social_publication` owner, version, capability, group, privacy, Diagnostic Adapter, full Workflow Adapter, native drafts, role-neutral schema, and subject-aware schema extension;
 - current-administrator Create-surface presentation diagnostics.
 
-A failed row must include at least one controlled code. Raw `reason`, exception objects, native messages, and arbitrary adapter fields are not displayed.
+A failed row must include at least one controlled code. Any unrecognized row identifier is reduced to `unrecognized_check`, and any unrecognized diagnostic identifier is reduced to `unrecognized_diagnostic`. Raw `reason`, exception objects, native messages, and arbitrary adapter fields are not displayed.
 
 ## Static adapter and workflow contract health
 

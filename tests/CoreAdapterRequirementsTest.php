@@ -155,4 +155,11 @@ final class CoreAdapterRequirementsTest extends TestCase {
 		$this->assertSame( 'fail', $report['status'] );
 		$this->assertContains( 'social_publication_native_version_too_low', $report['codes'] );
 	}
+
+	public function test_invalid_actual_native_version_is_a_release_failure(): void {
+		$this->assertTrue( $this->registry->register( new File21_Contract_Adapter( actualVersion: 'latest' ) ) );
+		$report = $this->requirements->social_publication_report();
+		$this->assertSame( 'fail', $report['status'] );
+		$this->assertContains( 'social_publication_native_version_invalid', $report['codes'] );
+	}
 }

@@ -61,8 +61,22 @@ final class Registry {
 			}
 
 			$capability = trim( $adapter->required_capability() );
-			if ( $adapter instanceof Workflow_Adapter && ( '' === $capability || sanitize_key( $capability ) !== $capability ) ) {
-				return $this->registration_error( 'invalid_required_capability', $key, 'Workflow adapter capability is not canonical.' );
+			if ( '' === $capability || sanitize_key( $capability ) !== $capability ) {
+				return $this->registration_error( 'invalid_required_capability', $key, 'Adapter capability is not canonical.' );
+			}
+
+			$native_module = trim( $adapter->native_module() );
+			if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{2,127}$/', $native_module ) ) {
+				return $this->registration_error( 'invalid_native_module', $key, 'Adapter native module is not canonical.' );
+			}
+
+			$minimum_native_version = trim( $adapter->minimum_native_version() );
+			if ( 1 !== preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/', $minimum_native_version ) ) {
+				return $this->registration_error( 'invalid_minimum_native_version', $key, 'Adapter minimum native version is invalid.' );
+			}
+
+			if ( ! in_array( $adapter->privacy_classification(), array( 'public', 'private', 'sensitive' ), true ) ) {
+				return $this->registration_error( 'invalid_privacy', $key, 'Adapter privacy classification is invalid.' );
 			}
 
 			$this->adapters[ $key ] = $adapter;

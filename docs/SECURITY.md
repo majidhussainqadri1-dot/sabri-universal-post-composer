@@ -23,13 +23,15 @@ Interactive workflow functions bind to `get_current_user_id()`. A supplied compa
 
 The coordinator checks Safe Mode, valid current subject, Membership Core eligibility, registered workflow metadata, exact API, and central capability before native availability. Native availability is then evaluated before adapter-specific authorization so an offline integration is not misreported as a permission denial.
 
-Rejected, suspended, expired-document, deleted, logged-out, and otherwise ineligible accounts are denied before native methods execute. Administrators and Founders remain subject to suspension and emergency-disable controls.
+Pending, draft, rejected, suspended, expired-document, deleted, logged-out, unknown, and otherwise unapproved accounts are denied before native methods execute. Administrators and Founders cannot use WordPress role or `manage_options` privileges to expand a Membership Core denial and remain subject to emergency-disable controls.
 
 ## Create-surface privacy and cache boundary
 
 Every WordPress object that actually renders `[sabri_universal_composer]` is treated as a private personalized Create surface, whether or not it is the canonical mapped page. It receives:
 
 - no-cache headers;
+- WordPress page/object/database no-cache constants;
+- `Vary: Cookie` and the LiteSpeed no-cache signal;
 - `X-Robots-Tag: noindex, nofollow, noarchive`;
 - equivalent `wp_robots` directives.
 
@@ -57,7 +59,7 @@ Submission uses an immutable two-UUID-v4 idempotency key. The native owner must 
 
 ## Native diagnostics
 
-Only a fixed File 22 native-error vocabulary is public. Arbitrary native codes become `native_error`. Raw native message/data and exception class/message are discarded. Registry and System Check diagnostics contain controlled codes only.
+Only fixed File 22 native-error and System Check vocabularies are public. Arbitrary native codes become `native_error`; arbitrary System Check codes become `unrecognized_diagnostic`. Raw native message/data and exception class/message are discarded. Registry and System Check diagnostics contain controlled codes only.
 
 No diagnostic may contain a user ID, identity/document evidence, URL, native reference, raw idempotency key, unpublished body, patient narrative, consent evidence, SQL, path, stack, token, nonce, credential, or secret.
 

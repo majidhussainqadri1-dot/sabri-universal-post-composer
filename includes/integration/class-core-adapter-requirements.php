@@ -61,14 +61,17 @@ final class Core_Adapter_Requirements {
 		}
 
 		try {
-			$codes = array();
+			$codes   = array();
+			$minimum = trim( $adapter->minimum_native_version() );
 			if ( self::SOCIAL_PUBLICATION_KEY !== $adapter->key() ) {
 				$codes[] = 'adapter_key_mismatch';
 			}
 			if ( self::FILE21_NATIVE_MODULE !== $adapter->native_module() ) {
 				$codes[] = 'native_module_mismatch';
 			}
-			if ( version_compare( $adapter->minimum_native_version(), self::MINIMUM_FILE21_VERSION, '<' ) ) {
+			if ( ! $this->valid_version( $minimum ) ) {
+				$codes[] = 'invalid_minimum_native_version';
+			} elseif ( version_compare( $minimum, self::MINIMUM_FILE21_VERSION, '<' ) ) {
 				$codes[] = 'minimum_native_version_too_low';
 			}
 			if ( self::REQUIRED_CREATE_CAPABILITY !== $adapter->required_capability() ) {
@@ -124,10 +127,13 @@ final class Core_Adapter_Requirements {
 
 			$health = $adapter instanceof Diagnostic_Adapter ? $adapter->health_report() : array();
 			$actual = isset( $health['actual_native_version'] ) && is_string( $health['actual_native_version'] )
-				? $health['actual_native_version']
+				? trim( $health['actual_native_version'] )
 				: '';
 			if ( '' === $actual ) {
 				return $this->failure( 'native_version_unreported' );
+			}
+			if ( ! $this->valid_version( $actual ) ) {
+				return $this->failure( 'native_version_invalid' );
 			}
 			if ( version_compare( $actual, self::MINIMUM_FILE21_VERSION, '<' ) ) {
 				return $this->failure( 'native_version_too_low' );
@@ -142,7 +148,7 @@ final class Core_Adapter_Requirements {
 				'adapter_key'    => $adapter->key(),
 				'native_module'  => $adapter->native_module(),
 				'actual_native'  => $actual,
-				'minimum_native' => $adapter->minimum_native_version(),
+				'minimum_native' => $minimum,
 			);
 		} catch ( Throwable $error ) {
 			unset( $error );
@@ -170,5 +176,9 @@ final class Core_Adapter_Requirements {
 
 	private function runtime_constant( string $name ): mixed {
 		return defined( $name ) ? constant( $name ) : null;
+	}
+
+	private function valid_version( string $version ): bool {
+		return 1 === preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/', $version );
 	}
 }

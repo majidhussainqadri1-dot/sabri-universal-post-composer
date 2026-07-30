@@ -61,7 +61,6 @@ Historical Phase 22E review records remain immutable evidence for the earlier Ph
 ## Development and QA files
 
 - `.github/workflows/ci.yml`
-- `.github/workflows/corrective-lock-sync.yml`
 - `.github/workflows/phase22d-review-evidence.yml`
 - `.github/workflows/phase22e-review-evidence.yml`
 - `composer.json`
@@ -77,10 +76,14 @@ Historical Phase 22E review records remain immutable evidence for the earlier Ph
 - `tests/CreateSurfaceTest.php`
 - `tests/PageResolverRepairTest.php`
 - `tests/PluginPrivacyTest.php`
+- `tests/PublicApiSubjectBindingTest.php`
 - `tests/RegistryTest.php`
+- `tests/SafeModeTest.php`
 - `tests/SubjectSchemaTest.php`
 - `tests/WorkflowCoordinatorTest.php`
+- `tests/ShellBridgeTest.php`
 - `tests/run-public-api-collision-test.php`
+- `tests/run-file20-contract-collision-test.php`
 - `tests/phpstan-wordpress-stubs.php`
 
 Development files are excluded from a future production ZIP according to `.distignore`. The committed Composer lock freezes development-tool resolution for exact-head QA.

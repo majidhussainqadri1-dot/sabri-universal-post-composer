@@ -7,7 +7,10 @@
 | `supc_invalid_key` | Adapter key is not canonical |
 | `supc_duplicate_key` | Adapter key already exists |
 | `supc_api_mismatch` | Base Adapter API is incompatible |
-| `supc_invalid_required_capability` | Workflow adapter supplied a noncanonical central capability |
+| `supc_invalid_required_capability` | Adapter supplied an empty or noncanonical central capability |
+| `supc_invalid_native_module` | Adapter supplied a malformed native-module owner slug |
+| `supc_invalid_minimum_native_version` | Adapter supplied a malformed semantic minimum version |
+| `supc_invalid_privacy` | Adapter supplied a privacy classification outside the controlled vocabulary |
 | `supc_registration_exception` | Adapter registration threw an isolated exception |
 | `supc_availability_exception` | Adapter failed during availability/state evaluation |
 | `supc_workflow_disabled` | File 22 or unified shell Safe Mode disabled workflows |
@@ -51,6 +54,7 @@
 | `file20_contract_collision` | File 20 producer functions are not owned by the expected shell |
 | `file20_contract_functions_missing` | Required Create producer functions are absent |
 | `file20_contract_unavailable` | File 20 reports its Create producer contract unavailable |
+| `file20_contract_exception` | A trusted File 20 readiness callback threw and File 22 failed closed |
 
 ## File 21 release-critical health codes
 
@@ -59,6 +63,7 @@ Controlled codes include:
 - `social_publication_not_registered`;
 - `social_publication_contract_mismatch`;
 - `social_publication_native_version_unreported`;
+- `social_publication_native_version_invalid`;
 - `social_publication_native_version_too_low`;
 - `social_publication_temporarily_unavailable`;
 - `adapter_key_mismatch`;
@@ -95,5 +100,7 @@ Allowed native codes are only:
 `permission_denied`, `validation_failed`, `conflict`, `rate_limited`, `temporarily_unavailable`, `not_found`, `expired`, and `invalid_reference`.
 
 Every other native code becomes `native_error`. Exceptions use only `native_exception`.
+
+System Check applies fixed row-key and operational-code allowlists. An unknown row key becomes `unrecognized_check`, and an adapter or report-filter code outside the code list becomes `unrecognized_diagnostic`; arbitrary sanitized strings are not treated as safe merely because they look canonical.
 
 Public messages and diagnostics never expose stacks, paths, patient data, raw payloads, IDs, URLs, native references, raw idempotency keys, exception classes/messages, native error data, or secrets.

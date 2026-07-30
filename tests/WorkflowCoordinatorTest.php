@@ -189,14 +189,35 @@ final class WorkflowCoordinatorTest extends TestCase {
 		$this->adapter->schema_fields['title']['default'] = 'Private value';
 		$this->assertSame( 'supc_invalid_schema_contract', $this->coordinator->schema( 1, 'workflow_test' )->code );
 		$this->adapter->schema_fields = array(
-			'category' => array( 'type' => 'select', 'label_code' => 'category_label', 'required' => true, 'privacy_class' => 'public', 'choices' => array( 'news' => 'choice_news' ) ),
-			'amount'   => array( 'type' => 'number', 'label_code' => 'amount_label', 'required' => false, 'privacy_class' => 'private', 'minimum' => 1, 'maximum' => 5 ),
+			'category'  => array( 'type' => 'select', 'label_code' => 'category_label', 'required' => true, 'privacy_class' => 'public', 'choices' => array( 'news' => 'choice_news' ) ),
+			'amount'    => array( 'type' => 'number', 'label_code' => 'amount_label', 'required' => false, 'privacy_class' => 'private', 'minimum' => 1, 'maximum' => 5 ),
+			'case_date' => array( 'type' => 'date', 'label_code' => 'case_date', 'required' => false, 'privacy_class' => 'private' ),
+			'case_time' => array( 'type' => 'datetime', 'label_code' => 'case_time', 'required' => false, 'privacy_class' => 'private' ),
+			'source'    => array( 'type' => 'url', 'label_code' => 'source', 'required' => false, 'privacy_class' => 'public' ),
 		);
 		$this->assertSame( 'supc_workflow_payload_unknown_field', $this->coordinator->validate( 1, 'workflow_test', array( 'unknown' => 'x' ) )->code );
 		$this->assertSame( 'supc_workflow_payload_required_field_missing', $this->coordinator->validate( 1, 'workflow_test', array() )->code );
 		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'other' ) )->code );
 		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'amount' => 9 ) )->code );
-		$this->assertIsArray( $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'amount' => 3 ) ) );
+		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'case_date' => '2026-02-30' ) )->code );
+		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'case_time' => '2026-07-29T24:10' ) )->code );
+		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'case_time' => '2026-07-29T23:10+14:01' ) )->code );
+		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'case_time' => '2026-07-29T23:10+05:99' ) )->code );
+		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'source' => 'file:///etc/passwd' ) )->code );
+		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'source' => 'https://user:pass@example.test/private' ) )->code );
+		$this->assertIsArray(
+			$this->coordinator->validate(
+				1,
+				'workflow_test',
+				array(
+					'category'  => 'news',
+					'amount'    => 3,
+					'case_date' => '2028-02-29',
+					'case_time' => '2026-07-29T23:10:45+05:00',
+					'source'    => 'https://example.test/source',
+				)
+			)
+		);
 	}
 
 	public function test_canonical_url_is_subject_bound(): void {

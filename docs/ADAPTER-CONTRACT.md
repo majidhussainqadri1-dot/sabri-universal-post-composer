@@ -6,7 +6,7 @@ Every content type is owned by a native module. File 22 coordinates discovery an
 
 The base adapter supplies exact API version, canonical key, label, description, group, icon, deterministic priority, native owner and minimum version, central capability, privacy class, native availability, adapter-specific authorization, and a safe native start route.
 
-The canonical key must match `^[a-z][a-z0-9_]{2,63}$`. Invalid and duplicate keys fail closed.
+The canonical key must match `^[a-z][a-z0-9_]{2,63}$`. The central capability must be a nonempty canonical WordPress capability, the native module must be a canonical lowercase slug, the minimum native version must be semantic, and privacy must be exactly `public`, `private`, or `sensitive`. Invalid metadata and duplicate keys fail closed for base, diagnostic, and workflow adapters.
 
 ## Authorization and availability separation
 
@@ -105,7 +105,7 @@ Before native mutation, File 22 enforces the authenticated subject's schema:
 - values must match their declared scalar/array type;
 - select/multiselect values must exist in `choices`;
 - numeric bounds are enforced;
-- email, URL, date, datetime, checkbox, and opaque-reference formats are validated;
+- email, HTTP(S)-only URL without credentials, real calendar date, bounded clock/timezone datetime, checkbox, and opaque-reference formats are validated;
 - objects, resources, closures, non-finite floats, excessive nesting, and encoded payloads over 1 MiB are rejected.
 
 `create_draft()` may accept a partial payload, but every supplied field must still be declared and type-valid. Files and protected evidence remain in native storage and are represented only by opaque references or separately reviewed secure upload tokens.
@@ -160,5 +160,7 @@ A route-only or incomplete adapter is a release failure, not a healthy integrati
 ## Idempotency and ownership
 
 Final submission uses two UUID-v4 values separated by a colon. The native owner provides durable reconciliation: same key and same payload returns the existing result; same key and conflicting payload fails; retries never create duplicate native records.
+
+`supc_adapter_matches()` is also current-subject bound: an owner match is true only when the registered adapter is presently available and authorized through the central and native gates for `get_current_user_id()`.
 
 File 22 must never grant permission independently, duplicate native drafts/posts/media/moderation records, retain protected evidence, expose another subject's reference, or claim publication before a durable native result.

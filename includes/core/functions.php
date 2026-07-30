@@ -71,8 +71,13 @@ if ( array() === $public_api_collisions && $public_api_markers_unclaimed ) {
 
 	function supc_adapter_matches( string $key, string $native_module ): bool {
 		try {
-			$adapter = Plugin::instance()->registry()->get( $key );
-			return null !== $adapter && $adapter->native_module() === $native_module;
+			$user_id  = get_current_user_id();
+			$registry = Plugin::instance()->registry();
+			$adapter  = $registry->get( $key );
+			return $user_id > 0
+				&& null !== $adapter
+				&& $adapter->native_module() === $native_module
+				&& isset( $registry->available_for_user( $user_id )[ $key ] );
 		} catch ( \Throwable $error ) {
 			unset( $error );
 			return false;

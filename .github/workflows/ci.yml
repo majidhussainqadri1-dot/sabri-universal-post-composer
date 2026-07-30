@@ -160,6 +160,8 @@ jobs:
       - run: composer test
       - name: Run isolated public API collision contract
         run: php tests/run-public-api-collision-test.php
+      - name: Run isolated File 20 producer collision contract
+        run: php tests/run-file20-contract-collision-test.php
 
   repository-contract:
     name: Repository contract
@@ -204,9 +206,13 @@ jobs:
             tests/PageResolverRepairTest.php
             tests/WorkflowCoordinatorTest.php
             tests/PluginPrivacyTest.php
+            tests/PublicApiSubjectBindingTest.php
             tests/SubjectSchemaTest.php
             tests/CoreAdapterRequirementsTest.php
+            tests/SafeModeTest.php
+            tests/ShellBridgeTest.php
             tests/run-public-api-collision-test.php
+            tests/run-file20-contract-collision-test.php
             tests/phpstan-wordpress-stubs.php
             docs/ARCHITECTURE.md docs/ADAPTER-CONTRACT.md docs/DECISION-LOG.md docs/SECURITY.md
             docs/PRIVACY.md docs/ACCESSIBILITY.md docs/MIGRATION.md docs/ROLLBACK.md

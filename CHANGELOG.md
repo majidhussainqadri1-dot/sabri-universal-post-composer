@@ -6,7 +6,10 @@
 
 - Reconciled Phases 22B–22E into one Draft PR targeting canonical `main`.
 - Protected every page or post that renders `[sabri_universal_composer]` with no-cache and noindex/nofollow/noarchive controls, including noncanonical and ambiguous shortcode pages.
+- Added WordPress, object-cache, database-cache, LiteSpeed, and `Vary: Cookie` no-cache signals at the direct render boundary.
 - Added complete File 22 public PHP API version, owner, function-ownership, collision, and current-subject contracts.
+- Bound the File 20 presentation bridge to the authenticated current user and ignored mismatched caller-supplied subject IDs.
+- Required `supc_adapter_matches()` to confirm exact owner plus current-subject availability before File 21 may remove its fallback.
 - Corrected native availability/adapter authorization ordering so an offline File 21 integration is not mislabeled as permission denial.
 - Required File 21's release-critical adapter to implement Diagnostic Adapter, full Workflow Adapter, native drafts, role-neutral base schema, and subject-aware schema extension.
 - Added `SUPC_SUBJECT_SCHEMA_API_VERSION` and interactive `schema_for_user( int $user_id )` support without changing the frozen Workflow Adapter interface.
@@ -14,6 +17,7 @@
 - Added File 20 Create contract and File 22 public API rows to System Check with actionable controlled codes.
 - Added subject-schema support to Static Adapter and Workflow Contract Health.
 - Removed raw exception classes/messages from registry and File 21 requirement diagnostics.
+- Replaced arbitrary System Check keys, adapter health codes, and render exception classes with fixed privacy-safe vocabularies.
 - Added exact-head checkout verification to every CI job and dependency-lock evidence generation.
 - Added isolated public API collision, noncanonical shortcode privacy, File 21 route-only rejection, unavailable-state, schema-bound payload, and subject-schema regression tests.
 - Expanded controlled staging acceptance to cover installation/load order, role/status/document matrix, IDOR, cache/indexing, browsers, accessibility, Urdu RTL, backup restoration, and rollback.
@@ -48,6 +52,7 @@
 - Phase 22E guarded server-side `Workflow_Adapter` coordinator for schema, native drafts, validation, preview, idempotent submission, status, and canonical URL operations.
 - Public PHP workflow integration functions and a two-UUID idempotency-key generator.
 - Payload type, nesting, and 1 MiB encoded-size boundaries before native invocation.
+- Calendar-aware date/datetime validation and HTTP(S)-only schema URL validation without embedded credentials.
 - Controlled native-reference, workflow-status, preview URL, and canonical URL result validation.
 - PHPUnit contracts for authorization, payload safety, idempotency, same-origin URLs, native exceptions, and invalid native statuses.
 
@@ -58,6 +63,7 @@
 - File 21 version `1.0.3` is the frozen minimum owner for the first release-critical social publication adapter.
 - File 21 must implement the diagnostic contract and declare the canonical `sabri_feed_create_posts` capability.
 - Wrong owner, wrong capability, wrong group/privacy class, old declared version, old actual runtime version, route-only integration, and missing subject schema are release failures.
+- Empty capability, malformed native owner, malformed minimum version, and unknown privacy metadata are rejected at registration for every adapter type.
 - A duplicate `social_publication` key is not accepted as successful File 21 registration.
 - File 21 fallback removal requires the exact File 20 producer contract and current-user Create visibility; a version string alone is insufficient.
 - WordPress readme no longer declares a stable development tag.
@@ -82,10 +88,16 @@
 - Prevented silent first-ID selection when multiple shortcode pages exist.
 - Prevented repeated orphan insertion attempts after managed-page validation failure.
 - Added result-specific administrator notice severity and accessible table captions and column scopes.
+- Prevented WordPress Administrator privileges from expanding a pending or otherwise unapproved Membership Core state.
+- Prevented foreign or colliding File 20 producer functions from executing during health checks.
+- Made external File 20 Safe Mode exceptions fail closed instead of breaking File 22.
+- Rejected impossible calendar dates, invalid clock values, invalid timezone offsets, non-HTTP URL schemes, and credential-bearing schema URLs.
+- Removed the temporary write-enabled corrective workflow and corrected the source manifest.
 
 ### Security
 
 - Suspended, rejected, and expired-document accounts are denied centrally.
+- Pending, draft, unknown, and otherwise unapproved Membership Core states are denied even when the account has `manage_options`.
 - Sensitive Patient Case drafts remain server-side by default.
 - File 22 does not own PDF bytes, identity evidence, patient-consent evidence, or private clinical records.
 - File 21 fallback remains available during partial rollout, duplicate-key collision, incompatible shell, missing producer hook, Safe Mode, or rollback.

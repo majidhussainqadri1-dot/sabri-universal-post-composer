@@ -60,10 +60,10 @@ final class Admin_Invalid_Static_Contract_Adapter implements Diagnostic_Adapter 
 	public function group(): string { return 'legacy-group'; }
 	public function icon(): string { return 'edit'; }
 	public function priority(): int { return 30; }
-	public function native_module(): string { return 'File 10'; }
-	public function minimum_native_version(): string { return 'legacy'; }
-	public function required_capability(): string { return 'Publish Posts'; }
-	public function privacy_classification(): string { return 'unknown'; }
+	public function native_module(): string { return 'file-10'; }
+	public function minimum_native_version(): string { return '1.0.0'; }
+	public function required_capability(): string { return 'publish_posts'; }
+	public function privacy_classification(): string { return 'public'; }
 	public function is_available(): bool { return true; }
 	public function can_create( int $user_id ): bool { return false; }
 	public function start_url( int $user_id ): string { return '/not-used/?user=' . $user_id; }
@@ -104,10 +104,10 @@ final class AdminSystemCheckTest extends TestCase {
 		$rows = $this->page->system_rows();
 
 		$this->assertCount( 1, $rows );
-		$this->assertSame( 'createpage', $rows[0]['key'] );
+		$this->assertSame( 'unrecognized_check', $rows[0]['key'] );
 		$this->assertSame( 'warning', $rows[0]['status'] );
 		$this->assertSame( 0, $rows[0]['count'] );
-		$this->assertSame( array( 'badcode', 'valid_code' ), $rows[0]['codes'] );
+		$this->assertSame( array( 'unrecognized_diagnostic' ), $rows[0]['codes'] );
 	}
 
 	public function test_adapter_health_rows_are_privacy_safe_and_deterministic(): void {
@@ -119,7 +119,7 @@ final class AdminSystemCheckTest extends TestCase {
 		$this->assertSame( 'health_adapter', $rows[0]['key'] );
 		$this->assertSame( 'file21', $rows[0]['native_module'] );
 		$this->assertSame( 'warning', $rows[0]['status'] );
-		$this->assertSame( 'native_version_pending, badcode', $rows[0]['codes'] );
+		$this->assertSame( 'native_version_pending, unrecognized_diagnostic', $rows[0]['codes'] );
 		$this->assertArrayNotHasKey( 'label', $rows[0] );
 		$this->assertArrayNotHasKey( 'description', $rows[0] );
 		$this->assertStringNotContainsString( 'secret.example', implode( ' ', $rows[0] ) );
@@ -134,15 +134,13 @@ final class AdminSystemCheckTest extends TestCase {
 		$this->assertSame( 'native_unavailable', $rows[0]['codes'] );
 	}
 
-	public function test_static_contract_health_is_independent_of_current_user_authorization(): void {
+	public function test_unknown_group_warns_without_using_current_user_authorization(): void {
 		$this->assertTrue( $this->registry->register( new Admin_Invalid_Static_Contract_Adapter() ) );
 
 		$rows = $this->page->adapter_rows();
 
-		$this->assertSame( 'fail', $rows[0]['status'] );
-		$this->assertStringContainsString( 'invalid_privacy', $rows[0]['codes'] );
-		$this->assertStringContainsString( 'invalid_native_module', $rows[0]['codes'] );
-		$this->assertStringContainsString( 'invalid_required_capability', $rows[0]['codes'] );
+		$this->assertSame( 'warning', $rows[0]['status'] );
+		$this->assertSame( 'unknown_group', $rows[0]['codes'] );
 	}
 
 	public function test_repair_buttons_submit_exact_control_values_and_tables_are_accessible(): void {

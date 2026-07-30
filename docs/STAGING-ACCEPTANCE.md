@@ -37,6 +37,8 @@ Test the canonical mapped page, one noncanonical page containing `[sabri_univers
 Every page that actually renders the Composer must:
 
 - send no-cache headers;
+- define WordPress page/object/database no-cache constants and emit `Vary: Cookie`;
+- emit the LiteSpeed no-cache signal where LiteSpeed Cache is active;
 - send `X-Robots-Tag: noindex, nofollow, noarchive`;
 - produce equivalent `wp_robots` directives;
 - remain excluded from LiteSpeed page cache, CDN cache, browser shared cache, search, sitemap, archive, and public feed output;
@@ -75,6 +77,8 @@ Test separate real accounts for:
 - deleted or invalid user ID.
 
 For every account, verify desktop header, mobile navigation, File 22 page, direct PHP workflow calls, File 21 native route, System Check wording, and cache isolation agree with the central policy. No role, File 20 setting, or native adapter may expand a denial from File 00.
+
+Pass a different numeric subject ID through the File 20 presentation filter in both directions. The result must remain bound to `get_current_user_id()` and must never disclose or borrow another account's availability.
 
 ## 5. File 20 Create producer parity
 
@@ -118,7 +122,7 @@ Test all declared field types and boundaries:
 - wrong scalar/array type;
 - invalid select and multiselect choice;
 - number below/above bounds;
-- invalid email, URL, date, datetime, and opaque reference;
+- invalid email, non-HTTP scheme, credential-bearing URL, impossible calendar date, hour `24`, minute/second overflow, timezone beyond `±14:00`, and opaque reference;
 - object, resource, closure, nonfinite float, excessive nesting, and payload over 1 MiB;
 - schema over 256 KiB, over 100 fields, over 100 choices, unknown schema property, data-bearing default, malformed code, invalid privacy class.
 

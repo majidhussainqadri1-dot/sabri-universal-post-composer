@@ -200,8 +200,9 @@ final class Create_Surface {
 
 				$collected[ $group_key ]['cards'][] = $card;
 			} catch ( Throwable $error ) {
+				unset( $error );
 				$this->record_diagnostic( $key, 'render_exception', 'fail' );
-				do_action( 'supc_adapter_render_error', $key, get_class( $error ) );
+				do_action( 'supc_adapter_render_error', $key, 'render_exception' );
 			}
 		}
 

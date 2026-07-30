@@ -17,7 +17,8 @@ final class Surface_Test_Adapter implements Adapter {
 		private string $adapter_url = '/create-native/',
 		private int $adapter_priority = 10,
 		private string $adapter_icon = 'edit',
-		private bool $adapter_available = true
+		private bool $adapter_available = true,
+		private bool $throw_on_start = false
 	) {
 	}
 
@@ -36,6 +37,9 @@ final class Surface_Test_Adapter implements Adapter {
 	public function can_create( int $user_id ): bool { return $user_id > 0; }
 	public function start_url( int $user_id ): string {
 		unset( $user_id );
+		if ( $this->throw_on_start ) {
+			throw new RuntimeException( 'Private adapter exception.' );
+		}
 		return $this->adapter_url;
 	}
 }
@@ -89,18 +93,32 @@ final class CreateSurfaceTest extends TestCase {
 		$this->assertCount( 2, $groups['publishing']['cards'] );
 	}
 
-	public function test_unknown_privacy_rejects_only_that_adapter_and_fails_system_check(): void {
-		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'legacy_item', 'Legacy', 'publishing', 'unknown' ) ) );
+	public function test_unknown_privacy_is_rejected_at_registration_without_disabling_healthy_adapter(): void {
+		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Surface_Test_Adapter( 'legacy_item', 'Legacy', 'publishing', 'unknown' ) ) );
 		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'healthy_item', 'Healthy', 'publishing', 'private', '/healthy/create/' ) ) );
 
 		$surface = new Create_Surface( $this->registry );
 		$groups  = $surface->collect_groups( 1 );
-		$row     = $surface->system_check_row( 1 );
 
 		$this->assertSame( 'healthy_item', $groups['publishing']['cards'][0]['key'] );
 		$this->assertCount( 1, $groups['publishing']['cards'] );
-		$this->assertSame( 'fail', $row['status'] );
-		$this->assertContains( 'invalid_privacy', $row['codes'] );
+		$this->assertSame( 'invalid_privacy', $this->registry->errors()['legacy_item']['code'] );
+	}
+
+	public function test_render_exception_uses_only_a_controlled_diagnostic_code(): void {
+		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'throwing_item', 'Throwing', 'publishing', 'public', '/throwing/', 10, 'edit', true, true ) ) );
+
+		$surface = new Create_Surface( $this->registry );
+
+		$this->assertSame( array(), $surface->collect_groups( 1 ) );
+		$this->assertContains(
+			array( 'supc_adapter_render_error', array( 'throwing_item', 'render_exception' ) ),
+			$GLOBALS['supc_test_actions_fired']
+		);
+		$this->assertStringNotContainsString(
+			'RuntimeException',
+			serialize( $GLOBALS['supc_test_actions_fired'] )
+		);
 	}
 
 	public function test_permission_and_integration_failures_have_distinct_messages(): void {

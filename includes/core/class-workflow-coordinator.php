@@ -492,15 +492,74 @@ final class Workflow_Coordinator {
 			return is_string( $value ) && ( '' === $value || ( function_exists( 'is_email' ) ? false !== is_email( $value ) : false !== filter_var( $value, FILTER_VALIDATE_EMAIL ) ) );
 		}
 		if ( 'url' === $type ) {
-			return is_string( $value ) && ( '' === $value || false !== filter_var( $value, FILTER_VALIDATE_URL ) );
+			return is_string( $value ) && ( '' === $value || $this->valid_http_url_value( $value ) );
 		}
 		if ( 'date' === $type ) {
-			return is_string( $value ) && ( '' === $value || 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $value ) );
+			return is_string( $value ) && ( '' === $value || $this->valid_date_value( $value ) );
 		}
 		if ( 'datetime' === $type ) {
-			return is_string( $value ) && ( '' === $value || 1 === preg_match( '/^\d{4}-\d{2}-\d{2}[T ][0-2]\d:[0-5]\d(?::[0-5]\d)?(?:Z|[+-][0-2]\d:[0-5]\d)?$/', $value ) );
+			return is_string( $value ) && ( '' === $value || $this->valid_datetime_value( $value ) );
 		}
 		return false;
+	}
+
+	private function valid_http_url_value( string $value ): bool {
+		if (
+			false === filter_var( $value, FILTER_VALIDATE_URL ) ||
+			1 === preg_match( '/[\x00-\x1F\x7F]/', $value ) ||
+			str_contains( $value, '\\' )
+		) {
+			return false;
+		}
+
+		$parts = wp_parse_url( $value );
+		if ( ! is_array( $parts ) ) {
+			return false;
+		}
+
+		$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
+		$host   = (string) ( $parts['host'] ?? '' );
+		$port   = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
+		return in_array( $scheme, array( 'http', 'https' ), true )
+			&& '' !== $host
+			&& ! isset( $parts['user'] )
+			&& ! isset( $parts['pass'] )
+			&& ( 0 === $port || ( $port >= 1 && $port <= 65535 ) );
+	}
+
+	private function valid_date_value( string $value ): bool {
+		if ( 1 !== preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $value, $parts ) ) {
+			return false;
+		}
+
+		$year  = (int) $parts[1];
+		$month = (int) $parts[2];
+		$day   = (int) $parts[3];
+		return $year >= 1 && checkdate( $month, $day, $year );
+	}
+
+	private function valid_datetime_value( string $value ): bool {
+		$pattern = '/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(Z|[+-](\d{2}):(\d{2}))?$/';
+		if ( 1 !== preg_match( $pattern, $value, $parts ) || ! $this->valid_date_value( $parts[1] ) ) {
+			return false;
+		}
+
+		$hour   = (int) $parts[2];
+		$minute = (int) $parts[3];
+		$second = isset( $parts[4] ) && '' !== $parts[4] ? (int) $parts[4] : 0;
+		if ( $hour > 23 || $minute > 59 || $second > 59 ) {
+			return false;
+		}
+
+		$timezone = $parts[5] ?? '';
+		if ( '' === $timezone || 'Z' === $timezone ) {
+			return true;
+		}
+
+		$offset_hour   = (int) ( $parts[6] ?? 0 );
+		$offset_minute = (int) ( $parts[7] ?? 0 );
+		return $offset_minute <= 59
+			&& ( $offset_hour < 14 || ( 14 === $offset_hour && 0 === $offset_minute ) );
 	}
 
 	/**

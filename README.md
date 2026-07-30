@@ -49,6 +49,8 @@ $result = supc_register_adapter( $adapter );
 
 Adapters must implement `Sabri\UniversalComposer\Contracts\Adapter`. Full native draft orchestration additionally implements `Workflow_Adapter`.
 
+Every adapter must declare a nonempty canonical central capability, canonical native-module slug, semantic minimum native version, and one of the controlled privacy classes. Registration rejects malformed metadata before the adapter can reach the Create surface or workflow coordinator.
+
 ## Create surface
 
 The resolved Create page groups only authorized and available adapters into controlled Publishing, Knowledge and Learning, Media, Commerce, and Other sections.
@@ -73,7 +75,7 @@ Phase 22E adds guarded server-side PHP functions for native modules implementing
 - native status;
 - canonical URL retrieval.
 
-The coordinator rechecks Safe Mode, Membership Core eligibility, central capability, adapter authorization, native availability, payload safety, native-reference format, idempotency-key format, result envelopes, and same-origin HTTPS URLs on every operation.
+The coordinator rechecks Safe Mode, Membership Core eligibility, central capability, adapter authorization, native availability, payload safety, native-reference format, idempotency-key format, result envelopes, and same-origin HTTPS URLs on every operation. Schema URL fields accept only HTTP(S) URLs without embedded credentials; date and datetime fields must be real calendar and clock values with valid timezone offsets.
 
 Phase 22E does not expose a REST, AJAX, or browser form controller and does not persist File 22-owned draft payloads. Native modules remain responsible for secure storage, durable idempotency, publication, and canonical records.
 

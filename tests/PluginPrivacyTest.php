@@ -53,6 +53,13 @@ final class PluginPrivacyTest extends TestCase {
 
 		$this->assertIsString( $output );
 		$this->assertSame( 1, $GLOBALS['supc_test_nocache_headers'] );
+		$this->assertTrue( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE );
+		$this->assertTrue( defined( 'DONOTCACHEOBJECT' ) && DONOTCACHEOBJECT );
+		$this->assertTrue( defined( 'DONOTCACHEDB' ) && DONOTCACHEDB );
+		$this->assertContains(
+			array( 'litespeed_control_set_nocache', array( 'sabri-universal-post-composer' ) ),
+			$GLOBALS['supc_test_actions_fired']
+		);
 		$this->assertContains(
 			array( 'supc_private_surface_headers_applied', array() ),
 			$GLOBALS['supc_test_actions_fired']
