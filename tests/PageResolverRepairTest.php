@@ -102,7 +102,7 @@ final class PageResolverRepairTest extends TestCase {
 
 	public function test_repair_lock_prevents_a_second_concurrent_mutation(): void {
 		$GLOBALS['supc_test_options']['supc_create_page_repair_lock'] = array(
-			'token'   => 'existing-lock',
+			'token'   => '00000000-0000-4000-8000-000000000001',
 			'created' => time(),
 		);
 
