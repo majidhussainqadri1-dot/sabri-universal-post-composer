@@ -35,6 +35,7 @@
 - `docs/FILE21-INTEGRATION.md`
 - `docs/FILE22-CUMULATIVE-POST-CORRECTION-VERIFICATION-2026-07-30.md`
 - `docs/FILE22-POST-MERGE-INDEPENDENT-REVIEW-AND-CORRECTION-2026-07-30.md`
+- `docs/FILE22-SECOND-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/MASTER-PLAN-AMENDMENT-v2.1.md`
 - `docs/MIGRATION.md`
 - `docs/PHASE-22C-CREATE-SURFACE.md`
@@ -58,7 +59,7 @@
 - `docs/STAGING-ACCEPTANCE.md`
 - `docs/SYSTEM-CHECK.md`
 
-Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and the 30 July 2026 post-merge independent review supersede outdated status wording; they do not replace controlled staging or production acceptance.
+Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and both 30 July 2026 post-merge independent reviews supersede outdated status wording; they do not replace controlled staging or production acceptance.
 
 ## Development and QA files
 
@@ -82,6 +83,7 @@ Historical phase review records remain immutable evidence for their exact earlie
 - `tests/PublicApiSubjectBindingTest.php`
 - `tests/RegistryTest.php`
 - `tests/SafeModeTest.php`
+- `tests/SecondPostMergeHardeningTest.php`
 - `tests/SubjectSchemaTest.php`
 - `tests/WorkflowCoordinatorTest.php`
 - `tests/ShellBridgeTest.php`
@@ -93,4 +95,4 @@ Development files are excluded from a future production ZIP according to `.disti
 
 ## Release boundary
 
-PR #6 has been merged into canonical `main`; therefore, statements that it remains an unmerged Draft are obsolete and were corrected by the 30 July 2026 post-merge audit. The merge establishes a source baseline only. No release ZIP, production checksum, machine-generated package manifest, controlled Files 00/20/21/22 staging acceptance, live deployment, or production approval has been declared. Complete role/IDOR/cache/browser/accessibility/RTL acceptance, backup restoration, rollback proof, and explicit Founder authorization remain mandatory.
+PR #6 has been merged into canonical `main`; therefore, statements that it remains an unmerged Draft are obsolete. The merged source baseline and subsequent Draft review branches do not constitute release approval. No release ZIP, production checksum, machine-generated package manifest, controlled Files 00/20/21/22 staging acceptance, live deployment, or production approval has been declared. Complete role/IDOR/cache/browser/accessibility/RTL acceptance, backup restoration, rollback proof, and explicit Founder authorization remain mandatory.
