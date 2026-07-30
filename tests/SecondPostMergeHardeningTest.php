@@ -88,7 +88,7 @@ final class SecondPostMergeHardeningTest extends TestCase {
 		$GLOBALS['supc_test_statuses']     = array( 1 => 'approved' );
 		$GLOBALS['supc_test_capabilities'] = array(
 			1 => array(
-				'publish_posts'          => true,
+				'publish_posts'           => true,
 				'sabri_feed_create_posts' => true,
 			),
 		);
@@ -117,7 +117,8 @@ final class SecondPostMergeHardeningTest extends TestCase {
 
 		$groups = ( new Create_Surface( $this->registry ) )->collect_groups( 1 );
 		$this->assertArrayHasKey( 'media', $groups );
-		$this->assertSame( 'sensitive', $groups['media']['cards'][0]['privacy'] );
+		$cards = array_column( $groups['media']['cards'], null, 'key' );
+		$this->assertSame( 'sensitive', $cards['mutable_adapter']['privacy'] );
 		$this->assertArrayNotHasKey( 'commerce', $groups );
 	}
 
