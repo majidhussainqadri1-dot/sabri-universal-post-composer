@@ -57,6 +57,7 @@ jobs:
             grep -Fq -- "- \`$file\`" MANIFEST.md
           done
           grep -Fq 'Membership Core status callback to originate' CHANGELOG.md
-          grep -Fq 'Build metadata is retained for diagnostics but ignored' docs/ARCHITECTURE.md
+          grep -Fqi 'build metadata' docs/ARCHITECTURE.md
+          grep -Fq 'compare_prerelease' includes/core/class-version.php
           grep -Fq 'SMC_FILE' includes/core/class-permission-resolver.php
           grep -Fq 'supc_created_page_mapping_rollback' includes/core/class-page-resolver.php
