@@ -29,11 +29,35 @@ $core_constants = array(
 	'SUPC_PATH',
 	'SUPC_URL',
 );
+$core_symbols = array(
+	'Sabri\\UniversalComposer\\Contracts\\Adapter',
+	'Sabri\\UniversalComposer\\Contracts\\Workflow_Adapter',
+	'Sabri\\UniversalComposer\\Contracts\\Diagnostic_Adapter',
+	'Sabri\\UniversalComposer\\Core\\Safe_Mode',
+	'Sabri\\UniversalComposer\\Core\\Permission_Resolver',
+	'Sabri\\UniversalComposer\\Core\\Page_Resolver',
+	'Sabri\\UniversalComposer\\Core\\Registry',
+	'Sabri\\UniversalComposer\\Core\\Workflow_Coordinator',
+	'Sabri\\UniversalComposer\\Core\\Plugin',
+	'Sabri\\UniversalComposer\\Presentation\\Create_Surface',
+	'Sabri\\UniversalComposer\\Integration\\Shell_Bridge',
+	'Sabri\\UniversalComposer\\Integration\\Core_Adapter_Requirements',
+	'Sabri\\UniversalComposer\\Admin\\System_Check_Page',
+);
 $core_constant_collisions = array_values( array_filter( $core_constants, 'defined' ) );
+$core_symbol_collisions   = array_values(
+	array_filter(
+		$core_symbols,
+		static fn ( string $symbol ): bool => class_exists( $symbol, false )
+			|| interface_exists( $symbol, false )
+			|| trait_exists( $symbol, false )
+	)
+);
 
-if ( array() !== $core_constant_collisions ) {
-	// Never consume a foreign path, URL, version, or contract constant. The plugin
-	// remains inert and removes itself from the active set on the next admin load.
+if ( array() !== $core_constant_collisions || array() !== $core_symbol_collisions ) {
+	// Never consume a foreign path, URL, version, contract, class, or interface.
+	// The plugin remains inert and removes itself from the active set on the next
+	// administrator load instead of risking a fatal redeclaration or mixed runtime.
 	add_action(
 		'admin_init',
 		static function (): void {
@@ -47,7 +71,7 @@ if ( array() !== $core_constant_collisions ) {
 		'admin_notices',
 		static function (): void {
 			echo '<div class="notice notice-error"><p>'
-				. esc_html__( 'Sabri Universal Post Composer was disabled because another component preclaimed one or more File 22 core constants.', 'sabri-universal-post-composer' )
+				. esc_html__( 'Sabri Universal Post Composer was disabled because another component preclaimed one or more File 22 core constants or runtime symbols.', 'sabri-universal-post-composer' )
 				. '</p></div>';
 		}
 	);
