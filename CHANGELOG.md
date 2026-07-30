@@ -2,6 +2,16 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Sixth complete-repository hardening
+
+- Failed closed before loading source files when any File 22-owned class or interface is preclaimed, preventing fatal redeclaration and mixed runtimes.
+- Removed authorization and operational allow caches so Membership status, Safe Mode, capability, native availability, and adapter policy are re-evaluated on every call.
+- Trusted the File 20 Safe Mode callback only when the exact version, canonical owner, and function-ownership markers agree.
+- Narrowed missing-mapping discovery to likely shortcode-bearing pages while retaining IDs-only retrieval and exact candidate validation.
+- Rolled back only the exact newly inserted File 22-managed page when post-insert ownership or route validation fails.
+- Rejected malformed Workflow API metadata atomically while retaining well-formed incompatible versions for controlled diagnostics.
+- Added sixth-cycle PHPUnit, isolated symbol/Safe-Mode/discovery/rollback contracts, and an exact-head evidence workflow.
+
 ### Fifth complete-repository hardening
 
 - Failed closed before loading runtime files when any File 22 core constant is preclaimed, preventing foreign path, URL, version, or contract values from controlling bootstrap.
@@ -68,7 +78,7 @@
 - Mandatory Sabri Membership Core activation and permission boundary.
 - Versioned adapter API with base, workflow, and diagnostic contracts.
 - Canonical adapter-key validation and collision diagnostics.
-- Per-adapter exception isolation and per-request availability caching.
+- Per-adapter exception isolation with live authorization and availability re-evaluation.
 - Deterministic adapter ordering.
 - Safe Create page creation and resolution without overwriting existing pages.
 - Private-surface noindex, noarchive, and no-cache controls.
@@ -104,7 +114,7 @@
 - File 21 version `1.0.3` is the frozen minimum owner for the first release-critical social publication adapter.
 - File 21 must implement the diagnostic contract and declare the canonical `sabri_feed_create_posts` capability.
 - Wrong owner, wrong capability, wrong group/privacy class, old declared version, old actual runtime version, route-only integration, and missing subject schema are release failures.
-- Empty capability, malformed native owner, malformed minimum version, and unknown privacy metadata are rejected at registration for every adapter type.
+- Empty capability, malformed native owner, malformed minimum version, malformed Workflow API version, and unknown privacy metadata are rejected at registration for every relevant adapter type.
 - A duplicate `social_publication` key is not accepted as successful File 21 registration.
 - File 21 fallback removal requires the exact File 20 producer contract and current-user Create visibility; a version string alone is insufficient.
 - WordPress readme no longer declares a stable development tag.
