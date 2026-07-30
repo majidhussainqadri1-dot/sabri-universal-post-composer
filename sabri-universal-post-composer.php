@@ -31,20 +31,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'SUPC_URL',
 	);
 	$core_symbols = array(
-		'Sabri\\UniversalComposer\\Contracts\\Adapter',
-		'Sabri\\UniversalComposer\\Contracts\\Workflow_Adapter',
-		'Sabri\\UniversalComposer\\Contracts\\Diagnostic_Adapter',
-		'Sabri\\UniversalComposer\\Core\\Version',
-		'Sabri\\UniversalComposer\\Core\\Safe_Mode',
-		'Sabri\\UniversalComposer\\Core\\Permission_Resolver',
-		'Sabri\\UniversalComposer\\Core\\Page_Resolver',
-		'Sabri\\UniversalComposer\\Core\\Registry',
-		'Sabri\\UniversalComposer\\Core\\Workflow_Coordinator',
-		'Sabri\\UniversalComposer\\Core\\Plugin',
-		'Sabri\\UniversalComposer\\Presentation\\Create_Surface',
-		'Sabri\\UniversalComposer\\Integration\\Shell_Bridge',
-		'Sabri\\UniversalComposer\\Integration\\Core_Adapter_Requirements',
-		'Sabri\\UniversalComposer\\Admin\\System_Check_Page',
+		'Sabri\UniversalComposer\Contracts\Adapter',
+		'Sabri\UniversalComposer\Contracts\Workflow_Adapter',
+		'Sabri\UniversalComposer\Contracts\Diagnostic_Adapter',
+		'Sabri\UniversalComposer\Core\Version',
+		'Sabri\UniversalComposer\Core\Runtime_Trust',
+		'Sabri\UniversalComposer\Core\Safe_Mode',
+		'Sabri\UniversalComposer\Core\Permission_Resolver',
+		'Sabri\UniversalComposer\Core\Page_Resolver',
+		'Sabri\UniversalComposer\Core\Registry',
+		'Sabri\UniversalComposer\Core\Workflow_Coordinator',
+		'Sabri\UniversalComposer\Core\Plugin',
+		'Sabri\UniversalComposer\Presentation\Create_Surface',
+		'Sabri\UniversalComposer\Integration\Shell_Bridge',
+		'Sabri\UniversalComposer\Integration\Core_Adapter_Requirements',
+		'Sabri\UniversalComposer\Admin\System_Check_Page',
 	);
 	$core_constant_collisions = array_values( array_filter( $core_constants, 'defined' ) );
 	$core_symbol_collisions   = array_values(
@@ -94,6 +95,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/contracts/interface-workflow-adapter.php';
 	require_once SUPC_PATH . 'includes/contracts/interface-diagnostic-adapter.php';
 	require_once SUPC_PATH . 'includes/core/class-version.php';
+	require_once SUPC_PATH . 'includes/core/class-runtime-trust.php';
 	require_once SUPC_PATH . 'includes/core/class-safe-mode.php';
 	require_once SUPC_PATH . 'includes/core/class-permission-resolver.php';
 	require_once SUPC_PATH . 'includes/core/class-page-resolver.php';
