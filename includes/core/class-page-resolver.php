@@ -18,10 +18,10 @@ final class Page_Resolver {
 	private const OPTION_KEY = 'supc_create_page_id';
 	private const MANAGED_META = '_supc_managed_page';
 	private const REPAIR_LOCK_OPTION = 'supc_create_page_repair_lock';
+	private const EMERGENCY_OPTION = 'supc_emergency_disabled';
 	private const REPAIR_LOCK_TTL = 60;
 	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
 	private const APPROVED_SLUGS = array( 'create', 'create-content', 'platform-create', 'sabri-create' );
-	private const MISSING_MAPPING = '__supc_mapping_missing__';
 
 	private static ?int $resolved_page_id = null;
 
@@ -332,7 +332,10 @@ final class Page_Resolver {
 	 * @return array{persisted:bool,restored:bool}
 	 */
 	private static function persist_mapping( int $page_id ): array {
-		$previous = get_option( self::OPTION_KEY, self::MISSING_MAPPING );
+		$missing         = new \stdClass();
+		$previous        = get_option( self::OPTION_KEY, $missing );
+		$previous_exists = $missing !== $previous;
+
 		update_option( self::OPTION_KEY, $page_id, false );
 		if ( $page_id === absint( get_option( self::OPTION_KEY, 0 ) ) ) {
 			self::reset_cache();
@@ -340,29 +343,64 @@ final class Page_Resolver {
 			return array( 'persisted' => true, 'restored' => true );
 		}
 
-		$restored = self::restore_mapping( $previous );
+		$restored = self::restore_mapping( $previous_exists, $previous );
 		self::reset_cache();
 		do_action( 'supc_mapping_persistence_rollback', $page_id, $restored );
 		return array( 'persisted' => false, 'restored' => $restored );
 	}
 
-	private static function restore_mapping( mixed $previous ): bool {
-		if ( self::MISSING_MAPPING === $previous ) {
+	private static function restore_mapping( bool $previous_exists, mixed $previous ): bool {
+		if ( ! $previous_exists ) {
 			delete_option( self::OPTION_KEY );
-			return self::MISSING_MAPPING === get_option( self::OPTION_KEY, self::MISSING_MAPPING );
+			$missing = new \stdClass();
+			return $missing === get_option( self::OPTION_KEY, $missing );
 		}
 
 		update_option( self::OPTION_KEY, $previous, false );
-		return $previous === get_option( self::OPTION_KEY, self::MISSING_MAPPING );
+		$missing = new \stdClass();
+		return $previous === get_option( self::OPTION_KEY, $missing );
 	}
 
 	private static function rollback_created_page( int $page_id ): bool {
-		if ( ! function_exists( 'wp_delete_post' ) ) {
-			return false;
+		if ( function_exists( 'wp_delete_post' ) ) {
+			$deleted = wp_delete_post( $page_id, true );
+			if ( false !== $deleted && null !== $deleted && self::created_record_is_quarantined( $page_id ) ) {
+				return true;
+			}
 		}
 
-		$deleted = wp_delete_post( $page_id, true );
-		return false !== $deleted && null !== $deleted;
+		if ( function_exists( 'wp_update_post' ) ) {
+			$updated = wp_update_post(
+				array(
+					'ID'           => $page_id,
+					'post_status'  => 'draft',
+					'post_content' => '',
+				),
+				true
+			);
+			if ( ! is_wp_error( $updated ) && $page_id === (int) $updated && self::created_record_is_quarantined( $page_id ) ) {
+				return true;
+			}
+		}
+
+		if ( self::created_record_is_quarantined( $page_id ) ) {
+			return true;
+		}
+
+		update_option( self::EMERGENCY_OPTION, true, false );
+		$emergency_set = (bool) get_option( self::EMERGENCY_OPTION, false );
+		do_action( 'supc_created_page_cleanup_failed', $page_id, $emergency_set );
+		return false;
+	}
+
+	private static function created_record_is_quarantined( int $page_id ): bool {
+		$status = get_post_status( $page_id );
+		if ( false === $status || null === $status || 'publish' !== $status ) {
+			return true;
+		}
+
+		$content = (string) get_post_field( 'post_content', $page_id );
+		return ! has_shortcode( $content, self::SHORTCODE );
 	}
 
 	private static function acquire_repair_lock(): string {
