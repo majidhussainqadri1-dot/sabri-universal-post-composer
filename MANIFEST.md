@@ -1,4 +1,4 @@
-# Source Manifest — Cumulative Phases 22A–22E Corrections
+# Source Manifest — Cumulative Phases 22A–22E and Post-Merge Corrections
 
 ## Runtime
 
@@ -34,6 +34,7 @@
 - `docs/ERROR-CODES.md`
 - `docs/FILE21-INTEGRATION.md`
 - `docs/FILE22-CUMULATIVE-POST-CORRECTION-VERIFICATION-2026-07-30.md`
+- `docs/FILE22-POST-MERGE-INDEPENDENT-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/MASTER-PLAN-AMENDMENT-v2.1.md`
 - `docs/MIGRATION.md`
 - `docs/PHASE-22C-CREATE-SURFACE.md`
@@ -41,8 +42,8 @@
 - `docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md`
 - `docs/PHASE-22C-POST-CORRECTION-VERIFICATION-2026-07-29.md`
 - `docs/PHASE-22D-ADMIN-SYSTEM-CHECK.md`
-- `docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
 - `docs/PHASE-22D-POST-CORRECTION-VERIFICATION-2026-07-29.md`
+- `docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md`
 - `docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md`
 - `docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md`
 - `docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md`
@@ -57,7 +58,7 @@
 - `docs/STAGING-ACCEPTANCE.md`
 - `docs/SYSTEM-CHECK.md`
 
-Historical Phase 22E review records remain immutable evidence for the earlier Phase 22E runtime. They do not approve the cumulative corrective runtime and are explicitly superseded by the forthcoming cumulative independent review and post-correction verification.
+Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and the 30 July 2026 post-merge independent review supersede outdated status wording; they do not replace controlled staging or production acceptance.
 
 ## Development and QA files
 
@@ -92,4 +93,4 @@ Development files are excluded from a future production ZIP according to `.disti
 
 ## Release boundary
 
-No release ZIP, production checksum, machine-generated package manifest, staging acceptance record, or production approval has been declared. Draft PR #6 targets canonical `main` and remains unmerged. Files 00/20/21/22 staging, complete role/IDOR/cache/browser/accessibility/RTL acceptance, backup restoration, rollback proof, independent cumulative review, post-correction verification, and explicit Founder authorization remain mandatory.
+PR #6 has been merged into canonical `main`; therefore, statements that it remains an unmerged Draft are obsolete and were corrected by the 30 July 2026 post-merge audit. The merge establishes a source baseline only. No release ZIP, production checksum, machine-generated package manifest, controlled Files 00/20/21/22 staging acceptance, live deployment, or production approval has been declared. Complete role/IDOR/cache/browser/accessibility/RTL acceptance, backup restoration, rollback proof, and explicit Founder authorization remain mandatory.
