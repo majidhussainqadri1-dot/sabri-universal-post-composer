@@ -16,6 +16,8 @@ final class PageResolverRepairTest extends TestCase {
 		$GLOBALS['supc_test_get_posts_calls']    = 0;
 		$GLOBALS['supc_test_delete_post_result'] = 'object';
 		$GLOBALS['supc_test_deleted_posts']      = array();
+		$GLOBALS['supc_test_update_post_result'] = 'id';
+		$GLOBALS['supc_test_updated_posts']      = array();
 		$GLOBALS['supc_test_actions_fired']      = array();
 		Page_Resolver::reset_cache();
 	}
@@ -118,6 +120,28 @@ final class PageResolverRepairTest extends TestCase {
 		$this->assertSame( array(), $GLOBALS['supc_test_pages'] );
 	}
 
+	public function test_literal_old_sentinel_value_is_restored_exactly(): void {
+		$GLOBALS['supc_test_options']['supc_create_page_id'] = '__supc_mapping_missing__';
+		$GLOBALS['supc_test_update_fail_keys'][]              = 'supc_create_page_id';
+
+		$result = Page_Resolver::repair_mapping( true );
+
+		$this->assertSame( 'mapping_persistence_failed', $result['result'] );
+		$this->assertArrayHasKey( 'supc_create_page_id', $GLOBALS['supc_test_options'] );
+		$this->assertSame( '__supc_mapping_missing__', $GLOBALS['supc_test_options']['supc_create_page_id'] );
+	}
+
+	public function test_null_previous_mapping_value_is_restored_exactly(): void {
+		$GLOBALS['supc_test_options']['supc_create_page_id'] = null;
+		$GLOBALS['supc_test_update_fail_keys'][]              = 'supc_create_page_id';
+
+		$result = Page_Resolver::repair_mapping( true );
+
+		$this->assertSame( 'mapping_persistence_failed', $result['result'] );
+		$this->assertArrayHasKey( 'supc_create_page_id', $GLOBALS['supc_test_options'] );
+		$this->assertNull( $GLOBALS['supc_test_options']['supc_create_page_id'] );
+	}
+
 	public function test_dry_repair_plan_does_not_create_or_change_data(): void {
 		$result = Page_Resolver::repair_mapping( false );
 
@@ -186,7 +210,7 @@ final class PageResolverRepairTest extends TestCase {
 		$this->assertSame( array( 101 ), $GLOBALS['supc_test_deleted_posts'] );
 	}
 
-	public function test_null_delete_result_is_recorded_as_failed_rollback_evidence(): void {
+	public function test_failed_delete_is_quarantined_as_nonpublic_without_emergency_mode(): void {
 		$GLOBALS['supc_test_insert_mutations']['slug'] = 'create-2';
 		$GLOBALS['supc_test_delete_post_result']       = 'null';
 
@@ -194,7 +218,25 @@ final class PageResolverRepairTest extends TestCase {
 
 		$this->assertSame( 'managed_page_validation_failed', $result['result'] );
 		$this->assertArrayHasKey( 101, $GLOBALS['supc_test_pages'] );
-		$this->assertSame( array(), $GLOBALS['supc_test_deleted_posts'] );
+		$this->assertSame( 'draft', $GLOBALS['supc_test_pages'][101]['status'] );
+		$this->assertSame( '', $GLOBALS['supc_test_pages'][101]['content'] );
+		$this->assertSame( array( 101 ), $GLOBALS['supc_test_updated_posts'] );
+		$this->assertArrayNotHasKey( 'supc_emergency_disabled', $GLOBALS['supc_test_options'] );
+		$this->assertContains( array( 'supc_invalid_managed_page_rollback', array( 101, true ) ), $GLOBALS['supc_test_actions_fired'] );
+	}
+
+	public function test_unremovable_published_shortcode_enters_emergency_safe_mode(): void {
+		$GLOBALS['supc_test_insert_mutations']['slug'] = 'create-2';
+		$GLOBALS['supc_test_delete_post_result']       = 'null';
+		$GLOBALS['supc_test_update_post_result']       = 'error';
+
+		$result = Page_Resolver::repair_mapping( true );
+
+		$this->assertSame( 'managed_page_validation_failed', $result['result'] );
+		$this->assertSame( 'publish', $GLOBALS['supc_test_pages'][101]['status'] );
+		$this->assertSame( '[sabri_universal_composer]', $GLOBALS['supc_test_pages'][101]['content'] );
+		$this->assertTrue( $GLOBALS['supc_test_options']['supc_emergency_disabled'] );
+		$this->assertContains( array( 'supc_created_page_cleanup_failed', array( 101, true ) ), $GLOBALS['supc_test_actions_fired'] );
 		$this->assertContains( array( 'supc_invalid_managed_page_rollback', array( 101, false ) ), $GLOBALS['supc_test_actions_fired'] );
 	}
 
