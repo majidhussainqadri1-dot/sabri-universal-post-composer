@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Sabri\UniversalComposer\Contracts\Adapter;
+use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
 use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
 
-final class Test_Adapter implements Adapter {
+class Test_Adapter implements Adapter {
 	public function __construct(
 		private string $adapter_key,
 		private int $adapter_priority = 10,
@@ -45,6 +46,37 @@ final class Test_Adapter implements Adapter {
 		return $this->available && $this->authorized && $user_id > 0;
 	}
 	public function start_url( int $user_id ): string { return '/create/' . $this->adapter_key . '?user=' . $user_id; }
+
+	public function change_capability( string $capability ): void {
+		$this->capability = $capability;
+	}
+
+	public function change_native_module( string $native_module ): void {
+		$this->native_module = $native_module;
+	}
+}
+
+final class Test_Workflow_Adapter extends Test_Adapter implements Workflow_Adapter {
+	public function __construct( string $adapter_key, private bool $throw_on_workflow_metadata = false ) {
+		parent::__construct( $adapter_key );
+	}
+
+	public function workflow_api_version(): string {
+		if ( $this->throw_on_workflow_metadata ) {
+			throw new RuntimeException( 'Workflow metadata failure.' );
+		}
+		return '1.0.0';
+	}
+
+	public function schema_version(): string { return '1.0.0'; }
+	public function supports_native_drafts(): bool { return true; }
+	public function schema(): array { return array( 'version' => '1.0.0', 'fields' => array() ); }
+	public function create_draft( int $user_id, ?string $native_reference, array $payload ) { unset( $user_id, $native_reference, $payload ); return array(); }
+	public function validate( int $user_id, array $payload ) { unset( $user_id, $payload ); return array(); }
+	public function preview( int $user_id, array $payload ) { unset( $user_id, $payload ); return array(); }
+	public function submit( int $user_id, string $idempotency_key, array $payload ) { unset( $user_id, $idempotency_key, $payload ); return array(); }
+	public function status( int $user_id, string $native_reference ) { unset( $user_id, $native_reference ); return array(); }
+	public function canonical_url( int $user_id, string $native_reference ): string { unset( $user_id, $native_reference ); return ''; }
 }
 
 final class RegistryTest extends TestCase {
@@ -72,6 +104,34 @@ final class RegistryTest extends TestCase {
 		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'invalid_native', native_module: 'File 21' ) ) );
 		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'invalid_version', minimum_native_version: 'latest' ) ) );
 		$this->assertInstanceOf( WP_Error::class, $this->registry->register( new Test_Adapter( 'invalid_privacy', privacy: 'unknown' ) ) );
+	}
+
+	public function test_registration_exception_is_atomic(): void {
+		$result = $this->registry->register( new Test_Workflow_Adapter( 'broken_workflow', true ) );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertNull( $this->registry->get( 'broken_workflow' ) );
+		$this->assertNull( $this->registry->adapter_contract( 'broken_workflow' ) );
+		$this->assertNull( $this->registry->workflow_contract( 'broken_workflow' ) );
+		$this->assertSame( array(), $this->registry->all() );
+		$this->assertArrayHasKey( 'broken_workflow', $this->registry->errors() );
+	}
+
+	public function test_registration_metadata_is_immutable_for_authorization_and_owner_checks(): void {
+		$adapter = new Test_Adapter( 'immutable_metadata', capability: 'manage_options', native_module: 'original-owner' );
+		$this->assertTrue( $this->registry->register( $adapter ) );
+
+		$adapter->change_capability( 'publish_posts' );
+		$adapter->change_native_module( 'changed-owner' );
+
+		$this->assertSame( array(), $this->registry->available_for_user( 1 ) );
+		$this->assertSame( 'manage_options', $this->registry->adapter_contract( 'immutable_metadata' )['required_capability'] );
+		$this->assertSame( 'original-owner', $this->registry->adapter_contract( 'immutable_metadata' )['native_module'] );
+	}
+
+	public function test_empty_registry_is_reported_as_native_service_unavailable(): void {
+		$this->assertSame( 'unavailable', $this->registry->creation_state_for_user( 1 ) );
+		$this->assertTrue( $this->registry->has_central_capability_for_user( 1 ) );
 	}
 
 	public function test_central_permission_denies_suspended_user(): void {
