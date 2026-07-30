@@ -395,7 +395,7 @@ final class Page_Resolver {
 
 	private static function created_record_is_quarantined( int $page_id ): bool {
 		$status = get_post_status( $page_id );
-		if ( false === $status || null === $status || 'publish' !== $status ) {
+		if ( false === $status || 'publish' !== $status ) {
 			return true;
 		}
 
