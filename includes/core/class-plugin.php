@@ -245,7 +245,7 @@ final class Plugin {
 			$functions_complete &&
 			! Runtime_Trust::functions_declared_by_file( self::PUBLIC_API_FUNCTIONS, SUPC_PATH . 'includes/core/functions.php' )
 		) {
-			$codes[] = 'public_api_source_mismatch';
+			$codes[] = 'public_api_function_collision';
 		}
 
 		return array( 'key' => 'public_api_contract', 'status' => array() === $codes ? 'pass' : 'fail', 'count' => count( array_unique( $codes ) ), 'codes' => array_values( array_unique( $codes ) ) );
@@ -273,7 +273,7 @@ final class Plugin {
 		$source_owned = $functions_complete
 			&& Runtime_Trust::shell_symbols_owned( self::FILE20_FUNCTIONS, self::SHELL_SAFE_MODE_CLASS );
 		if ( Runtime_Trust::shell_claimed() && ! $source_owned ) {
-			$codes[] = 'file20_contract_source_mismatch';
+			$codes[] = 'file20_contract_collision';
 		}
 
 		$trusted = '1.0.1' === $version
