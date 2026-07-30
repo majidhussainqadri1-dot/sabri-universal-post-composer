@@ -55,18 +55,19 @@ final class Core_Adapter_Requirements {
 	 * @return array<string, mixed>
 	 */
 	public function social_publication_report(): array {
-		$adapter = $this->registry->get( self::SOCIAL_PUBLICATION_KEY );
+		$adapter       = $this->registry->get( self::SOCIAL_PUBLICATION_KEY );
+		$base_contract = $this->registry->adapter_contract( self::SOCIAL_PUBLICATION_KEY );
 		if ( ! $adapter instanceof Adapter ) {
 			return $this->failure( 'not_registered' );
+		}
+		if ( null === $base_contract ) {
+			return $this->failure( 'registration_metadata_missing' );
 		}
 
 		try {
 			$codes   = array();
-			$minimum = trim( $adapter->minimum_native_version() );
-			if ( self::SOCIAL_PUBLICATION_KEY !== $adapter->key() ) {
-				$codes[] = 'adapter_key_mismatch';
-			}
-			if ( self::FILE21_NATIVE_MODULE !== $adapter->native_module() ) {
+			$minimum = $base_contract['minimum_native_version'];
+			if ( self::FILE21_NATIVE_MODULE !== $base_contract['native_module'] ) {
 				$codes[] = 'native_module_mismatch';
 			}
 			if ( ! $this->valid_version( $minimum ) ) {
@@ -74,13 +75,13 @@ final class Core_Adapter_Requirements {
 			} elseif ( version_compare( $minimum, self::MINIMUM_FILE21_VERSION, '<' ) ) {
 				$codes[] = 'minimum_native_version_too_low';
 			}
-			if ( self::REQUIRED_CREATE_CAPABILITY !== $adapter->required_capability() ) {
+			if ( self::REQUIRED_CREATE_CAPABILITY !== $base_contract['required_capability'] ) {
 				$codes[] = 'required_capability_mismatch';
 			}
-			if ( self::REQUIRED_GROUP !== $adapter->group() ) {
+			if ( self::REQUIRED_GROUP !== $base_contract['group'] ) {
 				$codes[] = 'group_mismatch';
 			}
-			if ( self::REQUIRED_PRIVACY_CLASS !== $adapter->privacy_classification() ) {
+			if ( self::REQUIRED_PRIVACY_CLASS !== $base_contract['privacy_classification'] ) {
 				$codes[] = 'privacy_classification_mismatch';
 			}
 			if ( ! $adapter instanceof Diagnostic_Adapter ) {
@@ -96,17 +97,17 @@ final class Core_Adapter_Requirements {
 				$codes[] = 'subject_schema_contract_missing';
 			}
 
-			$contract = $this->registry->workflow_contract( self::SOCIAL_PUBLICATION_KEY );
-			if ( null === $contract ) {
+			$workflow_contract = $this->registry->workflow_contract( self::SOCIAL_PUBLICATION_KEY );
+			if ( null === $workflow_contract ) {
 				$codes[] = 'workflow_registration_metadata_missing';
 			} else {
-				if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
+				if ( SUPC_WORKFLOW_API_VERSION !== $workflow_contract['workflow_api_version'] ) {
 					$codes[] = 'workflow_api_mismatch';
 				}
-				if ( self::REQUIRED_CREATE_CAPABILITY !== $contract['required_capability'] ) {
+				if ( self::REQUIRED_CREATE_CAPABILITY !== $workflow_contract['required_capability'] ) {
 					$codes[] = 'workflow_capability_mismatch';
 				}
-				if ( ! $contract['supports_native_drafts'] ) {
+				if ( ! $workflow_contract['supports_native_drafts'] ) {
 					$codes[] = 'native_draft_contract_missing';
 				}
 			}
@@ -145,8 +146,8 @@ final class Core_Adapter_Requirements {
 				'status'         => $available ? 'pass' : 'warning',
 				'count'          => $available ? 0 : 1,
 				'codes'          => $available ? array() : array( 'social_publication_temporarily_unavailable' ),
-				'adapter_key'    => $adapter->key(),
-				'native_module'  => $adapter->native_module(),
+				'adapter_key'    => self::SOCIAL_PUBLICATION_KEY,
+				'native_module'  => $base_contract['native_module'],
 				'actual_native'  => $actual,
 				'minimum_native' => $minimum,
 			);
