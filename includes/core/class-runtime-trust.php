@@ -66,14 +66,23 @@ final class Runtime_Trust {
 	public static function public_api_owned( string $expected_file ): bool {
 		if (
 			! defined( 'SUPC_PUBLIC_API_VERSION' ) ||
-			self::PUBLIC_API_VERSION !== (string) SUPC_PUBLIC_API_VERSION ||
 			! defined( 'SUPC_PUBLIC_API_OWNER' ) ||
-			self::PUBLIC_API_OWNER !== (string) SUPC_PUBLIC_API_OWNER ||
 			! defined( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' ) ||
-			true !== SUPC_PUBLIC_API_FUNCTIONS_OWNED ||
-			! defined( 'SUPC_PUBLIC_API_COLLISIONS' ) ||
-			! is_string( SUPC_PUBLIC_API_COLLISIONS ) ||
-			'' !== SUPC_PUBLIC_API_COLLISIONS
+			! defined( 'SUPC_PUBLIC_API_COLLISIONS' )
+		) {
+			return false;
+		}
+
+		$version    = constant( 'SUPC_PUBLIC_API_VERSION' );
+		$owner      = constant( 'SUPC_PUBLIC_API_OWNER' );
+		$owned      = constant( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' );
+		$collisions = constant( 'SUPC_PUBLIC_API_COLLISIONS' );
+		if (
+			self::PUBLIC_API_VERSION !== $version ||
+			self::PUBLIC_API_OWNER !== $owner ||
+			true !== $owned ||
+			! is_string( $collisions ) ||
+			'' !== $collisions
 		) {
 			return false;
 		}
