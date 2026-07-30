@@ -147,10 +147,7 @@ final class Page_Resolver {
 
 				$persistence = self::persist_mapping( $page_id );
 				if ( ! $persistence['persisted'] ) {
-					return array(
-						'result'  => $persistence['restored'] ? 'mapping_persistence_failed' : 'mapping_rollback_failed',
-						'page_id' => $page_id,
-					);
+					return array( 'result' => 'mapping_persistence_failed', 'page_id' => $page_id );
 				}
 
 				return array( 'result' => 'mapped_existing', 'page_id' => $page_id );
@@ -166,10 +163,7 @@ final class Page_Resolver {
 			if ( ! $persistence['persisted'] ) {
 				$page_rolled_back = self::rollback_created_page( $created['page_id'] );
 				do_action( 'supc_created_page_mapping_rollback', $created['page_id'], $persistence['restored'], $page_rolled_back );
-				return array(
-					'result'  => $persistence['restored'] && $page_rolled_back ? 'mapping_persistence_failed' : 'mapping_rollback_failed',
-					'page_id' => $created['page_id'],
-				);
+				return array( 'result' => 'mapping_persistence_failed', 'page_id' => $created['page_id'] );
 			}
 
 			return array( 'result' => 'created_managed_page', 'page_id' => $created['page_id'] );
@@ -321,7 +315,7 @@ final class Page_Resolver {
 		if ( ! self::is_valid_managed_page( $page_id, $slug ) ) {
 			$rolled_back = self::rollback_created_page( $page_id );
 			do_action( 'supc_invalid_managed_page_rollback', $page_id, $rolled_back );
-			return array( 'result' => $rolled_back ? 'managed_page_validation_failed' : 'mapping_rollback_failed', 'page_id' => $page_id );
+			return array( 'result' => 'managed_page_validation_failed', 'page_id' => $page_id );
 		}
 
 		return array( 'result' => 'managed_page_created', 'page_id' => $page_id );
