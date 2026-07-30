@@ -186,15 +186,16 @@ final class PageResolverRepairTest extends TestCase {
 		$this->assertSame( array( 101 ), $GLOBALS['supc_test_deleted_posts'] );
 	}
 
-	public function test_null_delete_result_is_not_misreported_as_successful_rollback(): void {
+	public function test_null_delete_result_is_recorded_as_failed_rollback_evidence(): void {
 		$GLOBALS['supc_test_insert_mutations']['slug'] = 'create-2';
 		$GLOBALS['supc_test_delete_post_result']       = 'null';
 
 		$result = Page_Resolver::repair_mapping( true );
 
-		$this->assertSame( 'mapping_rollback_failed', $result['result'] );
+		$this->assertSame( 'managed_page_validation_failed', $result['result'] );
 		$this->assertArrayHasKey( 101, $GLOBALS['supc_test_pages'] );
 		$this->assertSame( array(), $GLOBALS['supc_test_deleted_posts'] );
+		$this->assertContains( array( 'supc_invalid_managed_page_rollback', array( 101, false ) ), $GLOBALS['supc_test_actions_fired'] );
 	}
 
 	public function test_valid_mapping_is_not_changed(): void {
