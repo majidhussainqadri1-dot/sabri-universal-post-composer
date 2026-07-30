@@ -263,7 +263,7 @@ final class Plugin {
 		if ( 'sabri-unified-application-shell' !== $owner ) { $codes[] = 'file20_contract_owner_mismatch'; }
 		if ( true !== $owned ) { $codes[] = 'file20_contract_collision'; }
 		foreach ( self::FILE20_FUNCTIONS as $function ) {
-			if ( ! function_exists( $function ) ) {
+			if ( ! is_callable( $function ) ) {
 				$functions_complete = false;
 				$codes[]            = 'file20_contract_functions_missing';
 				break;
@@ -283,7 +283,8 @@ final class Plugin {
 			&& $source_owned;
 		if ( $trusted ) {
 			try {
-				if ( ! sabri_shell_create_contract_available() ) {
+				$available = call_user_func( self::FILE20_FUNCTIONS[0] );
+				if ( ! (bool) $available ) {
 					$codes[] = 'file20_contract_unavailable';
 				}
 			} catch ( \Throwable $error ) {
