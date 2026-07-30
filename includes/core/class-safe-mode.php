@@ -25,6 +25,19 @@ final class Safe_Mode {
 
 		$callback = array( '\\Sabri\\UnifiedShell\\SafeMode', 'disabled' );
 		if ( is_callable( $callback ) ) {
+			$trusted_shell = defined( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' )
+				&& '1.0.1' === (string) SABRI_SHELL_CREATE_CONTRACT_VERSION
+				&& defined( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' )
+				&& 'sabri-unified-application-shell' === (string) SABRI_SHELL_CREATE_CONTRACT_OWNER
+				&& defined( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' )
+				&& true === SABRI_SHELL_CREATE_FUNCTIONS_OWNED;
+
+			// A colliding, incomplete, or obsolete shell class must never be trusted to
+			// clear the platform-wide emergency boundary.
+			if ( ! $trusted_shell ) {
+				return true;
+			}
+
 			try {
 				return (bool) call_user_func( $callback );
 			} catch ( \Throwable $error ) {
