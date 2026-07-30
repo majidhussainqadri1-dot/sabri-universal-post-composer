@@ -28,12 +28,17 @@ $public_api_functions = array(
 	'supc_workflow_canonical_url',
 	'supc_generate_idempotency_key',
 );
-$public_api_collisions = array_values( array_filter( $public_api_functions, 'function_exists' ) );
-$public_api_markers_unclaimed = ! defined( 'SUPC_PUBLIC_API_VERSION' )
-	&& ! defined( 'SUPC_PUBLIC_API_OWNER' )
-	&& ! defined( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' );
+$public_api_markers = array(
+	'SUPC_PUBLIC_API_VERSION',
+	'SUPC_PUBLIC_API_OWNER',
+	'SUPC_PUBLIC_API_FUNCTIONS_OWNED',
+	'SUPC_PUBLIC_API_COLLISIONS',
+);
+$public_api_function_collisions = array_values( array_filter( $public_api_functions, 'function_exists' ) );
+$public_api_marker_collisions   = array_values( array_filter( $public_api_markers, 'defined' ) );
+$public_api_collisions          = array_merge( $public_api_function_collisions, $public_api_marker_collisions );
 
-if ( array() === $public_api_collisions && $public_api_markers_unclaimed ) {
+if ( array() === $public_api_collisions ) {
 	define( 'SUPC_PUBLIC_API_VERSION', '1.0.0' );
 	define( 'SUPC_PUBLIC_API_OWNER', 'sabri-universal-post-composer' );
 	define( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED', true );
