@@ -62,4 +62,4 @@ jobs:
           done
           grep -Fq 'Sixth complete-repository hardening' CHANGELOG.md
           grep -Fq 're-evaluated on every call' docs/SECURITY.md
-          grep -Fq 'exact File 20 contract' docs/SECURITY.md
+          grep -Fq 'exact Create contract version' docs/SECURITY.md
