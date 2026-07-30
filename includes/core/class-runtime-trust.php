@@ -114,6 +114,7 @@ final class Runtime_Trust {
 				if ( false === $source || $source !== $expected_file ) {
 					return false;
 				}
+			}
 		} catch ( \Throwable $error ) {
 			unset( $error );
 			return false;
