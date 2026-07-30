@@ -74,9 +74,11 @@ if ( array() === $public_api_collisions && $public_api_markers_unclaimed ) {
 			$user_id  = get_current_user_id();
 			$registry = Plugin::instance()->registry();
 			$adapter  = $registry->get( $key );
+			$contract = $registry->adapter_contract( $key );
 			return $user_id > 0
 				&& null !== $adapter
-				&& $adapter->native_module() === $native_module
+				&& null !== $contract
+				&& $contract['native_module'] === $native_module
 				&& isset( $registry->available_for_user( $user_id )[ $key ] );
 		} catch ( \Throwable $error ) {
 			unset( $error );
