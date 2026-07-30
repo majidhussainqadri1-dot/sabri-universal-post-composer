@@ -12,6 +12,8 @@ define( 'SUPC_MIN_SMC_VERSION', '1.0.1' );
 define( 'SUPC_VERSION', '0.1.0-dev' );
 define( 'SUPC_URL', 'https://example.test/wp-content/plugins/sabri-universal-post-composer/' );
 define( 'SMC_VERSION', '1.0.1' );
+define( 'SMC_FILE', __FILE__ );
+define( 'SMC_PATH', __DIR__ . '/' );
 
 $GLOBALS['supc_test_statuses']          = array( 1 => 'approved', 2 => 'suspended' );
 $GLOBALS['supc_test_capabilities']      = array( 1 => array( 'sabri_feed_create_posts' => true ) );
@@ -34,6 +36,8 @@ $GLOBALS['supc_test_update_fail_keys']  = array();
 $GLOBALS['supc_test_add_option_fail']   = false;
 $GLOBALS['supc_test_insert_mutations']  = array();
 $GLOBALS['supc_test_get_posts_calls']   = 0;
+$GLOBALS['supc_test_delete_post_result'] = 'object';
+$GLOBALS['supc_test_deleted_posts']      = array();
 
 class WP_Error {
 	public function __construct(
@@ -310,6 +314,24 @@ function wp_insert_post( array $postarr, bool $wp_error = false ): int|WP_Error 
 	return $id;
 }
 
+function wp_delete_post( int $post_id, bool $force_delete = false ): object|false|null {
+	unset( $force_delete );
+	$result = (string) $GLOBALS['supc_test_delete_post_result'];
+	if ( 'null' === $result ) {
+		return null;
+	}
+	if ( 'false' === $result ) {
+		return false;
+	}
+	if ( ! isset( $GLOBALS['supc_test_pages'][ $post_id ] ) ) {
+		return null;
+	}
+
+	$GLOBALS['supc_test_deleted_posts'][] = $post_id;
+	unset( $GLOBALS['supc_test_pages'][ $post_id ] );
+	return (object) array( 'ID' => $post_id );
+}
+
 function is_wp_error( mixed $thing ): bool {
 	return $thing instanceof WP_Error;
 }
@@ -353,6 +375,7 @@ function wp_die( string $message ): never {
 
 require_once dirname( __DIR__ ) . '/includes/contracts/interface-adapter.php';
 require_once dirname( __DIR__ ) . '/includes/contracts/interface-diagnostic-adapter.php';
+require_once dirname( __DIR__ ) . '/includes/core/class-version.php';
 require_once dirname( __DIR__ ) . '/includes/core/class-safe-mode.php';
 require_once dirname( __DIR__ ) . '/includes/core/class-permission-resolver.php';
 require_once dirname( __DIR__ ) . '/includes/core/class-page-resolver.php';
