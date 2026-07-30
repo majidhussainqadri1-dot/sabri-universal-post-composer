@@ -2,6 +2,15 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Second post-merge hardening
+
+- Extended the immutable registration contract to include privacy class, group, priority, and minimum native version alongside capability and native owner.
+- Prevented mutable adapters from relabeling sensitive workflows as public, moving Create cards between groups, changing ordering, or rewriting declared compatibility after registration.
+- Required File 21 release-readiness diagnostics to use immutable base/workflow contracts while retaining dynamic operational health and actual native-version reporting.
+- Kept incompatible Workflow Adapters available for controlled diagnostics but removed them from invokable Create-surface availability.
+- Cleared stale registration/runtime errors after successful corrected re-registration or explicit unregistration.
+- Added independent second-post-merge regression coverage for structural metadata snapshots, Create-surface privacy/group integrity, workflow compatibility, stale diagnostics, and File 21 readiness.
+
 ### Cumulative corrective reconciliation
 
 - Reconciled Phases 22B–22E into one Draft PR targeting canonical `main`.
