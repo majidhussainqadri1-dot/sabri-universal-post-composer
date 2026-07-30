@@ -2,7 +2,7 @@
 
 ## Scope
 
-This review examined canonical `main` after merged PR #6 and compared the actual runtime, tests, public API, and repository status against the File 22 ownership and fail-closed architecture.
+This review examined canonical `main` after merged PR #6 and compared the actual runtime, tests, public API, repository status, and review-evidence automation against the File 22 ownership and fail-closed architecture.
 
 Reviewed areas:
 
@@ -11,6 +11,7 @@ Reviewed areas:
 - current-subject public API behavior;
 - empty and unavailable integration states;
 - merged-source versus staging/release status documentation;
+- historical versus current review-evidence boundaries;
 - regression coverage for the corrected boundaries.
 
 ## Findings
@@ -61,12 +62,21 @@ The repository contained wording that all phases and PR #6 remained unmerged Dra
 - no approved package or production release;
 - no live deployment or completion claim.
 
-## Regression tests added
+### F22-PM-05 — Historical Phase 22E evidence workflow rejected every later runtime review
+
+**Severity:** Medium
+
+The Phase 22E evidence workflow granted supersession only to the old cumulative correction branch name. Any later independent branch based on the already merged cumulative baseline failed merely because current runtime files differed from the historical Phase 22E implementation SHA. This produced a false red check even when the historical evidence remained intact and the newer cumulative evidence check passed.
+
+**Correction:** The workflow now uses the immutable merged PR #6 commit as its supersession boundary. Descendants of that merged cumulative baseline preserve and verify the historical Phase 22E records, then exit successfully without treating later independently reviewed runtime changes as corruption. Pre-cumulative branches still retain the original historical file-freeze enforcement.
+
+## Regression tests and automation checks added
 
 - workflow metadata exception leaves no adapter, base contract, or workflow contract;
 - post-registration capability downgrade cannot broaden access;
 - post-registration owner mutation cannot change `supc_adapter_matches()`;
-- eligible account with no adapters receives service-unavailable classification.
+- eligible account with no adapters receives service-unavailable classification;
+- merged cumulative descendants no longer receive a false Phase 22E evidence failure.
 
 ## Files corrected
 
@@ -74,6 +84,7 @@ The repository contained wording that all phases and PR #6 remained unmerged Dra
 - `includes/core/functions.php`
 - `tests/RegistryTest.php`
 - `tests/PublicApiSubjectBindingTest.php`
+- `.github/workflows/phase22e-review-evidence.yml`
 - `README.md`
 - `MANIFEST.md`
 - removal of `REPOSITORY-STATUS.md`
