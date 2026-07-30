@@ -15,12 +15,12 @@
 | `supc_availability_exception` | Adapter failed during availability/state evaluation |
 | `supc_workflow_disabled` | File 22 or unified shell Safe Mode disabled workflows |
 | `supc_invalid_workflow_request` | Current subject or adapter key is invalid |
-| `supc_workflow_adapter_unavailable` | Requested full Workflow Adapter is missing |
+| `supc_workflow_adapter_unavailable` | Requested full Workflow Adapter or its immutable workflow registration metadata is missing |
 | `supc_workflow_api_mismatch` | Captured Workflow API version is incompatible |
 | `supc_native_workflow_unavailable` | Central permission passed, but native workflow is unavailable |
-| `supc_workflow_permission_denied` | Membership Core, central capability, or adapter policy denied the authenticated subject |
+| `supc_workflow_permission_denied` | Membership Core, immutable central capability, or adapter policy denied the authenticated subject |
 | `supc_native_drafts_unsupported` | Registration contract does not support direct native drafts |
-| `supc_invalid_schema_contract` | Static or subject schema version, vocabulary, privacy, bounds, choices, or size is invalid |
+| `supc_invalid_schema_contract` | Static or subject schema version, vocabulary, privacy, bounds, nonempty choices, or size is invalid |
 | `supc_invalid_workflow_payload` | Payload contains unsupported objects, resources, nesting, or nonfinite values |
 | `supc_workflow_payload_too_large` | Encoded payload exceeds 1 MiB |
 | `supc_workflow_payload_unknown_field` | Payload contains a field absent from the authenticated subject's schema |
@@ -35,6 +35,17 @@
 | `supc_invalid_canonical_url` | Native owner denied the subject or returned an unsafe URL |
 | `supc_native_workflow_error` | Native `WP_Error` was normalized and raw message/data discarded |
 | `supc_workflow_adapter_exception` | Native operation threw; class and message were not emitted |
+
+## Workflow contract-health codes
+
+| Code | Meaning |
+|---|---|
+| `workflow_registration_metadata_missing` | An object implements `Workflow_Adapter`, but its immutable registration snapshot is absent; health fails closed |
+| `workflow_api_mismatch` | The captured workflow API is incompatible; schema and other workflow methods are not invoked |
+| `invalid_schema_contract` | A compatible workflow returned an invalid role-neutral static schema |
+| `workflow_contract_exception` | A compatible workflow threw during static contract inspection; raw exception data was discarded |
+
+A non-workflow adapter is reported as `not_applicable`; it does not receive any of these failure codes.
 
 ## File 22 public API health codes
 
@@ -61,13 +72,17 @@
 Controlled codes include:
 
 - `social_publication_not_registered`;
+- `social_publication_registration_metadata_missing`;
 - `social_publication_contract_mismatch`;
 - `social_publication_native_version_unreported`;
 - `social_publication_native_version_invalid`;
 - `social_publication_native_version_too_low`;
+- `social_publication_native_version_below_declared_minimum`;
 - `social_publication_temporarily_unavailable`;
+- `social_publication_diagnostic_exception`;
 - `adapter_key_mismatch`;
 - `native_module_mismatch`;
+- `invalid_minimum_native_version`;
 - `minimum_native_version_too_low`;
 - `required_capability_mismatch`;
 - `group_mismatch`;
