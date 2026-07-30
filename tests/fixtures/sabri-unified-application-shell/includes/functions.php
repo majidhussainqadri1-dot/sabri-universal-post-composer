@@ -5,10 +5,14 @@
 
 declare(strict_types=1);
 
-function sabri_shell_create_contract_available(): bool {
-	return true;
+if ( ! function_exists( 'sabri_shell_create_contract_available' ) ) {
+	function sabri_shell_create_contract_available(): bool {
+		return true;
+	}
 }
 
-function sabri_shell_create_visible_for_current_user(): bool {
-	return true;
+if ( ! function_exists( 'sabri_shell_create_visible_for_current_user' ) ) {
+	function sabri_shell_create_visible_for_current_user(): bool {
+		return true;
+	}
 }
