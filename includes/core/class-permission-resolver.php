@@ -71,11 +71,21 @@ final class Permission_Resolver {
 		}
 	}
 
-	public function can_use_adapter( int $user_id, Adapter $adapter ): bool {
-		if ( ! $this->can_use_capability( $user_id, $adapter->required_capability() ) ) {
+	/**
+	 * Resolve an adapter-specific decision only after the caller supplies the
+	 * immutable registration-time capability. Live adapter metadata is never an
+	 * authorization source after registration.
+	 */
+	public function can_use_adapter( int $user_id, Adapter $adapter, string $registered_capability ): bool {
+		if ( ! $this->can_use_capability( $user_id, $registered_capability ) ) {
 			return false;
 		}
 
-		return $adapter->can_create( $user_id );
+		try {
+			return $adapter->can_create( $user_id );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return false;
+		}
 	}
 }
