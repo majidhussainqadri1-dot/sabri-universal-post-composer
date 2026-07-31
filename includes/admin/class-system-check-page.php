@@ -13,6 +13,7 @@ use Sabri\UniversalComposer\Contracts\Diagnostic_Adapter;
 use Sabri\UniversalComposer\Core\Page_Resolver;
 use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
+use Sabri\UniversalComposer\Core\Version;
 use Sabri\UniversalComposer\Core\Workflow_Coordinator;
 use Throwable;
 
@@ -25,6 +26,8 @@ final class System_Check_Page {
 	private const CAPABILITY = 'manage_options';
 	private const REPAIR_ACTION = 'supc_repair_create_page';
 	private const NONCE_ACTION = 'supc_repair_create_page';
+	private const MAX_SYSTEM_ROWS = 100;
+	private const MAX_DIAGNOSTIC_COUNT = 1000;
 	private const ALLOWED_GROUPS = array( 'publishing', 'knowledge', 'media', 'commerce', 'other' );
 	private const ALLOWED_PRIVACY = array( 'public', 'private', 'sensitive' );
 	private const SAFE_SYSTEM_KEYS = array(
@@ -44,10 +47,13 @@ final class System_Check_Page {
 		'create_page_missing',
 		'invalid_key',
 		'duplicate_key',
+		'adapter_limit_reached',
+		'registry_error_limit_reached',
 		'api_mismatch',
 		'invalid_required_capability',
 		'invalid_native_module',
 		'invalid_minimum_native_version',
+		'invalid_priority',
 		'invalid_privacy',
 		'invalid_group',
 		'registration_exception',
@@ -59,12 +65,20 @@ final class System_Check_Page {
 		'public_api_owner_mismatch',
 		'public_api_function_collision',
 		'public_api_incomplete',
+		'file20_contract_missing',
+		'file20_legacy_contract_missing',
+		'file20_visibility_contract_missing',
 		'file20_contract_version_mismatch',
 		'file20_contract_owner_mismatch',
 		'file20_contract_collision',
 		'file20_contract_functions_missing',
 		'file20_contract_unavailable',
 		'file20_contract_exception',
+		'create_surface_safe_mode',
+		'create_surface_subject_unavailable',
+		'create_surface_subject_not_authorized',
+		'create_surface_native_unavailable',
+		'invalid_display_metadata',
 		'invalid_route',
 		'unknown_group',
 		'render_exception',
@@ -234,7 +248,7 @@ final class System_Check_Page {
 		}
 
 		$rows = array();
-		foreach ( $raw as $row ) {
+		foreach ( array_slice( $raw, 0, self::MAX_SYSTEM_ROWS ) as $row ) {
 			if ( ! is_array( $row ) ) {
 				continue;
 			}
@@ -249,10 +263,11 @@ final class System_Check_Page {
 				$key = 'unrecognized_check';
 			}
 
+			$reported_count = max( count( $codes ), max( 0, (int) ( $row['count'] ?? count( $codes ) ) ) );
 			$rows[] = array(
 				'key'    => $key,
 				'status' => $status,
-				'count'  => max( 0, (int) ( $row['count'] ?? count( $codes ) ) ),
+				'count'  => min( self::MAX_DIAGNOSTIC_COUNT, $reported_count ),
 				'codes'  => $codes,
 			);
 		}
@@ -315,7 +330,7 @@ final class System_Check_Page {
 					$status  = $this->worse_status( $status, 'fail' );
 					$codes[] = 'invalid_required_capability';
 				}
-				if ( 1 !== preg_match( '/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/', $minimum ) ) {
+				if ( ! Version::valid( $minimum ) ) {
 					$status  = $this->worse_status( $status, 'warning' );
 					$codes[] = 'invalid_minimum_native_version';
 				}
