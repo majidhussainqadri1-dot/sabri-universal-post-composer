@@ -25,10 +25,13 @@ final class Workflow_Coordinator {
 	private const MAX_PREVIEW_TTL = 1800;
 	private const MAX_SCHEMA_FIELDS = 100;
 	private const MAX_SCHEMA_CHOICES = 100;
-	private const NATIVE_REFERENCE_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/';
-	private const IDEMPOTENCY_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
-	private const CODE_PATTERN = '/^[a-z][a-z0-9_.:-]{0,63}$/';
-	private const FIELD_KEY_PATTERN = '/^[a-z][a-z0-9_]{0,63}$/';
+	private const MAX_ARRAY_ITEMS = 1000;
+	private const MAX_CODE_COLLECTION_ITEMS = 100;
+	private const MAX_URL_BYTES = 2048;
+	private const NATIVE_REFERENCE_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/D';
+	private const IDEMPOTENCY_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD';
+	private const CODE_PATTERN = '/^[a-z][a-z0-9_.:-]{0,63}$/D';
+	private const FIELD_KEY_PATTERN = '/^[a-z][a-z0-9_]{0,63}$/D';
 	private const FINAL_STATUSES = array( 'draft', 'pending_review', 'scheduled', 'published', 'rejected', 'failed' );
 	private const DRAFT_STATUSES = array( 'draft', 'pending_review' );
 	private const FIELD_TYPES = array( 'text', 'textarea', 'select', 'multiselect', 'checkbox', 'number', 'date', 'datetime', 'url', 'email', 'opaque_reference' );
@@ -315,7 +318,8 @@ final class Workflow_Coordinator {
 	}
 
 	public function generate_idempotency_key(): string {
-		return wp_generate_uuid4() . ':' . wp_generate_uuid4();
+		$key = wp_generate_uuid4() . ':' . wp_generate_uuid4();
+		return 1 === preg_match( self::IDEMPOTENCY_PATTERN, $key ) ? $key : '';
 	}
 
 	/**
@@ -325,7 +329,7 @@ final class Workflow_Coordinator {
 		if ( Safe_Mode::disabled() ) {
 			return $this->error( 'workflow_disabled', 'Workflow orchestration is temporarily disabled.', $adapter_key );
 		}
-		if ( $user_id <= 0 || 1 !== preg_match( '/^[a-z][a-z0-9_]{2,63}$/', $adapter_key ) ) {
+		if ( $user_id <= 0 || 1 !== preg_match( '/^[a-z][a-z0-9_]{2,63}$/D', $adapter_key ) ) {
 			return $this->error( 'invalid_workflow_request', 'The workflow request is invalid.', $adapter_key );
 		}
 		if ( ! $this->permissions->account_is_eligible( $user_id ) ) {
@@ -370,7 +374,7 @@ final class Workflow_Coordinator {
 				return $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key );
 			}
 			$fields = $schema['fields'] ?? null;
-			if ( ! $this->valid_version( $version ) || ! isset( $schema['version'] ) || $version !== $schema['version'] || ! is_array( $fields ) || ! $this->bounded_array( $schema, self::MAX_SCHEMA_BYTES ) ) {
+			if ( ! Version::valid( $version ) || ! isset( $schema['version'] ) || $version !== $schema['version'] || ! is_array( $fields ) || ! $this->bounded_array( $schema, self::MAX_SCHEMA_BYTES ) ) {
 				return $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key );
 			}
 
@@ -492,13 +496,15 @@ final class Workflow_Coordinator {
 			return is_string( $value ) && isset( $definition['choices'][ $value ] );
 		}
 		if ( 'multiselect' === $type ) {
-			if ( ! is_array( $value ) || array_values( $value ) !== $value ) {
+			if ( ! is_array( $value ) || array_values( $value ) !== $value || count( $value ) > self::MAX_SCHEMA_CHOICES ) {
 				return false;
 			}
+			$seen = array();
 			foreach ( $value as $choice ) {
-				if ( ! is_string( $choice ) || ! isset( $definition['choices'][ $choice ] ) ) {
+				if ( ! is_string( $choice ) || ! isset( $definition['choices'][ $choice ] ) || isset( $seen[ $choice ] ) ) {
 					return false;
 				}
+				$seen[ $choice ] = true;
 			}
 			return true;
 		}
@@ -522,6 +528,7 @@ final class Workflow_Coordinator {
 
 	private function valid_http_url_value( string $value ): bool {
 		if (
+			strlen( $value ) > self::MAX_URL_BYTES ||
 			false === filter_var( $value, FILTER_VALIDATE_URL ) ||
 			1 === preg_match( '/[\x00-\x1F\x7F]/', $value ) ||
 			str_contains( $value, '\\' )
@@ -545,7 +552,7 @@ final class Workflow_Coordinator {
 	}
 
 	private function valid_date_value( string $value ): bool {
-		if ( 1 !== preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $value, $parts ) ) {
+		if ( 1 !== preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/D', $value, $parts ) ) {
 			return false;
 		}
 
@@ -556,7 +563,7 @@ final class Workflow_Coordinator {
 	}
 
 	private function valid_datetime_value( string $value ): bool {
-		$pattern = '/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(Z|[+-](\d{2}):(\d{2}))?$/';
+		$pattern = '/^(\d{4}-\d{2}-\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(Z|[+-](\d{2}):(\d{2}))?$/D';
 		if ( 1 !== preg_match( $pattern, $value, $parts ) || ! $this->valid_date_value( $parts[1] ) ) {
 			return false;
 		}
@@ -614,7 +621,7 @@ final class Workflow_Coordinator {
 		if ( null === $value || is_scalar( $value ) ) {
 			return ! is_float( $value ) || is_finite( $value );
 		}
-		if ( ! is_array( $value ) ) {
+		if ( ! is_array( $value ) || count( $value ) > self::MAX_ARRAY_ITEMS ) {
 			return false;
 		}
 		foreach ( $value as $key => $item ) {
@@ -710,12 +717,15 @@ final class Workflow_Coordinator {
 	 * @return array<int|string, mixed>|null
 	 */
 	private function normalize_code_collection( mixed $codes, int $depth = 0 ): ?array {
-		if ( ! is_array( $codes ) || $depth > 3 ) {
+		if ( ! is_array( $codes ) || $depth > 3 || count( $codes ) > self::MAX_CODE_COLLECTION_ITEMS ) {
 			return null;
 		}
 
 		$normalized = array();
 		foreach ( $codes as $key => $value ) {
+			if ( is_int( $key ) && $key < 0 ) {
+				return null;
+			}
 			if ( is_string( $key ) && 1 !== preg_match( self::FIELD_KEY_PATTERN, $key ) ) {
 				return null;
 			}
@@ -743,13 +753,9 @@ final class Workflow_Coordinator {
 		return 1 === preg_match( self::NATIVE_REFERENCE_PATTERN, $reference );
 	}
 
-	private function valid_version( string $version ): bool {
-		return 1 === preg_match( '/^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$/', $version );
-	}
-
 	private function internal_url( string $url ): string {
 		$url = trim( $url );
-		if ( '' === $url || 1 === preg_match( '/[\x00-\x1F\x7F]/', $url ) || str_contains( $url, '\\' ) ) {
+		if ( '' === $url || strlen( $url ) > self::MAX_URL_BYTES || 1 === preg_match( '/[\x00-\x1F\x7F]/', $url ) || str_contains( $url, '\\' ) ) {
 			return '';
 		}
 		$validated = wp_validate_redirect( $url, '' );
