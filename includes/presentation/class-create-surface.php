@@ -21,6 +21,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Create_Surface {
 	private const GROUP_ORDER = array( 'publishing', 'knowledge', 'media', 'commerce', 'other' );
+	private const MAX_LABEL_BYTES = 160;
+	private const MAX_DESCRIPTION_BYTES = 1000;
+	private const MAX_ROUTE_BYTES = 2048;
+	private const MAX_ICON_BYTES = 64;
 
 	/** @var array<string, array{code:string,severity:string}> */
 	private array $diagnostics = array();
@@ -138,6 +142,18 @@ final class Create_Surface {
 	 * @return array<string, mixed>
 	 */
 	public function system_check_row( int $user_id ): array {
+		if ( Safe_Mode::disabled() ) {
+			return $this->not_evaluated_row( 'create_surface_safe_mode' );
+		}
+		if ( $user_id <= 0 ) {
+			return $this->not_evaluated_row( 'create_surface_subject_unavailable' );
+		}
+
+		$state = $this->registry->creation_state_for_user( $user_id );
+		if ( 'denied' === $state ) {
+			return $this->not_evaluated_row( 'create_surface_subject_not_authorized' );
+		}
+
 		$this->collect_groups( $user_id );
 		$errors   = 0;
 		$warnings = 0;
@@ -152,13 +168,18 @@ final class Create_Surface {
 			}
 		}
 
+		if ( 'unavailable' === $state && array() === $codes ) {
+			$codes[] = 'create_surface_native_unavailable';
+			++$warnings;
+		}
+
 		$codes = array_values( array_unique( $codes ) );
 		sort( $codes );
 
 		return array(
 			'key'           => 'create_surface_diagnostics',
 			'status'        => $errors > 0 ? 'fail' : ( $warnings > 0 ? 'warning' : 'pass' ),
-			'count'         => count( $this->diagnostics ),
+			'count'         => count( $this->diagnostics ) + ( 'unavailable' === $state && 1 === $warnings ? 1 : 0 ),
 			'error_count'   => $errors,
 			'warning_count' => $warnings,
 			'codes'         => $codes,
@@ -228,7 +249,22 @@ final class Create_Surface {
 	 * @return array<string,string>|null
 	 */
 	private function card_from_adapter( string $key, Adapter $adapter, int $user_id, array $contract ): ?array {
-		$url = $this->validate_internal_route( $adapter->start_url( $user_id ) );
+		$label       = trim( $adapter->label() );
+		$description = trim( $adapter->description() );
+		$icon        = trim( $adapter->icon() );
+		$route       = trim( $adapter->start_url( $user_id ) );
+		if (
+			! $this->bounded_text( $label, 1, self::MAX_LABEL_BYTES ) ||
+			! $this->bounded_text( $description, 1, self::MAX_DESCRIPTION_BYTES ) ||
+			! $this->bounded_text( $icon, 1, self::MAX_ICON_BYTES ) ||
+			! $this->bounded_text( $route, 1, self::MAX_ROUTE_BYTES )
+		) {
+			$this->record_diagnostic( $key, 'invalid_display_metadata', 'fail' );
+			do_action( 'supc_adapter_render_error', $key, 'invalid_display_metadata' );
+			return null;
+		}
+
+		$url = $this->validate_internal_route( $route );
 		if ( '' === $url ) {
 			$this->record_diagnostic( $key, 'invalid_route', 'fail' );
 			do_action( 'supc_adapter_invalid_start_url', $key );
@@ -244,10 +280,10 @@ final class Create_Surface {
 
 		return array(
 			'key'           => $key,
-			'label'         => $adapter->label(),
-			'description'   => $adapter->description(),
+			'label'         => $label,
+			'description'   => $description,
 			'url'           => $url,
-			'icon_class'    => $this->icon_class( $adapter->icon() ),
+			'icon_class'    => $this->icon_class( $icon ),
 			'privacy'       => $privacy,
 			'privacy_label' => $this->privacy_label( $privacy ),
 		);
@@ -360,7 +396,7 @@ final class Create_Surface {
 
 	private function validate_internal_route( string $route ): string {
 		$route = trim( $route );
-		if ( '' === $route || 1 === preg_match( '/[\x00-\x1F\x7F]/', $route ) || str_contains( $route, '\\' ) ) {
+		if ( ! $this->bounded_text( $route, 1, self::MAX_ROUTE_BYTES ) || str_contains( $route, '\\' ) ) {
 			return '';
 		}
 
@@ -398,6 +434,25 @@ final class Create_Surface {
 		$target_port = isset( $target['port'] ) ? (int) $target['port'] : 443;
 		$home_port   = isset( $home['port'] ) ? (int) $home['port'] : 443;
 		return $target_port === $home_port ? $validated : '';
+	}
+
+	private function bounded_text( string $value, int $minimum_bytes, int $maximum_bytes ): bool {
+		$length = strlen( $value );
+		return $length >= $minimum_bytes
+			&& $length <= $maximum_bytes
+			&& 0 === preg_match( '/[\x00-\x1F\x7F]/', $value );
+	}
+
+	/** @return array<string,mixed> */
+	private function not_evaluated_row( string $code ): array {
+		return array(
+			'key'           => 'create_surface_diagnostics',
+			'status'        => 'warning',
+			'count'         => 1,
+			'error_count'   => 0,
+			'warning_count' => 1,
+			'codes'         => array( $code ),
+		);
 	}
 
 	private function record_diagnostic( string $key, string $code, string $severity ): void {
