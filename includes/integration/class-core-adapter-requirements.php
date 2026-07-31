@@ -82,6 +82,7 @@ final class Core_Adapter_Requirements {
 			}
 			if ( ! $adapter instanceof Workflow_Adapter ) {
 				$codes[] = 'workflow_contract_missing';
+				$codes[] = 'subject_schema_contract_missing';
 			}
 			if ( self::SUBJECT_SCHEMA_API_VERSION !== $this->runtime_constant( 'SUPC_SUBJECT_SCHEMA_API_VERSION' ) ) {
 				$codes[] = 'subject_schema_api_mismatch';
@@ -162,7 +163,10 @@ final class Core_Adapter_Requirements {
 		}
 	}
 
-	/** @param array<int,string> $extra_codes @return array<string,mixed> */
+	/**
+	 * @param array<int,string> $extra_codes Privacy-safe controlled codes.
+	 * @return array<string,mixed>
+	 */
 	private function failure( string $reason, array $extra_codes = array() ): array {
 		$codes = array_merge( array( 'social_publication_' . sanitize_key( $reason ) ), array_slice( array_map( 'sanitize_key', $extra_codes ), 0, 20 ) );
 		$codes = array_values( array_unique( array_filter( $codes ) ) );
