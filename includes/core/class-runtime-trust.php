@@ -37,8 +37,8 @@ final class Runtime_Trust {
 		'supc_generate_idempotency_key',
 	);
 	private const SHELL_DIRECTORY = 'sabri-unified-application-shell';
-	private const SHELL_FILE      = 'sabri-unified-application-shell.php';
-	private const SHELL_SLUG      = 'sabri-unified-application-shell';
+	private const SHELL_FILE = 'sabri-unified-application-shell.php';
+	private const SHELL_SLUG = 'sabri-unified-application-shell';
 	private const SHELL_SAFE_MODE_CLASS = '\\Sabri\\UnifiedShell\\SafeMode';
 	private const SHELL_CREATE_MARKERS = array(
 		'SABRI_SHELL_CREATE_CONTRACT_VERSION',
@@ -50,16 +50,12 @@ final class Runtime_Trust {
 		'sabri_shell_create_visible_for_current_user',
 	);
 
-	/**
-	 * @return array<int,string>
-	 */
+	/** @return array<int,string> */
 	public static function public_api_functions(): array {
 		return self::PUBLIC_API_FUNCTIONS;
 	}
 
-	/**
-	 * @return array<int,string>
-	 */
+	/** @return array<int,string> */
 	public static function shell_create_functions(): array {
 		return self::SHELL_CREATE_FUNCTIONS;
 	}
@@ -72,7 +68,7 @@ final class Runtime_Trust {
 		}
 
 		foreach ( self::PUBLIC_API_FUNCTIONS as $function ) {
-			if ( function_exists( $function ) ) {
+			if ( self::global_function_exists( $function ) ) {
 				return true;
 			}
 		}
@@ -90,9 +86,9 @@ final class Runtime_Trust {
 			return false;
 		}
 
-		$version    = constant( 'SUPC_PUBLIC_API_VERSION' );
-		$owner      = constant( 'SUPC_PUBLIC_API_OWNER' );
-		$owned      = constant( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' );
+		$version = constant( 'SUPC_PUBLIC_API_VERSION' );
+		$owner = constant( 'SUPC_PUBLIC_API_OWNER' );
+		$owned = constant( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' );
 		$collisions = constant( 'SUPC_PUBLIC_API_COLLISIONS' );
 		if (
 			self::PUBLIC_API_VERSION !== $version ||
@@ -107,16 +103,14 @@ final class Runtime_Trust {
 		return self::functions_declared_by_file( self::PUBLIC_API_FUNCTIONS, $expected_file );
 	}
 
-	/**
-	 * @param array<int,string> $functions Global function names.
-	 */
+	/** @param array<int,string> $functions Global function names. */
 	public static function functions_available( array $functions ): bool {
 		if ( array() === $functions ) {
 			return false;
 		}
 
 		foreach ( $functions as $function ) {
-			if ( ! is_string( $function ) || '' === $function || ! function_exists( $function ) ) {
+			if ( ! is_string( $function ) || '' === $function || ! self::global_function_exists( $function ) ) {
 				return false;
 			}
 		}
@@ -124,9 +118,7 @@ final class Runtime_Trust {
 		return true;
 	}
 
-	/**
-	 * @param array<int,string> $functions Global function names.
-	 */
+	/** @param array<int,string> $functions Global function names. */
 	public static function functions_declared_by_file( array $functions, string $expected_file ): bool {
 		$expected_file = realpath( $expected_file );
 		if ( false === $expected_file || ! self::functions_available( $functions ) ) {
@@ -170,7 +162,7 @@ final class Runtime_Trust {
 		}
 
 		foreach ( self::SHELL_CREATE_FUNCTIONS as $function ) {
-			if ( function_exists( $function ) ) {
+			if ( self::global_function_exists( $function ) ) {
 				return true;
 			}
 		}
@@ -178,9 +170,7 @@ final class Runtime_Trust {
 		return false;
 	}
 
-	/**
-	 * Backward-compatible aggregate claim query used by existing diagnostics.
-	 */
+	/** Backward-compatible aggregate claim query used by existing diagnostics. */
 	public static function shell_claimed(): bool {
 		return self::shell_package_claimed() || self::shell_create_contract_claimed();
 	}
@@ -204,8 +194,8 @@ final class Runtime_Trust {
 		}
 
 		$version = constant( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' );
-		$owner   = constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
-		$owned   = constant( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' );
+		$owner = constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
+		$owned = constant( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' );
 		return '1.0.1' === $version
 			&& self::SHELL_SLUG === $owner
 			&& true === $owned
@@ -213,9 +203,7 @@ final class Runtime_Trust {
 			&& null !== self::owned_shell_static_method( self::SHELL_SAFE_MODE_CLASS, 'disabled' );
 	}
 
-	/**
-	 * @param array<int,string> $functions Global File 20 function names.
-	 */
+	/** @param array<int,string> $functions Global File 20 function names. */
 	public static function shell_symbols_owned( array $functions = array(), string $class_name = '' ): bool {
 		$package = self::shell_package();
 		if ( null === $package ) {
@@ -224,7 +212,7 @@ final class Runtime_Trust {
 
 		try {
 			foreach ( $functions as $function ) {
-				if ( ! is_string( $function ) || '' === $function || ! function_exists( $function ) ) {
+				if ( ! is_string( $function ) || '' === $function || ! self::global_function_exists( $function ) ) {
 					return false;
 				}
 
@@ -293,9 +281,7 @@ final class Runtime_Trust {
 		}
 	}
 
-	/**
-	 * @return array{file:string,path:string}|null
-	 */
+	/** @return array{file:string,path:string}|null */
 	private static function shell_package(): ?array {
 		if (
 			! defined( 'SABRI_SHELL_FILE' ) ||
@@ -306,10 +292,10 @@ final class Runtime_Trust {
 			return null;
 		}
 
-		$slug    = constant( 'SABRI_SHELL_SLUG' );
+		$slug = constant( 'SABRI_SHELL_SLUG' );
 		$version = constant( 'SABRI_SHELL_VERSION' );
-		$file    = realpath( (string) constant( 'SABRI_SHELL_FILE' ) );
-		$path    = realpath( (string) constant( 'SABRI_SHELL_PATH' ) );
+		$file = realpath( (string) constant( 'SABRI_SHELL_FILE' ) );
+		$path = realpath( (string) constant( 'SABRI_SHELL_PATH' ) );
 		if (
 			self::SHELL_SLUG !== $slug ||
 			! is_string( $version ) ||
@@ -324,6 +310,14 @@ final class Runtime_Trust {
 		}
 
 		return array( 'file' => $file, 'path' => $path );
+	}
+
+	/**
+	 * Keep optional runtime discovery behind a dynamic boundary so static
+	 * analysis does not convert deployment-dependent functions into constants.
+	 */
+	private static function global_function_exists( string $function ): bool {
+		return function_exists( $function );
 	}
 
 	private static function source_is_inside( string|false $source, string $path ): bool {
