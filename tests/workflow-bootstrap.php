@@ -14,6 +14,7 @@ if ( ! defined( 'SUPC_PATH' ) ) {
 	define( 'SUPC_PATH', dirname( __DIR__ ) . '/' );
 }
 
+require_once SUPC_PATH . 'includes/core/class-contract-boundary.php';
 require_once SUPC_PATH . 'includes/core/class-runtime-trust.php';
 
 if ( ! defined( 'SUPC_WORKFLOW_API_VERSION' ) ) {
@@ -50,7 +51,7 @@ if ( ! defined( 'SUPC_SUBJECT_SCHEMA_API_VERSION' ) ) {
 		define( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED', true );
 	}
 
-	if ( ! class_exists( '\Sabri\UnifiedShell\SafeMode', false ) ) {
+	if ( ! class_exists( '\\Sabri\\UnifiedShell\\SafeMode', false ) ) {
 		require_once $shell_path . '/includes/class-safe-mode.php';
 	}
 	require_once $shell_path . '/includes/functions.php';
