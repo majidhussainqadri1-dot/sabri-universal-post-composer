@@ -156,6 +156,12 @@ Tenth-cycle assets and the new real-package compatibility assets were not all re
 
 Correction: the manifest, main CI inventory, and historical evidence checks are updated cumulatively.
 
+### 25. Medium — Create-surface diagnostic count could disagree with normalized codes
+
+Two or more adapters could emit the same controlled diagnostic. The row deduplicated the public codes but still counted internal adapter-level entries, producing a count larger than the visible code list.
+
+Correction: the final diagnostic count is derived from the normalized unique public codes. A regression with two independent invalid adapters proves that one visible code produces count `1`.
+
 ## Regression evidence added
 
 - `tests/EleventhCompleteReviewTest.php`
