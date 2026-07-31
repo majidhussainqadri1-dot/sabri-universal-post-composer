@@ -61,7 +61,7 @@ jobs:
             tests/run-file20-partial-create-contract-test.php
             tests/run-page-transaction-hardening-test.php
             tests/run-invalid-idempotency-generator-test.php
-            tests/fixtures/sabri-unified-application-shell-legacy-1.0.0/sabri-unified-application-shell.php
+            tests/fixtures/file20-legacy-1.0.0/sabri-unified-application-shell/sabri-unified-application-shell.php
             docs/FILE22-ELEVENTH-FULL-DEFECT-CENSUS-AND-CORRECTION-2026-07-31.md
           )
           for file in "${required[@]}"; do
