@@ -20,7 +20,8 @@ final class Page_Resolver {
 	private const REPAIR_LOCK_OPTION = 'supc_create_page_repair_lock';
 	private const EMERGENCY_OPTION = 'supc_emergency_disabled';
 	private const REPAIR_LOCK_TTL = 60;
-	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
+	private const MAX_DISCOVERY_CANDIDATES = 100;
+	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD';
 	private const APPROVED_SLUGS = array( 'create', 'create-content', 'platform-create', 'sabri-create' );
 
 	private static ?int $resolved_page_id = null;
@@ -246,8 +247,9 @@ final class Page_Resolver {
 	}
 
 	/**
-	 * Search only likely shortcode-bearing pages instead of hydrating every
-	 * published page ID when the canonical mapping is missing or damaged.
+	 * Search a bounded set of likely shortcode-bearing pages. Two matches are
+	 * sufficient to classify ambiguity; the higher bound keeps administrator
+	 * selection useful without permitting an unbounded full-site scan.
 	 *
 	 * @return array<int, int>
 	 */
@@ -256,7 +258,7 @@ final class Page_Resolver {
 			array(
 				'post_type'              => 'page',
 				'post_status'            => 'publish',
-				'posts_per_page'         => -1,
+				'posts_per_page'         => self::MAX_DISCOVERY_CANDIDATES + 1,
 				's'                      => self::SHORTCODE,
 				'sentence'               => true,
 				'orderby'                => 'ID',
@@ -273,6 +275,9 @@ final class Page_Resolver {
 			$page_id = (int) $page_id;
 			if ( self::is_valid_page( $page_id ) ) {
 				$matches[] = $page_id;
+				if ( count( $matches ) >= self::MAX_DISCOVERY_CANDIDATES ) {
+					break;
+				}
 			}
 		}
 
@@ -358,7 +363,21 @@ final class Page_Resolver {
 
 		update_option( self::OPTION_KEY, $previous, false );
 		$missing = new \stdClass();
-		return $previous === get_option( self::OPTION_KEY, $missing );
+		$current = get_option( self::OPTION_KEY, $missing );
+		return $missing !== $current && self::option_values_equal( $previous, $current );
+	}
+
+	private static function option_values_equal( mixed $left, mixed $right ): bool {
+		if ( $left === $right ) {
+			return true;
+		}
+
+		try {
+			return serialize( $left ) === serialize( $right );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return false;
+		}
 	}
 
 	private static function rollback_created_page( int $page_id ): bool {
@@ -416,6 +435,10 @@ final class Page_Resolver {
 		}
 
 		$token = wp_generate_uuid4();
+		if ( 1 !== preg_match( self::UUID_V4_PATTERN, $token ) ) {
+			return '';
+		}
+
 		$added = add_option(
 			self::REPAIR_LOCK_OPTION,
 			array( 'token' => $token, 'created' => $now ),
