@@ -24,9 +24,6 @@ if ( ! defined( 'SUPC_SUBJECT_SCHEMA_API_VERSION' ) ) {
 	define( 'SUPC_SUBJECT_SCHEMA_API_VERSION', '1.0.0' );
 }
 
-// The shared PHPUnit process represents a correctly owned File 20 integration.
-// Isolated collision tests predefine contradictory markers before loading their
-// own minimal runtime and therefore retain their fail-closed producer boundary.
 ( static function (): void {
 	$shell_path = __DIR__ . '/fixtures/sabri-unified-application-shell';
 	if ( ! defined( 'SABRI_SHELL_VERSION' ) ) {
@@ -50,7 +47,6 @@ if ( ! defined( 'SUPC_SUBJECT_SCHEMA_API_VERSION' ) ) {
 	if ( ! defined( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' ) ) {
 		define( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED', true );
 	}
-
 	if ( ! class_exists( '\\Sabri\\UnifiedShell\\SafeMode', false ) ) {
 		require_once $shell_path . '/includes/class-safe-mode.php';
 	}
@@ -64,6 +60,7 @@ if ( ! function_exists( 'wp_json_encode' ) ) {
 }
 
 require_once SUPC_PATH . 'includes/contracts/interface-workflow-adapter.php';
+require_once SUPC_PATH . 'includes/core/class-workflow-validator.php';
 require_once SUPC_PATH . 'includes/core/class-workflow-coordinator.php';
 require_once SUPC_PATH . 'includes/core/class-plugin.php';
 require_once SUPC_PATH . 'includes/core/functions.php';
