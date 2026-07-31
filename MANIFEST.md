@@ -98,7 +98,7 @@ Historical phase review records remain evidence for their exact earlier source h
 - `tests/fixtures/sabri-unified-application-shell/includes/class-safe-mode.php`
 - `tests/fixtures/sabri-unified-application-shell/includes/class-inherited-safe-mode.php`
 - `tests/fixtures/sabri-unified-application-shell/includes/functions.php`
-- `tests/fixtures/sabri-unified-application-shell-legacy-1.0.0/sabri-unified-application-shell.php`
+- `tests/fixtures/file20-legacy-1.0.0/sabri-unified-application-shell/sabri-unified-application-shell.php`
 - `tests/AccessibilityContrastTest.php`
 - `tests/AdminSystemCheckTest.php`
 - `tests/CoreAdapterRequirementsTest.php`
