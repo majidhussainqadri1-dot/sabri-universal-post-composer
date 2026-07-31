@@ -42,6 +42,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\UniversalComposer\Core\Permission_Resolver',
 		'Sabri\UniversalComposer\Core\Page_Resolver',
 		'Sabri\UniversalComposer\Core\Registry',
+		'Sabri\UniversalComposer\Core\Workflow_Validator',
 		'Sabri\UniversalComposer\Core\Workflow_Coordinator',
 		'Sabri\UniversalComposer\Core\Plugin',
 		'Sabri\UniversalComposer\Presentation\Create_Surface',
@@ -100,6 +101,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/core/class-permission-resolver.php';
 	require_once SUPC_PATH . 'includes/core/class-page-resolver.php';
 	require_once SUPC_PATH . 'includes/core/class-registry.php';
+	require_once SUPC_PATH . 'includes/core/class-workflow-validator.php';
 	require_once SUPC_PATH . 'includes/core/class-workflow-coordinator.php';
 	require_once SUPC_PATH . 'includes/presentation/class-create-surface.php';
 	require_once SUPC_PATH . 'includes/integration/class-shell-bridge.php';
