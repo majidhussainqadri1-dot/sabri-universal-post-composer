@@ -22,6 +22,7 @@ final class Workflow_Coordinator {
 	private const MAX_SCHEMA_BYTES = 262144;
 	private const MAX_RESULT_BYTES = 1048576;
 	private const MAX_DEPTH = 12;
+	private const MAX_TOTAL_NODES = 10000;
 	private const MAX_PREVIEW_TTL = 1800;
 	private const MAX_SCHEMA_FIELDS = 100;
 	private const MAX_SCHEMA_CHOICES = 100;
@@ -29,7 +30,7 @@ final class Workflow_Coordinator {
 	private const MAX_CODE_COLLECTION_ITEMS = 100;
 	private const MAX_URL_BYTES = 2048;
 	private const NATIVE_REFERENCE_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/D';
-	private const IDEMPOTENCY_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD';
+	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D';
 	private const CODE_PATTERN = '/^[a-z][a-z0-9_.:-]{0,63}$/D';
 	private const FIELD_KEY_PATTERN = '/^[a-z][a-z0-9_]{0,63}$/D';
 	private const FINAL_STATUSES = array( 'draft', 'pending_review', 'scheduled', 'published', 'rejected', 'failed' );
@@ -45,32 +46,26 @@ final class Workflow_Coordinator {
 	) {
 	}
 
-	/**
-	 * Return the schema for the authenticated subject. Adapters that expose the
-	 * optional `schema_for_user( int $user_id )` extension receive the subject;
-	 * all other adapters retain the version 1.0 role-neutral schema contract.
-	 *
-	 * @return array<string, mixed>|WP_Error
-	 */
+	/** @return array<string,mixed>|WP_Error */
 	public function schema( int $user_id, string $adapter_key ): array|WP_Error {
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
-		if ( $adapter instanceof WP_Error ) {
-			return $adapter;
+		$preflight = $this->preflight( $user_id, $adapter_key );
+		if ( $preflight instanceof WP_Error ) {
+			return $preflight;
 		}
-
-		return $this->schema_for_adapter( $adapter, $adapter_key, $user_id );
+		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
+		return $adapter instanceof WP_Error ? $adapter : $this->schema_for_adapter( $adapter, $adapter_key, $user_id );
 	}
 
-	/**
-	 * Role-independent, privacy-safe workflow contract inspection. A non-workflow
-	 * adapter is not applicable. A declared Workflow Adapter without its immutable
-	 * registration metadata fails closed. Incompatible workflow APIs are reported
-	 * without invoking schema methods from an unsupported contract.
-	 *
-	 * @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string,subject_schema_extension:string}
-	 */
+	/** @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string,subject_schema_extension:string} */
 	public function contract_health( string $adapter_key ): array {
+		if ( ! Contract_Boundary::adapter_key( $adapter_key ) ) {
+			return $this->health_failure( 'invalid_adapter_key' );
+		}
+
 		$adapter = $this->registry->get( $adapter_key );
+		if ( null === $adapter ) {
+			return $this->health_failure( 'workflow_adapter_not_registered' );
+		}
 		if ( ! $adapter instanceof Workflow_Adapter ) {
 			return array(
 				'status'                   => 'pass',
@@ -83,65 +78,54 @@ final class Workflow_Coordinator {
 
 		$contract = $this->registry->workflow_contract( $adapter_key );
 		if ( null === $contract ) {
-			return array(
-				'status'                   => 'fail',
-				'codes'                    => array( 'workflow_registration_metadata_missing' ),
-				'workflow_api_version'     => 'missing',
-				'supports_native_drafts'   => 'missing',
-				'subject_schema_extension' => is_callable( array( $adapter, 'schema_for_user' ) ) ? 'yes' : 'no',
+			return $this->health_failure(
+				'workflow_registration_metadata_missing',
+				'missing',
+				'missing',
+				'no'
 			);
 		}
 
-		$subject_schema_extension = is_callable( array( $adapter, 'schema_for_user' ) ) ? 'yes' : 'no';
+		$subject = $contract['subject_schema_extension'] ? 'yes' : 'no';
+		$drafts  = $contract['supports_native_drafts'] ? 'yes' : 'no';
 		if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
-			return array(
-				'status'                   => 'fail',
-				'codes'                    => array( 'workflow_api_mismatch' ),
-				'workflow_api_version'     => $contract['workflow_api_version'],
-				'supports_native_drafts'   => $contract['supports_native_drafts'] ? 'yes' : 'no',
-				'subject_schema_extension' => $subject_schema_extension,
-			);
+			return $this->health_failure( 'workflow_api_mismatch', $contract['workflow_api_version'], $drafts, $subject );
 		}
 
-		$codes  = array();
-		$status = 'pass';
-		try {
-			$schema = $this->schema_for_adapter( $adapter, $adapter_key );
-			if ( $schema instanceof WP_Error ) {
-				$status  = 'fail';
-				$codes[] = 'invalid_schema_contract';
-			}
-		} catch ( Throwable $error ) {
-			unset( $error );
-			$status  = 'fail';
-			$codes[] = 'workflow_contract_exception';
+		$schema = $this->schema_for_adapter( $adapter, $adapter_key );
+		if ( $schema instanceof WP_Error ) {
+			$code = 'supc_workflow_adapter_exception' === $schema->code
+				? 'workflow_contract_exception'
+				: 'invalid_schema_contract';
+			return $this->health_failure( $code, $contract['workflow_api_version'], $drafts, $subject );
 		}
 
 		return array(
-			'status'                   => $status,
-			'codes'                    => array_values( array_unique( $codes ) ),
+			'status'                   => 'pass',
+			'codes'                    => array(),
 			'workflow_api_version'     => $contract['workflow_api_version'],
-			'supports_native_drafts'   => $contract['supports_native_drafts'] ? 'yes' : 'no',
-			'subject_schema_extension' => $subject_schema_extension,
+			'supports_native_drafts'   => $drafts,
+			'subject_schema_extension' => $subject,
 		);
 	}
 
-	/**
-	 * @param array<string, mixed> $payload Draft payload.
-	 * @return array<string, mixed>|WP_Error
-	 */
+	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
 	public function create_draft( int $user_id, string $adapter_key, ?string $native_reference, array $payload ): array|WP_Error {
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
-		if ( $adapter instanceof WP_Error ) {
-			return $adapter;
-		}
-
-		$contract = $this->registry->workflow_contract( $adapter_key );
-		if ( null === $contract || ! $contract['supports_native_drafts'] ) {
-			return $this->error( 'native_drafts_unsupported', 'The native workflow does not support direct draft orchestration.', $adapter_key );
+		$preflight = $this->preflight( $user_id, $adapter_key );
+		if ( $preflight instanceof WP_Error ) {
+			return $preflight;
 		}
 		if ( null !== $native_reference && ! $this->valid_native_reference( $native_reference ) ) {
 			return $this->error( 'invalid_native_reference', 'The native draft reference is invalid.', $adapter_key );
+		}
+
+		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
+		if ( $adapter instanceof WP_Error ) {
+			return $adapter;
+		}
+		$contract = $this->registry->workflow_contract( $adapter_key );
+		if ( null === $contract || ! $contract['supports_native_drafts'] ) {
+			return $this->error( 'native_drafts_unsupported', 'The native workflow does not support direct draft orchestration.', $adapter_key );
 		}
 
 		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, false, $user_id );
@@ -154,35 +138,30 @@ final class Workflow_Coordinator {
 			if ( $result instanceof WP_Error ) {
 				return $this->native_error( $adapter_key, 'create_draft', $result );
 			}
-			if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) || ! array_key_exists( 'status', $result ) ) {
+			if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) ) {
 				return $this->error( 'invalid_native_result', 'The native draft result is invalid.', $adapter_key );
 			}
-
-			$reference = (string) ( $result['native_reference'] ?? '' );
-			$status    = sanitize_key( (string) $result['status'] );
-			if ( ! $this->valid_native_reference( $reference ) || ! in_array( $status, self::DRAFT_STATUSES, true ) ) {
+			$reference = $result['native_reference'] ?? null;
+			$status    = $result['status'] ?? null;
+			if ( ! is_string( $reference ) || ! $this->valid_native_reference( $reference ) || ! is_string( $status ) || ! in_array( $status, self::DRAFT_STATUSES, true ) ) {
 				return $this->error( 'invalid_native_result', 'The native draft result is invalid.', $adapter_key );
 			}
-
-			return array(
-				'native_reference' => $reference,
-				'status'           => $status,
-			);
+			return array( 'native_reference' => $reference, 'status' => $status );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'create_draft', $error );
 		}
 	}
 
-	/**
-	 * @param array<string, mixed> $payload Draft payload.
-	 * @return array<string, mixed>|WP_Error
-	 */
+	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
 	public function validate( int $user_id, string $adapter_key, array $payload ): array|WP_Error {
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
+		$preflight = $this->preflight( $user_id, $adapter_key );
+		if ( $preflight instanceof WP_Error ) {
+			return $preflight;
+		}
+		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
 		}
-
 		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true, $user_id );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
@@ -196,33 +175,30 @@ final class Workflow_Coordinator {
 			if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) || ! array_key_exists( 'valid', $result ) || ! is_bool( $result['valid'] ) ) {
 				return $this->error( 'invalid_validation_result', 'The native validation result is invalid.', $adapter_key );
 			}
-
 			$errors   = $this->normalize_code_collection( $result['errors'] ?? array() );
 			$warnings = $this->normalize_code_collection( $result['warnings'] ?? array() );
 			if ( null === $errors || null === $warnings ) {
 				return $this->error( 'invalid_validation_result', 'The native validation result is invalid.', $adapter_key );
 			}
-
-			return array(
-				'valid'    => $result['valid'],
-				'errors'   => $errors,
-				'warnings' => $warnings,
-			);
+			if ( ( $result['valid'] && array() !== $errors ) || ( ! $result['valid'] && array() === $errors ) || array_intersect( $errors, $warnings ) ) {
+				return $this->error( 'invalid_validation_result', 'The native validation result is internally inconsistent.', $adapter_key );
+			}
+			return array( 'valid' => $result['valid'], 'errors' => $errors, 'warnings' => $warnings );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'validate', $error );
 		}
 	}
 
-	/**
-	 * @param array<string, mixed> $payload Draft payload.
-	 * @return array<string, mixed>|WP_Error
-	 */
+	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
 	public function preview( int $user_id, string $adapter_key, array $payload ): array|WP_Error {
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
+		$preflight = $this->preflight( $user_id, $adapter_key );
+		if ( $preflight instanceof WP_Error ) {
+			return $preflight;
+		}
+		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
 		}
-
 		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true, $user_id );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
@@ -236,41 +212,35 @@ final class Workflow_Coordinator {
 			if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) ) {
 				return $this->error( 'invalid_preview_result', 'The native preview result is invalid.', $adapter_key );
 			}
-
-			$url        = $this->internal_url( (string) ( $result['preview_url'] ?? '' ) );
+			$url        = isset( $result['preview_url'] ) && is_string( $result['preview_url'] ) ? $this->internal_url( $result['preview_url'] ) : '';
 			$expires_at = $result['expires_at'] ?? null;
 			$now        = time();
 			if ( '' === $url || ! is_int( $expires_at ) || $expires_at <= $now || $expires_at > $now + self::MAX_PREVIEW_TTL ) {
 				return $this->error( 'invalid_preview_result', 'The native preview result is invalid.', $adapter_key );
 			}
-
-			return array(
-				'preview_url' => $url,
-				'expires_at'  => $expires_at,
-			);
+			return array( 'preview_url' => $url, 'expires_at' => $expires_at );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'preview', $error );
 		}
 	}
 
-	/**
-	 * @param array<string, mixed> $payload Final payload.
-	 * @return array<string, mixed>|WP_Error
-	 */
+	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
 	public function submit( int $user_id, string $adapter_key, string $idempotency_key, array $payload ): array|WP_Error {
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
+		$preflight = $this->preflight( $user_id, $adapter_key );
+		if ( $preflight instanceof WP_Error ) {
+			return $preflight;
+		}
+		if ( ! $this->valid_idempotency_key( $idempotency_key ) ) {
+			return $this->error( 'invalid_idempotency_key', 'The submission idempotency key is invalid.', $adapter_key );
+		}
+		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
 		}
-		if ( 1 !== preg_match( self::IDEMPOTENCY_PATTERN, $idempotency_key ) ) {
-			return $this->error( 'invalid_idempotency_key', 'The submission idempotency key is invalid.', $adapter_key );
-		}
-
 		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true, $user_id );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
-
 		try {
 			return $this->normalize_status_result( $adapter->submit( $user_id, $idempotency_key, $payload ), $adapter_key, 'submit' );
 		} catch ( Throwable $error ) {
@@ -278,18 +248,19 @@ final class Workflow_Coordinator {
 		}
 	}
 
-	/**
-	 * @return array<string, mixed>|WP_Error
-	 */
+	/** @return array<string,mixed>|WP_Error */
 	public function status( int $user_id, string $adapter_key, string $native_reference ): array|WP_Error {
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
-		if ( $adapter instanceof WP_Error ) {
-			return $adapter;
+		$preflight = $this->preflight( $user_id, $adapter_key );
+		if ( $preflight instanceof WP_Error ) {
+			return $preflight;
 		}
 		if ( ! $this->valid_native_reference( $native_reference ) ) {
 			return $this->error( 'invalid_native_reference', 'The native reference is invalid.', $adapter_key );
 		}
-
+		$adapter = $this->resolve_adapter( $user_id, $adapter_key, false );
+		if ( $adapter instanceof WP_Error ) {
+			return $adapter;
+		}
 		try {
 			return $this->normalize_status_result( $adapter->status( $user_id, $native_reference ), $adapter_key, 'status' );
 		} catch ( Throwable $error ) {
@@ -297,20 +268,22 @@ final class Workflow_Coordinator {
 		}
 	}
 
-	/**
-	 * @return string|WP_Error
-	 */
+	/** @return string|WP_Error */
 	public function canonical_url( int $user_id, string $adapter_key, string $native_reference ): string|WP_Error {
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key );
-		if ( $adapter instanceof WP_Error ) {
-			return $adapter;
+		$preflight = $this->preflight( $user_id, $adapter_key );
+		if ( $preflight instanceof WP_Error ) {
+			return $preflight;
 		}
 		if ( ! $this->valid_native_reference( $native_reference ) ) {
 			return $this->error( 'invalid_native_reference', 'The native reference is invalid.', $adapter_key );
 		}
-
+		$adapter = $this->resolve_adapter( $user_id, $adapter_key, false );
+		if ( $adapter instanceof WP_Error ) {
+			return $adapter;
+		}
 		try {
-			$url = $this->internal_url( $adapter->canonical_url( $user_id, $native_reference ) );
+			$url = $adapter->canonical_url( $user_id, $native_reference );
+			$url = is_string( $url ) ? $this->internal_url( $url ) : '';
 			return '' !== $url ? $url : $this->error( 'invalid_canonical_url', 'The native canonical URL is invalid.', $adapter_key );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'canonical_url', $error );
@@ -318,24 +291,27 @@ final class Workflow_Coordinator {
 	}
 
 	public function generate_idempotency_key(): string {
-		$key = wp_generate_uuid4() . ':' . wp_generate_uuid4();
-		return 1 === preg_match( self::IDEMPOTENCY_PATTERN, $key ) ? $key : '';
+		$left  = wp_generate_uuid4();
+		$right = wp_generate_uuid4();
+		$key   = $left . ':' . $right;
+		return $left !== $right && $this->valid_idempotency_key( $key ) ? $key : '';
 	}
 
-	/**
-	 * @return Workflow_Adapter|WP_Error
-	 */
-	private function resolve_adapter( int $user_id, string $adapter_key ): Workflow_Adapter|WP_Error {
+	private function preflight( int $user_id, string $adapter_key ): ?WP_Error {
 		if ( Safe_Mode::disabled() ) {
 			return $this->error( 'workflow_disabled', 'Workflow orchestration is temporarily disabled.', $adapter_key );
 		}
-		if ( $user_id <= 0 || 1 !== preg_match( '/^[a-z][a-z0-9_]{2,63}$/D', $adapter_key ) ) {
+		if ( $user_id <= 0 || ! Contract_Boundary::adapter_key( $adapter_key ) ) {
 			return $this->error( 'invalid_workflow_request', 'The workflow request is invalid.', $adapter_key );
 		}
 		if ( ! $this->permissions->account_is_eligible( $user_id ) ) {
 			return $this->error( 'workflow_permission_denied', 'The account is not authorized for this workflow.', $adapter_key );
 		}
+		return null;
+	}
 
+	/** @return Workflow_Adapter|WP_Error */
+	private function resolve_adapter( int $user_id, string $adapter_key, bool $require_create_policy ): Workflow_Adapter|WP_Error {
 		$adapter  = $this->registry->get( $adapter_key );
 		$contract = $this->registry->workflow_contract( $adapter_key );
 		if ( ! $adapter instanceof Workflow_Adapter || null === $contract ) {
@@ -347,12 +323,14 @@ final class Workflow_Coordinator {
 		if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
 			return $this->error( 'workflow_api_mismatch', 'The native workflow API version is incompatible.', $adapter_key );
 		}
-
 		try {
 			if ( ! $adapter->is_available() ) {
 				return $this->error( 'native_workflow_unavailable', 'The native workflow is unavailable.', $adapter_key );
 			}
-			if ( ! $adapter->can_create( $user_id ) ) {
+			if ( $require_create_policy && ! $adapter->can_create( $user_id ) ) {
+				return $this->error( 'workflow_permission_denied', 'The account is not authorized for this workflow.', $adapter_key );
+			}
+			if ( Safe_Mode::disabled() || ! $this->permissions->account_is_eligible( $user_id ) || ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
 				return $this->error( 'workflow_permission_denied', 'The account is not authorized for this workflow.', $adapter_key );
 			}
 			return $adapter;
@@ -361,41 +339,33 @@ final class Workflow_Coordinator {
 		}
 	}
 
-	/**
-	 * @return array<string, mixed>|WP_Error
-	 */
+	/** @return array<string,mixed>|WP_Error */
 	private function schema_for_adapter( Workflow_Adapter $adapter, string $adapter_key, int $user_id = 0 ): array|WP_Error {
 		try {
-			$version = trim( $adapter->schema_version() );
-			$schema  = $user_id > 0 && is_callable( array( $adapter, 'schema_for_user' ) )
-				? call_user_func( array( $adapter, 'schema_for_user' ), $user_id )
+			$version  = $adapter->schema_version();
+			$contract = $this->registry->workflow_contract( $adapter_key );
+			if ( ! is_string( $version ) || ! Contract_Boundary::version( $version ) || null === $contract ) {
+				return $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key );
+			}
+			$schema = $user_id > 0 && $contract['subject_schema_extension']
+				? $adapter->schema_for_user( $user_id )
 				: $adapter->schema();
-			if ( ! is_array( $schema ) ) {
+			if ( ! is_array( $schema ) || ! $this->bounded_array( $schema, self::MAX_SCHEMA_BYTES ) ) {
 				return $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key );
 			}
-			$fields = $schema['fields'] ?? null;
-			if ( ! Version::valid( $version ) || ! isset( $schema['version'] ) || $version !== $schema['version'] || ! is_array( $fields ) || ! $this->bounded_array( $schema, self::MAX_SCHEMA_BYTES ) ) {
+			if ( ! array_key_exists( 'version', $schema ) || ! is_string( $schema['version'] ) || $version !== $schema['version'] || ! array_key_exists( 'fields', $schema ) || ! is_array( $schema['fields'] ) ) {
 				return $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key );
 			}
-
-			$normalized_fields = $this->normalize_schema_fields( $fields );
-			if ( null === $normalized_fields ) {
-				return $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key );
-			}
-
-			return array(
-				'version' => $version,
-				'fields'  => $normalized_fields,
-			);
+			$fields = $this->normalize_schema_fields( $schema['fields'] );
+			return null === $fields
+				? $this->error( 'invalid_schema_contract', 'The native workflow schema is incompatible.', $adapter_key )
+				: array( 'version' => $version, 'fields' => $fields );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'schema', $error );
 		}
 	}
 
-	/**
-	 * @param array<string, mixed>|WP_Error $result Native result.
-	 * @return array<string, mixed>|WP_Error
-	 */
+	/** @param array<string,mixed>|WP_Error $result @return array<string,mixed>|WP_Error */
 	private function normalize_status_result( array|WP_Error $result, string $adapter_key, string $operation ): array|WP_Error {
 		if ( $result instanceof WP_Error ) {
 			return $this->native_error( $adapter_key, $operation, $result );
@@ -403,19 +373,17 @@ final class Workflow_Coordinator {
 		if ( ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) ) {
 			return $this->error( 'invalid_native_result', 'The native workflow result is invalid.', $adapter_key );
 		}
-
-		$reference = (string) ( $result['native_reference'] ?? '' );
-		$status    = sanitize_key( (string) ( $result['status'] ?? '' ) );
-		if ( ! $this->valid_native_reference( $reference ) || ! in_array( $status, self::FINAL_STATUSES, true ) ) {
+		$reference = $result['native_reference'] ?? null;
+		$status    = $result['status'] ?? null;
+		if ( ! is_string( $reference ) || ! $this->valid_native_reference( $reference ) || ! is_string( $status ) || ! in_array( $status, self::FINAL_STATUSES, true ) ) {
 			return $this->error( 'invalid_native_status', 'The native workflow status is invalid.', $adapter_key );
 		}
-
-		$normalized = array(
-			'native_reference' => $reference,
-			'status'           => $status,
-		);
-		if ( isset( $result['canonical_url'] ) ) {
-			$url = $this->internal_url( (string) $result['canonical_url'] );
+		$normalized = array( 'native_reference' => $reference, 'status' => $status );
+		if ( array_key_exists( 'canonical_url', $result ) ) {
+			if ( ! is_string( $result['canonical_url'] ) ) {
+				return $this->error( 'invalid_canonical_url', 'The native canonical URL is invalid.', $adapter_key );
+			}
+			$url = $this->internal_url( $result['canonical_url'] );
 			if ( '' === $url ) {
 				return $this->error( 'invalid_canonical_url', 'The native canonical URL is invalid.', $adapter_key );
 			}
@@ -424,11 +392,10 @@ final class Workflow_Coordinator {
 		return $normalized;
 	}
 
-	/**
-	 * @param array<string, mixed> $payload Workflow payload.
-	 */
+	/** @param array<string,mixed> $payload */
 	private function validate_payload( array $payload, string $adapter_key ): ?WP_Error {
-		if ( ! $this->is_safe_value( $payload ) ) {
+		$remaining = self::MAX_TOTAL_NODES;
+		if ( ! $this->is_safe_value( $payload, 0, $remaining ) ) {
 			return $this->error( 'invalid_workflow_payload', 'The workflow payload contains unsupported values.', $adapter_key );
 		}
 		$encoded = wp_json_encode( $payload );
@@ -438,9 +405,7 @@ final class Workflow_Coordinator {
 		return null;
 	}
 
-	/**
-	 * @param array<string, mixed> $payload Workflow payload.
-	 */
+	/** @param array<string,mixed> $payload */
 	private function validate_payload_contract( Workflow_Adapter $adapter, array $payload, string $adapter_key, bool $require_required, int $user_id ): ?WP_Error {
 		$base_error = $this->validate_payload( $payload, $adapter_key );
 		if ( $base_error instanceof WP_Error ) {
@@ -452,7 +417,7 @@ final class Workflow_Coordinator {
 		}
 		$fields = $schema['fields'];
 		foreach ( $payload as $key => $value ) {
-			if ( ! is_string( $key ) || ! isset( $fields[ $key ] ) ) {
+			if ( ! is_string( $key ) || ! array_key_exists( $key, $fields ) ) {
 				return $this->error( 'workflow_payload_unknown_field', 'The workflow payload contains an undeclared field.', $adapter_key );
 			}
 			if ( ! $this->field_value_is_valid( $fields[ $key ], $value ) ) {
@@ -461,7 +426,7 @@ final class Workflow_Coordinator {
 		}
 		if ( $require_required ) {
 			foreach ( $fields as $key => $definition ) {
-				if ( ! empty( $definition['required'] ) && ( ! array_key_exists( $key, $payload ) || $this->required_value_is_empty( $definition, $payload[ $key ] ) ) ) {
+				if ( true === $definition['required'] && ( ! array_key_exists( $key, $payload ) || $this->required_value_is_empty( $definition, $payload[ $key ] ) ) ) {
 					return $this->error( 'workflow_payload_required_field_missing', 'The workflow payload is missing a required field.', $adapter_key );
 				}
 			}
@@ -469,16 +434,14 @@ final class Workflow_Coordinator {
 		return null;
 	}
 
-	/**
-	 * @param array<string, mixed> $definition Normalized field definition.
-	 */
+	/** @param array<string,mixed> $definition */
 	private function field_value_is_valid( array $definition, mixed $value ): bool {
 		if ( null === $value ) {
-			return empty( $definition['required'] );
+			return false === $definition['required'];
 		}
-		$type = (string) $definition['type'];
+		$type = $definition['type'];
 		if ( in_array( $type, array( 'text', 'textarea' ), true ) ) {
-			return is_string( $value );
+			return is_string( $value ) && Contract_Boundary::bounded_text( $value, 0, self::MAX_PAYLOAD_BYTES, true );
 		}
 		if ( 'checkbox' === $type ) {
 			return is_bool( $value );
@@ -487,13 +450,13 @@ final class Workflow_Coordinator {
 			if ( ( ! is_int( $value ) && ! is_float( $value ) ) || ( is_float( $value ) && ! is_finite( $value ) ) ) {
 				return false;
 			}
-			if ( isset( $definition['minimum'] ) && $value < $definition['minimum'] ) {
+			if ( array_key_exists( 'minimum', $definition ) && $value < $definition['minimum'] ) {
 				return false;
 			}
-			return ! isset( $definition['maximum'] ) || $value <= $definition['maximum'];
+			return ! array_key_exists( 'maximum', $definition ) || $value <= $definition['maximum'];
 		}
 		if ( 'select' === $type ) {
-			return is_string( $value ) && isset( $definition['choices'][ $value ] );
+			return is_string( $value ) && array_key_exists( $value, $definition['choices'] );
 		}
 		if ( 'multiselect' === $type ) {
 			if ( ! is_array( $value ) || array_values( $value ) !== $value || count( $value ) > self::MAX_SCHEMA_CHOICES ) {
@@ -501,7 +464,7 @@ final class Workflow_Coordinator {
 			}
 			$seen = array();
 			foreach ( $value as $choice ) {
-				if ( ! is_string( $choice ) || ! isset( $definition['choices'][ $choice ] ) || isset( $seen[ $choice ] ) ) {
+				if ( ! is_string( $choice ) || ! array_key_exists( $choice, $definition['choices'] ) || isset( $seen[ $choice ] ) ) {
 					return false;
 				}
 				$seen[ $choice ] = true;
@@ -527,20 +490,13 @@ final class Workflow_Coordinator {
 	}
 
 	private function valid_http_url_value( string $value ): bool {
-		if (
-			strlen( $value ) > self::MAX_URL_BYTES ||
-			false === filter_var( $value, FILTER_VALIDATE_URL ) ||
-			1 === preg_match( '/[\x00-\x1F\x7F]/', $value ) ||
-			str_contains( $value, '\\' )
-		) {
+		if ( ! Contract_Boundary::bounded_text( $value, 1, self::MAX_URL_BYTES ) || false === filter_var( $value, FILTER_VALIDATE_URL ) || str_contains( $value, '\\' ) ) {
 			return false;
 		}
-
 		$parts = wp_parse_url( $value );
 		if ( ! is_array( $parts ) ) {
 			return false;
 		}
-
 		$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
 		$host   = (string) ( $parts['host'] ?? '' );
 		$port   = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
@@ -555,11 +511,8 @@ final class Workflow_Coordinator {
 		if ( 1 !== preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/D', $value, $parts ) ) {
 			return false;
 		}
-
-		$year  = (int) $parts[1];
-		$month = (int) $parts[2];
-		$day   = (int) $parts[3];
-		return $year >= 1 && checkdate( $month, $day, $year );
+		$year = (int) $parts[1];
+		return $year >= 1 && checkdate( (int) $parts[2], (int) $parts[3], $year );
 	}
 
 	private function valid_datetime_value( string $value ): bool {
@@ -567,59 +520,58 @@ final class Workflow_Coordinator {
 		if ( 1 !== preg_match( $pattern, $value, $parts ) || ! $this->valid_date_value( $parts[1] ) ) {
 			return false;
 		}
-
-		$hour   = (int) $parts[2];
+		$hour = (int) $parts[2];
 		$minute = (int) $parts[3];
 		$second = isset( $parts[4] ) && '' !== $parts[4] ? (int) $parts[4] : 0;
 		if ( $hour > 23 || $minute > 59 || $second > 59 ) {
 			return false;
 		}
-
 		$timezone = $parts[5] ?? '';
 		if ( '' === $timezone || 'Z' === $timezone ) {
 			return true;
 		}
-
-		$offset_hour   = (int) ( $parts[6] ?? 0 );
+		$offset_hour = (int) ( $parts[6] ?? 0 );
 		$offset_minute = (int) ( $parts[7] ?? 0 );
-		return $offset_minute <= 59
-			&& ( $offset_hour < 14 || ( 14 === $offset_hour && 0 === $offset_minute ) );
+		return $offset_minute <= 59 && ( $offset_hour < 14 || ( 14 === $offset_hour && 0 === $offset_minute ) );
 	}
 
-	/**
-	 * @param array<string, mixed> $definition Normalized field definition.
-	 */
+	/** @param array<string,mixed> $definition */
 	private function required_value_is_empty( array $definition, mixed $value ): bool {
 		if ( null === $value ) {
 			return true;
 		}
-		$type = (string) $definition['type'];
-		if ( 'checkbox' === $type ) {
+		if ( 'checkbox' === $definition['type'] ) {
 			return true !== $value;
 		}
-		if ( 'multiselect' === $type ) {
+		if ( 'multiselect' === $definition['type'] ) {
 			return ! is_array( $value ) || array() === $value;
 		}
 		return is_string( $value ) && '' === trim( $value );
 	}
 
-	/**
-	 * @param array<mixed> $value Array to inspect.
-	 */
+	/** @param array<mixed> $value */
 	private function bounded_array( array $value, int $maximum_bytes ): bool {
-		if ( ! $this->is_safe_value( $value ) ) {
+		$remaining = self::MAX_TOTAL_NODES;
+		if ( ! $this->is_safe_value( $value, 0, $remaining ) ) {
 			return false;
 		}
 		$encoded = wp_json_encode( $value );
 		return is_string( $encoded ) && strlen( $encoded ) <= $maximum_bytes;
 	}
 
-	private function is_safe_value( mixed $value, int $depth = 0 ): bool {
-		if ( $depth > self::MAX_DEPTH ) {
+	private function is_safe_value( mixed $value, int $depth, int &$remaining ): bool {
+		--$remaining;
+		if ( $remaining < 0 || $depth > self::MAX_DEPTH ) {
 			return false;
 		}
-		if ( null === $value || is_scalar( $value ) ) {
-			return ! is_float( $value ) || is_finite( $value );
+		if ( null === $value || is_bool( $value ) || is_int( $value ) ) {
+			return true;
+		}
+		if ( is_float( $value ) ) {
+			return is_finite( $value );
+		}
+		if ( is_string( $value ) ) {
+			return Contract_Boundary::valid_utf8( $value );
 		}
 		if ( ! is_array( $value ) || count( $value ) > self::MAX_ARRAY_ITEMS ) {
 			return false;
@@ -628,58 +580,54 @@ final class Workflow_Coordinator {
 			if ( ! is_int( $key ) && ! is_string( $key ) ) {
 				return false;
 			}
-			if ( ! $this->is_safe_value( $item, $depth + 1 ) ) {
+			if ( is_string( $key ) && ( ! Contract_Boundary::valid_utf8( $key ) || strlen( $key ) > 255 ) ) {
+				return false;
+			}
+			if ( ! $this->is_safe_value( $item, $depth + 1, $remaining ) ) {
 				return false;
 			}
 		}
 		return true;
 	}
 
-	/**
-	 * @param array<mixed> $fields Native schema fields.
-	 * @return array<string, array<string, mixed>>|null
-	 */
+	/** @param array<mixed> $fields @return array<string,array<string,mixed>>|null */
 	private function normalize_schema_fields( array $fields ): ?array {
 		if ( count( $fields ) > self::MAX_SCHEMA_FIELDS ) {
 			return null;
 		}
-
 		$normalized = array();
 		foreach ( $fields as $key => $definition ) {
-			if ( ! is_string( $key ) || 1 !== preg_match( self::FIELD_KEY_PATTERN, $key ) || ! is_array( $definition ) ) {
+			if ( ! is_string( $key ) || ! Contract_Boundary::field_key( $key ) || ! is_array( $definition ) || array() !== array_diff( array_keys( $definition ), self::FIELD_PROPERTIES ) ) {
 				return null;
 			}
-			if ( array() !== array_diff( array_keys( $definition ), self::FIELD_PROPERTIES ) ) {
+			if ( ! array_key_exists( 'type', $definition ) || ! is_string( $definition['type'] ) || ! in_array( $definition['type'], self::FIELD_TYPES, true ) ) {
 				return null;
 			}
-
-			$type          = sanitize_key( (string) ( $definition['type'] ?? '' ) );
-			$label_code    = (string) ( $definition['label_code'] ?? '' );
-			$privacy_class = sanitize_key( (string) ( $definition['privacy_class'] ?? '' ) );
-			if ( ! in_array( $type, self::FIELD_TYPES, true ) || 1 !== preg_match( self::CODE_PATTERN, $label_code ) || ! in_array( $privacy_class, self::PRIVACY_CLASSES, true ) ) {
+			if ( ! array_key_exists( 'label_code', $definition ) || ! is_string( $definition['label_code'] ) || 1 !== preg_match( self::CODE_PATTERN, $definition['label_code'] ) ) {
 				return null;
 			}
-
+			if ( ! array_key_exists( 'privacy_class', $definition ) || ! is_string( $definition['privacy_class'] ) || ! in_array( $definition['privacy_class'], self::PRIVACY_CLASSES, true ) ) {
+				return null;
+			}
+			$required = array_key_exists( 'required', $definition ) ? $definition['required'] : false;
+			if ( ! is_bool( $required ) ) {
+				return null;
+			}
+			$type = $definition['type'];
 			$field = array(
 				'type'          => $type,
-				'label_code'    => $label_code,
-				'required'      => isset( $definition['required'] ) ? $definition['required'] : false,
-				'privacy_class' => $privacy_class,
+				'label_code'    => $definition['label_code'],
+				'required'      => $required,
+				'privacy_class' => $definition['privacy_class'],
 			);
-			if ( ! is_bool( $field['required'] ) ) {
-				return null;
-			}
-
-			if ( isset( $definition['description_code'] ) ) {
-				$description_code = (string) $definition['description_code'];
-				if ( 1 !== preg_match( self::CODE_PATTERN, $description_code ) ) {
+			if ( array_key_exists( 'description_code', $definition ) ) {
+				if ( ! is_string( $definition['description_code'] ) || 1 !== preg_match( self::CODE_PATTERN, $definition['description_code'] ) ) {
 					return null;
 				}
-				$field['description_code'] = $description_code;
+				$field['description_code'] = $definition['description_code'];
 			}
-
 			foreach ( array( 'minimum', 'maximum' ) as $bound ) {
-				if ( isset( $definition[ $bound ] ) ) {
+				if ( array_key_exists( $bound, $definition ) ) {
 					$value = $definition[ $bound ];
 					if ( 'number' !== $type || ( ! is_int( $value ) && ! is_float( $value ) ) || ( is_float( $value ) && ! is_finite( $value ) ) ) {
 						return null;
@@ -687,75 +635,58 @@ final class Workflow_Coordinator {
 					$field[ $bound ] = $value;
 				}
 			}
-			if ( isset( $field['minimum'], $field['maximum'] ) && $field['minimum'] > $field['maximum'] ) {
+			if ( array_key_exists( 'minimum', $field ) && array_key_exists( 'maximum', $field ) && $field['minimum'] > $field['maximum'] ) {
 				return null;
 			}
-
-			$is_choice_field = in_array( $type, array( 'select', 'multiselect' ), true );
-			if ( $is_choice_field ) {
-				if ( ! isset( $definition['choices'] ) || ! is_array( $definition['choices'] ) || array() === $definition['choices'] || count( $definition['choices'] ) > self::MAX_SCHEMA_CHOICES ) {
+			$is_choice = in_array( $type, array( 'select', 'multiselect' ), true );
+			if ( $is_choice ) {
+				if ( ! array_key_exists( 'choices', $definition ) || ! is_array( $definition['choices'] ) || array() === $definition['choices'] || count( $definition['choices'] ) > self::MAX_SCHEMA_CHOICES ) {
 					return null;
 				}
 				$choices = array();
-				foreach ( $definition['choices'] as $choice_key => $choice_label_code ) {
-					if ( ! is_string( $choice_key ) || 1 !== preg_match( self::FIELD_KEY_PATTERN, $choice_key ) || ! is_string( $choice_label_code ) || 1 !== preg_match( self::CODE_PATTERN, $choice_label_code ) ) {
+				foreach ( $definition['choices'] as $choice_key => $choice_label ) {
+					if ( ! is_string( $choice_key ) || ! Contract_Boundary::field_key( $choice_key ) || ! is_string( $choice_label ) || 1 !== preg_match( self::CODE_PATTERN, $choice_label ) ) {
 						return null;
 					}
-					$choices[ $choice_key ] = $choice_label_code;
+					$choices[ $choice_key ] = $choice_label;
 				}
 				$field['choices'] = $choices;
-			} elseif ( isset( $definition['choices'] ) ) {
+			} elseif ( array_key_exists( 'choices', $definition ) ) {
 				return null;
 			}
-
 			$normalized[ $key ] = $field;
 		}
 		return $normalized;
 	}
 
-	/**
-	 * @return array<int|string, mixed>|null
-	 */
-	private function normalize_code_collection( mixed $codes, int $depth = 0 ): ?array {
-		if ( ! is_array( $codes ) || $depth > 3 || count( $codes ) > self::MAX_CODE_COLLECTION_ITEMS ) {
+	/** @return array<int,string>|null */
+	private function normalize_code_collection( mixed $codes ): ?array {
+		if ( ! is_array( $codes ) || array_values( $codes ) !== $codes || count( $codes ) > self::MAX_CODE_COLLECTION_ITEMS ) {
 			return null;
 		}
-
 		$normalized = array();
-		foreach ( $codes as $key => $value ) {
-			if ( is_int( $key ) && $key < 0 ) {
+		foreach ( $codes as $code ) {
+			if ( ! is_string( $code ) || ! Contract_Boundary::code( $code ) || isset( $normalized[ $code ] ) ) {
 				return null;
 			}
-			if ( is_string( $key ) && 1 !== preg_match( self::FIELD_KEY_PATTERN, $key ) ) {
-				return null;
-			}
-			if ( is_string( $value ) ) {
-				if ( 1 !== preg_match( self::CODE_PATTERN, $value ) ) {
-					return null;
-				}
-				$normalized[ $key ] = $value;
-				continue;
-			}
-			if ( is_array( $value ) ) {
-				$nested = $this->normalize_code_collection( $value, $depth + 1 );
-				if ( null === $nested ) {
-					return null;
-				}
-				$normalized[ $key ] = $nested;
-				continue;
-			}
-			return null;
+			$normalized[ $code ] = $code;
 		}
-		return $normalized;
+		return array_values( $normalized );
 	}
 
 	private function valid_native_reference( string $reference ): bool {
-		return 1 === preg_match( self::NATIVE_REFERENCE_PATTERN, $reference );
+		return Contract_Boundary::bounded_text( $reference, 1, 255 ) && 1 === preg_match( self::NATIVE_REFERENCE_PATTERN, $reference );
+	}
+
+	private function valid_idempotency_key( string $key ): bool {
+		$parts = explode( ':', $key );
+		return 2 === count( $parts ) && $parts[0] !== $parts[1]
+			&& 1 === preg_match( self::UUID_V4_PATTERN, $parts[0] )
+			&& 1 === preg_match( self::UUID_V4_PATTERN, $parts[1] );
 	}
 
 	private function internal_url( string $url ): string {
-		$url = trim( $url );
-		if ( '' === $url || strlen( $url ) > self::MAX_URL_BYTES || 1 === preg_match( '/[\x00-\x1F\x7F]/', $url ) || str_contains( $url, '\\' ) ) {
+		if ( $url !== trim( $url ) || ! Contract_Boundary::bounded_text( $url, 1, self::MAX_URL_BYTES ) || str_contains( $url, '\\' ) ) {
 			return '';
 		}
 		$validated = wp_validate_redirect( $url, '' );
@@ -783,22 +714,17 @@ final class Workflow_Coordinator {
 	}
 
 	private function native_error( string $adapter_key, string $operation, WP_Error $error ): WP_Error {
-		$native_code = '';
-		if ( is_callable( array( $error, 'get_error_code' ) ) ) {
-			$native_code = (string) call_user_func( array( $error, 'get_error_code' ) );
-		} else {
-			$properties  = get_object_vars( $error );
-			$native_code = isset( $properties['code'] ) ? (string) $properties['code'] : '';
-		}
+		$native_code = is_callable( array( $error, 'get_error_code' ) )
+			? (string) call_user_func( array( $error, 'get_error_code' ) )
+			: (string) ( get_object_vars( $error )['code'] ?? '' );
 		$native_code = strtolower( trim( $native_code ) );
 		$public_code = in_array( $native_code, self::NATIVE_ERROR_CODES, true ) ? $native_code : 'native_error';
-
-		do_action( 'supc_workflow_native_error', sanitize_key( $adapter_key ), sanitize_key( $operation ), $public_code );
+		do_action( 'supc_workflow_native_error', Contract_Boundary::public_identifier( $adapter_key ), sanitize_key( $operation ), $public_code );
 		return new WP_Error(
 			'supc_native_workflow_error',
 			__( 'The native workflow returned a controlled error.', 'sabri-universal-post-composer' ),
 			array(
-				'adapter_key' => sanitize_key( $adapter_key ),
+				'adapter_key' => Contract_Boundary::public_identifier( $adapter_key ),
 				'operation'   => sanitize_key( $operation ),
 				'native_code' => $public_code,
 			)
@@ -807,11 +733,22 @@ final class Workflow_Coordinator {
 
 	private function exception( string $adapter_key, string $operation, Throwable $error ): WP_Error {
 		unset( $error );
-		do_action( 'supc_workflow_exception', sanitize_key( $adapter_key ), sanitize_key( $operation ), 'native_exception' );
+		do_action( 'supc_workflow_exception', Contract_Boundary::public_identifier( $adapter_key ), sanitize_key( $operation ), 'native_exception' );
 		return $this->error( 'workflow_adapter_exception', 'The native workflow could not complete safely.', $adapter_key );
 	}
 
 	private function error( string $code, string $message, string $adapter_key ): WP_Error {
-		return new WP_Error( 'supc_' . $code, __( $message, 'sabri-universal-post-composer' ), array( 'adapter_key' => sanitize_key( $adapter_key ) ) );
+		return new WP_Error( 'supc_' . $code, __( $message, 'sabri-universal-post-composer' ), array( 'adapter_key' => Contract_Boundary::public_identifier( $adapter_key ) ) );
+	}
+
+	/** @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string,subject_schema_extension:string} */
+	private function health_failure( string $code, string $api = 'missing', string $drafts = 'missing', string $subject = 'missing' ): array {
+		return array(
+			'status'                   => 'fail',
+			'codes'                    => array( $code ),
+			'workflow_api_version'     => $api,
+			'supports_native_drafts'   => $drafts,
+			'subject_schema_extension' => $subject,
+		);
 	}
 }
