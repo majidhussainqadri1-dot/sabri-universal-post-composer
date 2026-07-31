@@ -19,6 +19,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Registry {
+	private const MAX_ADAPTERS = 100;
+	private const MAX_ERRORS = 200;
+	private const MIN_PRIORITY = -10000;
+	private const MAX_PRIORITY = 10000;
+	private const GROUP_PATTERN = '/^[a-z][a-z0-9_]{0,63}$/D';
+
 	/** @var array<string, Adapter> */
 	private array $adapters = array();
 
@@ -54,7 +60,7 @@ final class Registry {
 
 		try {
 			$key = $adapter->key();
-			if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{2,63}$/', $key ) ) {
+			if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{2,63}$/D', $key ) ) {
 				return $this->registration_error( 'invalid_key', $key, 'Adapter key is not canonical.' );
 			}
 
@@ -65,6 +71,10 @@ final class Registry {
 					'Adapter key is already registered.',
 					$this->duplicate_error_key( $key )
 				);
+			}
+
+			if ( count( $this->adapters ) >= self::MAX_ADAPTERS ) {
+				return $this->registration_error( 'adapter_limit_reached', $key, 'The bounded adapter registry is full.' );
 			}
 
 			$api_version = trim( $adapter->api_version() );
@@ -78,7 +88,7 @@ final class Registry {
 			}
 
 			$native_module = trim( $adapter->native_module() );
-			if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{2,127}$/', $native_module ) ) {
+			if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{2,127}$/D', $native_module ) ) {
 				return $this->registration_error( 'invalid_native_module', $key, 'Adapter native module is not canonical.' );
 			}
 
@@ -93,11 +103,14 @@ final class Registry {
 			}
 
 			$group = trim( $adapter->group() );
-			if ( '' === $group || strlen( $group ) > 64 ) {
+			if ( 1 !== preg_match( self::GROUP_PATTERN, $group ) ) {
 				return $this->registration_error( 'invalid_group', $key, 'Adapter group is invalid.' );
 			}
 
 			$priority = $adapter->priority();
+			if ( $priority < self::MIN_PRIORITY || $priority > self::MAX_PRIORITY ) {
+				return $this->registration_error( 'invalid_priority', $key, 'Adapter priority is outside the bounded range.' );
+			}
 
 			$base_contract = array(
 				'api_version'            => $api_version,
@@ -164,7 +177,7 @@ final class Registry {
 	}
 
 	public function get( string $key ): ?Adapter {
-		if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{2,63}$/', $key ) ) {
+		if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{2,63}$/D', $key ) ) {
 			return null;
 		}
 
@@ -346,9 +359,12 @@ final class Registry {
 	}
 
 	private function registration_error( string $code, string $key, string $message, ?string $storage_key = null ): WP_Error {
-		$this->errors[ $storage_key ?? $key ] = array(
-			'code'    => $code,
-			'message' => $message,
+		$this->record_error(
+			$storage_key ?? $key,
+			array(
+				'code'    => $code,
+				'message' => $message,
+			)
 		);
 
 		do_action( 'supc_adapter_registration_error', sanitize_key( $key ), $code );
@@ -356,12 +372,32 @@ final class Registry {
 	}
 
 	private function runtime_error( string $key, string $code ): WP_Error {
-		$this->errors[ $key ] = array(
-			'code'        => $code,
-			'occurred_at' => gmdate( 'c' ),
+		$this->record_error(
+			$key,
+			array(
+				'code'        => $code,
+				'occurred_at' => gmdate( 'c' ),
+			)
 		);
 
 		do_action( 'supc_adapter_runtime_error', sanitize_key( $key ), $code );
 		return new WP_Error( 'supc_' . $code, __( 'The content adapter is temporarily unavailable.', 'sabri-universal-post-composer' ) );
+	}
+
+	/**
+	 * @param array<string,mixed> $error Privacy-safe bounded diagnostic.
+	 */
+	private function record_error( string $storage_key, array $error ): void {
+		if ( isset( $this->errors[ $storage_key ] ) ) {
+			$this->errors[ $storage_key ] = $error;
+			return;
+		}
+
+		if ( count( $this->errors ) >= self::MAX_ERRORS ) {
+			$this->errors['[registry-limit]'] = array( 'code' => 'registry_error_limit_reached' );
+			return;
+		}
+
+		$this->errors[ $storage_key ] = $error;
 	}
 }
