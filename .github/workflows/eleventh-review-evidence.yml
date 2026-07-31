@@ -1,0 +1,77 @@
+name: File 22 Eleventh Full Defect Census Evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-22-eleventh-review-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  eleventh-review-evidence:
+    name: Exact-head eleventh census regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+      - name: Run cumulative PHPUnit suite
+        run: composer test
+      - name: Verify distributed File 20 version 1.0.0 compatibility
+        run: php tests/run-file20-legacy-1-0-0-compatibility-test.php
+      - name: Reject partial File 20 Create contract
+        run: php tests/run-file20-partial-create-contract-test.php
+      - name: Verify finite Create-page discovery
+        run: php tests/run-page-discovery-query-test.php
+      - name: Verify Create-page transaction hardening
+        run: php tests/run-page-transaction-hardening-test.php
+      - name: Reject malformed idempotency generator output
+        run: php tests/run-invalid-idempotency-generator-test.php
+      - name: Recheck public API collision Safe Mode
+        run: php tests/run-public-api-collision-test.php
+      - name: Recheck File 20 producer provenance
+        run: php tests/run-file20-contract-collision-test.php
+      - name: Verify eleventh review inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            .github/workflows/eleventh-review-evidence.yml
+            tests/EleventhCompleteReviewTest.php
+            tests/EleventhWorkflowHardeningTest.php
+            tests/run-file20-legacy-1-0-0-compatibility-test.php
+            tests/run-file20-partial-create-contract-test.php
+            tests/run-page-transaction-hardening-test.php
+            tests/run-invalid-idempotency-generator-test.php
+            tests/fixtures/sabri-unified-application-shell-legacy-1.0.0/sabri-unified-application-shell.php
+            docs/FILE22-ELEVENTH-FULL-DEFECT-CENSUS-AND-CORRECTION-2026-07-31.md
+          )
+          for file in "${required[@]}"; do
+            test -f "$file"
+            grep -Fq -- "- \`$file\`" MANIFEST.md
+          done
+          grep -Fq 'shell_create_contract_claimed' includes/core/class-runtime-trust.php
+          grep -Fq 'shell_create_contract_owned' includes/core/class-safe-mode.php
+          grep -Fq 'MAX_ADAPTERS = 100' includes/core/class-registry.php
+          grep -Fq 'MAX_DISCOVERY_CANDIDATES = 100' includes/core/class-page-resolver.php
+          grep -Fq 'MAX_SYSTEM_ROWS = 100' includes/admin/class-system-check-page.php
+          grep -Fq 'MAX_ARRAY_ITEMS = 1000' includes/core/class-workflow-coordinator.php
+          grep -Fq 'Eleventh full defect census' CHANGELOG.md
