@@ -11,6 +11,7 @@ namespace Sabri\UniversalComposer\Integration;
 
 use Sabri\UniversalComposer\Core\Page_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
+use Sabri\UniversalComposer\Core\Runtime_Trust;
 use Sabri\UniversalComposer\Core\Safe_Mode;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,8 +23,14 @@ final class Shell_Bridge {
 	}
 
 	public function register(): void {
+		// The distributed File 20 version 1.0.0 consumes this URL filter.
 		add_filter( 'sabri_shell_create_url', array( $this, 'filter_create_url' ) );
-		add_filter( 'sabri_shell_can_show_create', array( $this, 'filter_create_visibility' ), 10, 3 );
+
+		// Role-aware Create visibility is a later atomic File 20 contract. Do not
+		// claim that legacy File 20 consumes or enforces a nonexistent filter.
+		if ( Runtime_Trust::shell_create_contract_owned() ) {
+			add_filter( 'sabri_shell_can_show_create', array( $this, 'filter_create_visibility' ), 10, 3 );
+		}
 	}
 
 	public function filter_create_url( string $url ): string {
