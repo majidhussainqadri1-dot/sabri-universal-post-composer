@@ -179,7 +179,7 @@ final class Create_Surface {
 		return array(
 			'key'           => 'create_surface_diagnostics',
 			'status'        => $errors > 0 ? 'fail' : ( $warnings > 0 ? 'warning' : 'pass' ),
-			'count'         => count( $this->diagnostics ) + ( 'unavailable' === $state && 1 === $warnings ? 1 : 0 ),
+			'count'         => count( $codes ),
 			'error_count'   => $errors,
 			'warning_count' => $warnings,
 			'codes'         => $codes,
