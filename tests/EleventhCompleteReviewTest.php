@@ -113,6 +113,27 @@ final class EleventhCompleteReviewTest extends TestCase {
 		$this->assertContains( 'invalid_display_metadata', $codes );
 	}
 
+	public function test_create_surface_count_matches_unique_normalized_codes(): void {
+		$registry = $this->registry();
+		foreach ( array( 'oversized_label_one', 'oversized_label_two' ) as $key ) {
+			$this->assertTrue(
+				$registry->register(
+					new Eleventh_Review_Adapter(
+						$key,
+						'publishing',
+						10,
+						str_repeat( 'L', 161 )
+					)
+				)
+			);
+		}
+
+		$row = ( new Create_Surface( $registry ) )->system_check_row( 1 );
+		$this->assertSame( array( 'invalid_display_metadata' ), $row['codes'] );
+		$this->assertSame( 1, $row['count'] );
+		$this->assertSame( count( $row['codes'] ), $row['count'] );
+	}
+
 	public function test_system_check_rows_and_counts_are_bounded(): void {
 		$raw = array();
 		for ( $index = 0; $index < 150; ++$index ) {
