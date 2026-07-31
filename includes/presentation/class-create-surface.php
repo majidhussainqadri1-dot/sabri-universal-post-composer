@@ -72,7 +72,7 @@ final class Create_Surface {
 		if ( array() === $groups ) {
 			return $this->integration_unavailable_notice();
 		}
-		if ( Safe_Mode::disabled() ) {
+		if ( $this->surface_state_changed_to_disabled() ) {
 			return $this->notice( 'disabled', __( 'Content creation is temporarily unavailable.', 'sabri-universal-post-composer' ), __( 'The creation service changed state before the gateway could be displayed.', 'sabri-universal-post-composer' ) );
 		}
 
@@ -103,7 +103,9 @@ final class Create_Surface {
 		return $html;
 	}
 
-	/** @return array<string, array{label:string,description:string,cards:array<int,array<string,string>>}> */
+	/**
+	 * @return array<string,array{label:string,description:string,cards:array<int,array<string,string>>}>
+	 */
 	public function collect_groups( int $user_id ): array {
 		$this->diagnostics = array();
 		$snapshot = $this->registry->availability_snapshot_for_user( $user_id );
@@ -157,7 +159,10 @@ final class Create_Surface {
 		return $this->diagnostics;
 	}
 
-	/** @param array<string,Adapter> $adapters @return array<string,array{label:string,description:string,cards:array<int,array<string,string>>}> */
+	/**
+	 * @param array<string,Adapter> $adapters Available adapters.
+	 * @return array<string,array{label:string,description:string,cards:array<int,array<string,string>>}>
+	 */
 	private function collect_from_adapters( array $adapters, int $user_id ): array {
 		$collected = array();
 		foreach ( $adapters as $key => $adapter ) {
@@ -172,6 +177,9 @@ final class Create_Surface {
 					continue;
 				}
 				$group_key = $this->canonical_group( $contract['group'] );
+				if ( 'other' === $group_key && 'other' !== $contract['group'] ) {
+					$this->record_diagnostic( $key, 'unknown_group', 'warning' );
+				}
 				if ( ! isset( $collected[ $group_key ] ) ) {
 					$collected[ $group_key ] = $this->group_metadata( $group_key );
 					$collected[ $group_key ]['cards'] = array();
@@ -181,7 +189,7 @@ final class Create_Surface {
 				unset( $error );
 				$this->record_diagnostic( $key, 'render_exception', 'fail' );
 				do_action( 'supc_adapter_render_error', Contract_Boundary::public_identifier( $key ), 'render_exception' );
-			}
+		}
 		}
 		$ordered = array();
 		foreach ( self::GROUP_ORDER as $group_key ) {
@@ -192,7 +200,10 @@ final class Create_Surface {
 		return $ordered;
 	}
 
-	/** @param array<string,mixed> $contract @return array<string,string>|null */
+	/**
+	 * @param array<string,mixed> $contract Registration snapshot.
+ * @return array<string,string>|null
+ */
 	private function card_from_adapter( string $key, Adapter $adapter, int $user_id, array $contract ): ?array {
 		$label       = $adapter->label();
 		$description = $adapter->description();
@@ -203,7 +214,7 @@ final class Create_Surface {
 			$description !== trim( $description ) ||
 			$icon !== trim( $icon ) ||
 			$route !== trim( $route ) ||
-			! Contract_Boundary::bounded_text( $label, 1, self::MAX_LABEL_BYTES ) ||
+			!_Contract_Boundary::bounded_text( $label, 1, self::MAX_LABEL_BYTES ) ||
 			! Contract_Boundary::bounded_text( $description, 1, self::MAX_DESCRIPTION_BYTES, true ) ||
 			! Contract_Boundary::bounded_text( $icon, 1, self::MAX_ICON_BYTES ) ||
 			! Contract_Boundary::bounded_text( $route, 1, self::MAX_ROUTE_BYTES ) ||
@@ -251,6 +262,10 @@ final class Create_Surface {
 			$html .= '<p><a class="supc-create-notice__action" href="' . esc_url( $url ) . '">' . esc_html( $action ) . '</a></p>';
 		}
 		return $html . '</section>';
+	}
+
+	private function surface_state_changed_to_disabled(): bool {
+		return Safe_Mode::disabled();
 	}
 
 	private function integration_unavailable_notice(): string {
