@@ -13,7 +13,7 @@ function get_option( string $key, mixed $default = false ): mixed {
 	return $default;
 }
 
-$shell_path = __DIR__ . '/fixtures/sabri-unified-application-shell-legacy-1.0.0';
+$shell_path = __DIR__ . '/fixtures/file20-legacy-1.0.0/sabri-unified-application-shell';
 define( 'SABRI_SHELL_VERSION', '1.0.0' );
 define( 'SABRI_SHELL_FILE', $shell_path . '/sabri-unified-application-shell.php' );
 define( 'SABRI_SHELL_PATH', $shell_path . '/' );
