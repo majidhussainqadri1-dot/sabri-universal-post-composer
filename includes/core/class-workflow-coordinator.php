@@ -18,199 +18,308 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Workflow_Coordinator {
-	private const MAX_PAYLOAD_BYTES = 1048576;
-	private const MAX_SCHEMA_BYTES = 262144;
-	private const MAX_RESULT_BYTES = 1048576;
-	private const MAX_DEPTH = 12;
-	private const MAX_TOTAL_NODES = 10000;
-	private const MAX_PREVIEW_TTL = 1800;
-	private const MAX_SCHEMA_FIELDS = 100;
-	private const MAX_SCHEMA_CHOICES = 100;
-	private const MAX_ARRAY_ITEMS = 1000;
-	private const MAX_CODE_COLLECTION_ITEMS = 100;
-	private const MAX_URL_BYTES = 2048;
-	private const NATIVE_REFERENCE_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/D';
-	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D';
-	private const CODE_PATTERN = '/^[a-z][a-z0-9_.:-]{0,63}$/D';
-	private const FINAL_STATUSES = array( 'draft', 'pending_review', 'scheduled', 'published', 'rejected', 'failed' );
-	private const DRAFT_STATUSES = array( 'draft', 'pending_review' );
-	private const FIELD_TYPES = array( 'text', 'textarea', 'select', 'multiselect', 'checkbox', 'number', 'date', 'datetime', 'url', 'email', 'opaque_reference' );
-	private const FIELD_PROPERTIES = array( 'type', 'label_code', 'description_code', 'required', 'privacy_class', 'minimum', 'maximum', 'choices' );
-	private const PRIVACY_CLASSES = array( 'public', 'private', 'sensitive' );
-	private const NATIVE_ERROR_CODES = array( 'permission_denied', 'validation_failed', 'conflict', 'rate_limited', 'temporarily_unavailable', 'not_found', 'expired', 'invalid_reference' );
+	private const NATIVE_ERROR_CODES = array(
+		'permission_denied', 'validation_failed', 'conflict', 'rate_limited',
+		'temporarily_unavailable', 'not_found', 'expired', 'invalid_reference',
+	);
+
+	private Workflow_Validator $validator;
 
 	public function __construct(
 		private Registry $registry,
 		private Permission_Resolver $permissions
 	) {
+		$this->validator = new Workflow_Validator();
 	}
 
 	/** @return array<string,mixed>|WP_Error */
 	public function schema( int $user_id, string $adapter_key ): array|WP_Error {
-		$preflight = $this->preflight( $user_id, $adapter_key );
-		if ( $preflight instanceof WP_Error ) {
-			return $preflight;
+		$adapter = $this->resolve( $user_id, $adapter_key, true );
+		if ( $adapter instanceof WP_Error ) {
+			return $adapter;
 		}
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
-		return $adapter instanceof WP_Error ? $adapter : $this->schema_for_adapter( $adapter, $adapter_key, $user_id );
+		$contract = $this->registry->workflow_contract( $adapter_key );
+		return null === $contract
+			? $this->error( 'workflow_adapter_unavailable', $adapter_key )
+			: $this->validator->schema( $adapter, $contract, $user_id, $adapter_key );
 	}
 
-	/** @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string,subject_schema_extension:string} */
+	/**
+	 * @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string,subject_schema_extension:string}
+	 */
 	public function contract_health( string $adapter_key ): array {
 		if ( ! Contract_Boundary::adapter_key( $adapter_key ) ) {
 			return $this->health_failure( 'invalid_adapter_key' );
 		}
-
 		$adapter = $this->registry->get( $adapter_key );
 		if ( null === $adapter ) {
 			return $this->health_failure( 'workflow_adapter_not_registered' );
 		}
 		if ( ! $adapter instanceof Workflow_Adapter ) {
 			return array(
-				'status'                   => 'pass',
-				'codes'                    => array(),
-				'workflow_api_version'     => 'not_applicable',
-				'supports_native_drafts'   => 'not_applicable',
+				'status' => 'pass',
+				'codes' => array(),
+				'workflow_api_version' => 'not_applicable',
+				'supports_native_drafts' => 'not_applicable',
 				'subject_schema_extension' => 'not_applicable',
 			);
 		}
-
 		$contract = $this->registry->workflow_contract( $adapter_key );
 		if ( null === $contract ) {
-			return $this->health_failure(
-				'workflow_registration_metadata_missing',
-				'missing',
-				'missing',
-				'no'
-			);
+			return $this->health_failure( 'workflow_registration_metadata_missing' );
 		}
-
-		$subject = $contract['subject_schema_extension'] ? 'yes' : 'no';
 		$drafts  = $contract['supports_native_drafts'] ? 'yes' : 'no';
-		if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
-			return $this->health_failure( 'workflow_api_mismatch', $contract['workflow_api_version'], $drafts, $subject );
+		$subject = $contract['subject_schema_extension'] ? 'yes' : 'no';
+		$api     = $contract['workflow_api_version'];
+		if ( SUPC_WORKFLOW_API_VERSION !== $api ) {
+			return $this->health_failure( 'workflow_api_mismatch', $api, $drafts, $subject );
 		}
-
-		$schema = $this->schema_for_adapter( $adapter, $adapter_key );
+		$schema = $this->validator->schema( $adapter, $contract, 0, $adapter_key );
 		if ( $schema instanceof WP_Error ) {
 			$code = 'supc_workflow_adapter_exception' === $schema->code
 				? 'workflow_contract_exception'
 				: 'invalid_schema_contract';
-			return $this->health_failure( $code, $contract['workflow_api_version'], $drafts, $subject );
+			return $this->health_failure( $code, $api, $drafts, $subject );
 		}
-
 		return array(
-			'status'                   => 'pass',
-			'codes'                    => array(),
-			'workflow_api_version'     => $contract['workflow_api_version'],
-			'supports_native_drafts'   => $drafts,
+			'status' => 'pass',
+			'codes' => array(),
+			'workflow_api_version' => $api,
+			'supports_native_drafts' => $drafts,
 			'subject_schema_extension' => $subject,
 		);
 	}
 
-	/**
-	 * @param array<string,mixed> $payload Validated payload.
-	 * @return array<string,mixed>|WP_Error
-	 */
+	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
 	public function create_draft( int $user_id, string $adapter_key, ?string $native_reference, array $payload ): array|WP_Error {
-		$preflight = $this->preflight( $user_id, $adapter_key );
-		if ( $preflight instanceof WP_Error ) {
-			return $preflight;
+		if ( null !== $native_reference && ! $this->validator->valid_reference( $native_reference ) ) {
+			return $this->error( 'invalid_native_reference', $adapter_key );
 		}
-		if ( null !== $native_reference && ! $this->valid_native_reference( $native_reference ) ) {
-			return $this->error( 'invalid_native_reference', 'The native draft reference is invalid.', $adapter_key );
-		}
-
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
+		$adapter = $this->resolve( $user_id, $adapter_key, true );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
 		}
 		$contract = $this->registry->workflow_contract( $adapter_key );
 		if ( null === $contract || ! $contract['supports_native_drafts'] ) {
-			return $this->error( 'native_drafts_unsupported', 'The native workflow does not support direct draft orchestration.', $adapter_key );
+			return $this->error( 'native_drafts_unsupported', $adapter_key );
 		}
-
-		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, false, $user_id );
+		$payload_error = $this->validator->payload( $adapter, $contract, $payload, $user_id, $adapter_key, false );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
-
 		try {
 			$result = $adapter->create_draft( $user_id, $native_reference, $payload );
-			if ( $result instanceof WP_Error ) {
-				return $this->native_error( $adapter_key, 'create_draft', $result );
-			}
-			if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) ) {
-				return $this->error( 'invalid_native_result', 'The native draft result is invalid.', $adapter_key );
-			}
-			$reference = $result['native_reference'] ?? null;
-			$status    = $result['status'] ?? null;
-			if ( ! is_string( $reference ) || ! $this->valid_native_reference( $reference ) || ! is_string( $status ) || ! in_array( $status, self::DRAFT_STATUSES, true ) ) {
-				return $this->error( 'invalid_native_result', 'The native draft result is invalid.', $adapter_key );
-			}
-			return array( 'native_reference' => $reference, 'status' => $status );
+			return $result instanceof WP_Error
+				? $this->native_error( $adapter_key, 'create_draft', $result )
+				: $this->validator->draft_result( $result, $adapter_key );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'create_draft', $error );
 		}
 	}
 
-	/**
-	 * @param array<string,mixed> $payload Validated payload.
-	 * @return array<string,mixed>|WP_Error
-	 */
+	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
 	public function validate( int $user_id, string $adapter_key, array $payload ): array|WP_Error {
-		$preflight = $this->preflight( $user_id, $adapter_key );
-		if ( $preflight instanceof WP_Error ) {
-			return $preflight;
-		}
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
+		$adapter = $this->resolve( $user_id, $adapter_key, true );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
 		}
-		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true, $user_id );
+		$contract = $this->registry->workflow_contract( $adapter_key );
+		if ( null === $contract ) {
+			return $this->error( 'workflow_adapter_unavailable', $adapter_key );
+		}
+		$payload_error = $this->validator->payload( $adapter, $contract, $payload, $user_id, $adapter_key, true );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
-
 		try {
 			$result = $adapter->validate( $user_id, $payload );
-			if ( $result instanceof WP_Error ) {
-				return $this->native_error( $adapter_key, 'validate', $result );
-			}
-			if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) || ! array_key_exists( 'valid', $result ) || ! is_bool( $result['valid'] ) ) {
-				return $this->error( 'invalid_validation_result', 'The native validation result is invalid.', $adapter_key );
-			}
-			$errors   = $this->normalize_code_collection( $result['errors'] ?? array() );
-			$warnings = $this->normalize_code_collection( $result['warnings'] ?? array() );
-			if ( null === $errors || null === $warnings ) {
-				return $this->error( 'invalid_validation_result', 'The native validation result is invalid.', $adapter_key );
-			}
-			if ( ( $result['valid'] && array() !== $errors ) || ( ! $result['valid'] && array() === $errors ) || array_intersect( $errors, $warnings ) ) {
-				return $this->error( 'invalid_validation_result', 'The native validation result is internally inconsistent.', $adapter_key );
-			}
-			return array( 'valid' => $result['valid'], 'errors' => $errors, 'warnings' => $warnings );
+			return $result instanceof WP_Error
+				? $this->native_error( $adapter_key, 'validate', $result )
+				: $this->validator->validation_result( $result, $adapter_key );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'validate', $error );
 		}
 	}
 
-	/**
-	 * @param array<string,mixed> $payload Validated payload.
-	 * @return array<string,mixed>|WP_Error
-	 */
+	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
 	public function preview( int $user_id, string $adapter_key, array $payload ): array|WP_Error {
-		$preflight = $this->preflight( $user_id, $adapter_key );
-		if ( $preflight instanceof WP_Error ) {
-			return $preflight;
-		}
-		$adapter = $this->resolve_adapter( $user_id, $adapter_key, true );
+		$adapter = $this->resolve( $user_id, $adapter_key, true );
 		if ( $adapter instanceof WP_Error ) {
 			return $adapter;
 		}
-		$payload_error = $this->validate_payload_contract( $adapter, $payload, $adapter_key, true, $user_id );
+		$contract = $this->registry->workflow_contract( $adapter_key );
+		if ( null === $contract ) {
+			return $this->error( 'workflow_adapter_unavailable', $adapter_key );
+		}
+		$payload_error = $this->validator->payload( $adapter, $contract, $payload, $user_id, $adapter_key, true );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
-
 		try {
-			$result = $adapter->preview(
+			$result = $adapter->preview( $user_id, $payload );
+			return $result instanceof WP_Error
+				? $this->native_error( $adapter_key, 'preview', $result )
+				: $this->validator->preview_result( $result, $adapter_key );
+		} catch ( Throwable $error ) {
+			return $this->exception( $adapter_key, 'preview', $error );
+		}
+	}
+
+	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
+	public function submit( int $user_id, string $adapter_key, string $idempotency_key, array $payload ): array|WP_Error {
+		if ( ! $this->validator->valid_idempotency_key( $idempotency_key ) ) {
+			return $this->error( 'invalid_idempotency_key', $adapter_key );
+		}
+		$adapter = $this->resolve( $user_id, $adapter_key, true );
+		if ( $adapter instanceof WP_Error ) {
+			return $adapter;
+		}
+		$contract = $this->registry->workflow_contract( $adapter_key );
+		if ( null === $contract ) {
+			return $this->error( 'workflow_adapter_unavailable', $adapter_key );
+		}
+		$payload_error = $this->validator->payload( $adapter, $contract, $payload, $user_id, $adapter_key, true );
+		if ( $payload_error instanceof WP_Error ) {
+			return $payload_error;
+		}
+		try {
+			$result = $adapter->submit( $user_id, $idempotency_key, $payload );
+			return $result instanceof WP_Error
+				? $this->native_error( $adapter_key, 'submit', $result )
+				: $this->validator->status_result( $result, $adapter_key );
+		} catch ( Throwable $error ) {
+			return $this->exception( $adapter_key, 'submit', $error );
+		}
+	}
+
+	/** @return array<string,mixed>|WP_Error */
+	public function status( int $user_id, string $adapter_key, string $native_reference ): array|WP_Error {
+		if ( ! $this->validator->valid_reference( $native_reference ) ) {
+			return $this->error( 'invalid_native_reference', $adapter_key );
+		}
+		$adapter = $this->resolve( $user_id, $adapter_key, false );
+		if ( $adapter instanceof WP_Error ) {
+			return $adapter;
+		}
+		try {
+			$result = $adapter->status( $user_id, $native_reference );
+			return $result instanceof WP_Error
+				? $this->native_error( $adapter_key, 'status', $result )
+				: $this->validator->status_result( $result, $adapter_key );
+		} catch ( Throwable $error ) {
+			return $this->exception( $adapter_key, 'status', $error );
+		}
+	}
+
+	/** @return string|WP_Error */
+	public function canonical_url( int $user_id, string $adapter_key, string $native_reference ): string|WP_Error {
+		if ( ! $this->validator->valid_reference( $native_reference ) ) {
+			return $this->error( 'invalid_native_reference', $adapter_key );
+		}
+		$adapter = $this->resolve( $user_id, $adapter_key, false );
+		if ( $adapter instanceof WP_Error ) {
+			return $adapter;
+		}
+		try {
+			$url = $adapter->canonical_url( $user_id, $native_reference );
+			$url = $this->validator->internal_url( $url );
+			return '' !== $url ? $url : $this->error( 'invalid_canonical_url', $adapter_key );
+		} catch ( Throwable $error ) {
+			return $this->exception( $adapter_key, 'canonical_url', $error );
+		}
+	}
+
+	public function generate_idempotency_key(): string {
+		$left  = wp_generate_uuid4();
+		$right = wp_generate_uuid4();
+		$key   = $left . ':' . $right;
+		return $this->validator->valid_idempotency_key( $key ) ? $key : '';
+	}
+
+	/** @return Workflow_Adapter|WP_Error */
+	private function resolve( int $user_id, string $adapter_key, bool $require_create_policy ): Workflow_Adapter|WP_Error {
+		if ( Safe_Mode::disabled() ) {
+			return $this->error( 'workflow_disabled', $adapter_key );
+		}
+		if ( $user_id <= 0 || ! Contract_Boundary::adapter_key( $adapter_key ) ) {
+			return $this->error( 'invalid_workflow_request', $adapter_key );
+		}
+		if ( ! $this->permissions->account_is_eligible( $user_id ) ) {
+			return $this->error( 'workflow_permission_denied', $adapter_key );
+		}
+		$adapter  = $this->registry->get( $adapter_key );
+		$contract = $this->registry->workflow_contract( $adapter_key );
+		if ( ! $adapter instanceof Workflow_Adapter || null === $contract ) {
+			return $this->error( 'workflow_adapter_unavailable', $adapter_key );
+		}
+		if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
+			return $this->error( 'workflow_permission_denied', $adapter_key );
+		}
+		if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
+			return $this->error( 'workflow_api_mismatch', $adapter_key );
+		}
+		try {
+			if ( ! $adapter->is_available() ) {
+				return $this->error( 'native_workflow_unavailable', $adapter_key );
+			}
+			if ( $require_create_policy && ! $adapter->can_create( $user_id ) ) {
+				return $this->error( 'workflow_permission_denied', $adapter_key );
+			}
+			if (
+				Safe_Mode::disabled() ||
+				! $this->permissions->account_is_eligible( $user_id ) ||
+				! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] )
+			) {
+				return $this->error( 'workflow_permission_denied', $adapter_key );
+			}
+			return $adapter;
+		} catch ( Throwable $error ) {
+			return $this->exception( $adapter_key, 'resolve', $error );
+		}
+	}
+
+	private function native_error( string $adapter_key, string $operation, WP_Error $error ): WP_Error {
+		$native_code = is_callable( array( $error, 'get_error_code' ) )
+			? (string) call_user_func( array( $error, 'get_error_code' ) )
+			: (string) ( get_object_vars( $error )['code'] ?? '' );
+		$native_code = strtolower( trim( $native_code ) );
+		$public_code = in_array( $native_code, self::NATIVE_ERROR_CODES, true ) ? $native_code : 'native_error';
+		do_action( 'supc_workflow_native_error', Contract_Boundary::public_identifier( $adapter_key ), sanitize_key( $operation ), $public_code );
+		return new WP_Error(
+			'supc_native_workflow_error',
+			__( 'The native workflow returned a controlled error.', 'sabri-universal-post-composer' ),
+			array(
+				'adapter_key' => Contract_Boundary::public_identifier( $adapter_key ),
+				'operation' => sanitize_key( $operation ),
+				'native_code' => $public_code,
+			)
+		);
+	}
+
+	private function exception( string $adapter_key, string $operation, Throwable $error ): WP_Error {
+		unset( $error );
+		do_action( 'supc_workflow_exception', Contract_Boundary::public_identifier( $adapter_key ), sanitize_key( $operation ), 'native_exception' );
+		return $this->error( 'workflow_adapter_exception', $adapter_key );
+	}
+
+	private function error( string $code, string $adapter_key ): WP_Error {
+		return new WP_Error(
+			'supc_' . $code,
+			__( 'The workflow request could not be completed safely.', 'sabri-universal-post-composer' ),
+			array( 'adapter_key' => Contract_Boundary::public_identifier( $adapter_key ) )
+		);
+	}
+
+	/**
+	 * @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string,subject_schema_extension:string}
+	 */
+	private function health_failure( string $code, string $api = 'missing', string $drafts = 'missing', string $subject = 'missing' ): array {
+		return array(
+			'status' => 'fail',
+			'codes' => array( $code ),
+			'workflow_api_version' => $api,
+			'supports_native_drafts' => $drafts,
+			'subject_schema_extension' => $subject,
+		);
+	}
+}
