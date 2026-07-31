@@ -231,7 +231,7 @@ jobs:
             tests/fixtures/sabri-unified-application-shell/includes/class-safe-mode.php
             tests/fixtures/sabri-unified-application-shell/includes/class-inherited-safe-mode.php
             tests/fixtures/sabri-unified-application-shell/includes/functions.php
-            tests/fixtures/sabri-unified-application-shell-legacy-1.0.0/sabri-unified-application-shell.php
+            tests/fixtures/file20-legacy-1.0.0/sabri-unified-application-shell/sabri-unified-application-shell.php
             tests/run-public-api-collision-test.php tests/run-file20-contract-collision-test.php
             tests/run-untrusted-shell-safe-mode-test.php tests/run-file20-legacy-1-0-0-compatibility-test.php
             tests/run-file20-partial-create-contract-test.php tests/run-untrusted-membership-core-test.php
@@ -265,7 +265,7 @@ jobs:
             tests/run-file20-partial-create-contract-test.php
             tests/run-page-transaction-hardening-test.php
             tests/run-invalid-idempotency-generator-test.php
-            tests/fixtures/sabri-unified-application-shell-legacy-1.0.0/sabri-unified-application-shell.php
+            tests/fixtures/file20-legacy-1.0.0/sabri-unified-application-shell/sabri-unified-application-shell.php
             docs/FILE22-TENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
             docs/FILE22-ELEVENTH-FULL-DEFECT-CENSUS-AND-CORRECTION-2026-07-31.md
             .github/workflows/tenth-review-evidence.yml
