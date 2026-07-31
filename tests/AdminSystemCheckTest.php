@@ -106,7 +106,7 @@ final class AdminSystemCheckTest extends TestCase {
 		$this->assertCount( 1, $rows );
 		$this->assertSame( 'unrecognized_check', $rows[0]['key'] );
 		$this->assertSame( 'warning', $rows[0]['status'] );
-		$this->assertSame( 0, $rows[0]['count'] );
+		$this->assertSame( 1, $rows[0]['count'] );
 		$this->assertSame( array( 'unrecognized_diagnostic' ), $rows[0]['codes'] );
 	}
 
@@ -134,13 +134,12 @@ final class AdminSystemCheckTest extends TestCase {
 		$this->assertSame( 'native_unavailable', $rows[0]['codes'] );
 	}
 
-	public function test_unknown_group_warns_without_using_current_user_authorization(): void {
-		$this->assertTrue( $this->registry->register( new Admin_Invalid_Static_Contract_Adapter() ) );
+	public function test_noncanonical_group_is_rejected_before_static_health(): void {
+		$result = $this->registry->register( new Admin_Invalid_Static_Contract_Adapter() );
 
-		$rows = $this->page->adapter_rows();
-
-		$this->assertSame( 'warning', $rows[0]['status'] );
-		$this->assertSame( 'unknown_group', $rows[0]['codes'] );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'supc_invalid_group', $result->code );
+		$this->assertSame( array(), $this->page->adapter_rows() );
 	}
 
 	public function test_repair_buttons_submit_exact_control_values_and_tables_are_accessible(): void {
