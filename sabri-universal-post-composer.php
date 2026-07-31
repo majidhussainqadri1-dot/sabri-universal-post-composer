@@ -8,6 +8,7 @@
  * Text Domain: sabri-universal-post-composer
  * Requires at least: 6.5
  * Requires PHP: 8.1
+ * Requires Plugins: sabri-membership-core
  *
  * @package SabriUniversalPostComposer
  */
@@ -35,6 +36,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\UniversalComposer\Contracts\Workflow_Adapter',
 		'Sabri\UniversalComposer\Contracts\Diagnostic_Adapter',
 		'Sabri\UniversalComposer\Core\Version',
+		'Sabri\UniversalComposer\Core\Contract_Boundary',
 		'Sabri\UniversalComposer\Core\Runtime_Trust',
 		'Sabri\UniversalComposer\Core\Safe_Mode',
 		'Sabri\UniversalComposer\Core\Permission_Resolver',
@@ -58,9 +60,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	);
 
 	if ( array() !== $core_constant_collisions || array() !== $core_symbol_collisions ) {
-		// Never consume a foreign path, URL, version, contract, class, or interface.
-		// The plugin remains inert and removes itself from the active set on the next
-		// administrator load instead of risking a fatal redeclaration or mixed runtime.
 		add_action(
 			'admin_init',
 			static function (): void {
@@ -95,6 +94,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/contracts/interface-workflow-adapter.php';
 	require_once SUPC_PATH . 'includes/contracts/interface-diagnostic-adapter.php';
 	require_once SUPC_PATH . 'includes/core/class-version.php';
+	require_once SUPC_PATH . 'includes/core/class-contract-boundary.php';
 	require_once SUPC_PATH . 'includes/core/class-runtime-trust.php';
 	require_once SUPC_PATH . 'includes/core/class-safe-mode.php';
 	require_once SUPC_PATH . 'includes/core/class-permission-resolver.php';
