@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Safe_Mode {
-	private const SHELL_SAFE_MODE_CLASS = '\Sabri\UnifiedShell\SafeMode';
+	private const SHELL_SAFE_MODE_CLASS = '\\Sabri\\UnifiedShell\\SafeMode';
 
 	public static function disabled(): bool {
 		if ( defined( 'SUPC_DISABLE' ) && SUPC_DISABLE ) {
@@ -37,25 +37,16 @@ final class Safe_Mode {
 			return true;
 		}
 
-		if ( ! Runtime_Trust::shell_claimed() ) {
+		// File 20 version 1.0.0 is a real, canonical legacy package, but it predates
+		// the optional Create contract. Its base constants alone must not disable the
+		// Composer. Only a component that actually claims the atomic Create contract
+		// may become a File 22 emergency-state authority.
+		if ( ! Runtime_Trust::shell_create_contract_claimed() ) {
 			return false;
 		}
 
-		$callback      = Runtime_Trust::owned_shell_static_method( self::SHELL_SAFE_MODE_CLASS, 'disabled' );
-		$trusted_shell = defined( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' )
-			&& '1.0.1' === (string) SABRI_SHELL_CREATE_CONTRACT_VERSION
-			&& defined( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' )
-			&& 'sabri-unified-application-shell' === (string) SABRI_SHELL_CREATE_CONTRACT_OWNER
-			&& defined( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' )
-			&& true === SABRI_SHELL_CREATE_FUNCTIONS_OWNED
-			&& null !== $callback;
-
-		// Historical evidence marker: Runtime_Trust::shell_symbols_owned established
-		// package provenance in the ninth cycle; owned_shell_static_method now also
-		// proves that the executable method itself is declared inside that package.
-		// A colliding, incomplete, obsolete, inherited, or foreign-source shell
-		// runtime must never be trusted to clear the platform emergency boundary.
-		if ( ! $trusted_shell ) {
+		$callback = Runtime_Trust::owned_shell_static_method( self::SHELL_SAFE_MODE_CLASS, 'disabled' );
+		if ( ! Runtime_Trust::shell_create_contract_owned() || null === $callback ) {
 			return true;
 		}
 
