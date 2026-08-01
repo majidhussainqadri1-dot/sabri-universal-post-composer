@@ -189,7 +189,7 @@ final class Create_Surface {
 				unset( $error );
 				$this->record_diagnostic( $key, 'render_exception', 'fail' );
 				do_action( 'supc_adapter_render_error', Contract_Boundary::public_identifier( $key ), 'render_exception' );
-		}
+			}
 		}
 		$ordered = array();
 		foreach ( self::GROUP_ORDER as $group_key ) {
@@ -202,8 +202,8 @@ final class Create_Surface {
 
 	/**
 	 * @param array<string,mixed> $contract Registration snapshot.
- * @return array<string,string>|null
- */
+	 * @return array<string,string>|null
+	 */
 	private function card_from_adapter( string $key, Adapter $adapter, int $user_id, array $contract ): ?array {
 		$label       = $adapter->label();
 		$description = $adapter->description();
@@ -214,7 +214,7 @@ final class Create_Surface {
 			$description !== trim( $description ) ||
 			$icon !== trim( $icon ) ||
 			$route !== trim( $route ) ||
-			!_Contract_Boundary::bounded_text( $label, 1, self::MAX_LABEL_BYTES ) ||
+			! Contract_Boundary::bounded_text( $label, 1, self::MAX_LABEL_BYTES ) ||
 			! Contract_Boundary::bounded_text( $description, 1, self::MAX_DESCRIPTION_BYTES, true ) ||
 			! Contract_Boundary::bounded_text( $icon, 1, self::MAX_ICON_BYTES ) ||
 			! Contract_Boundary::bounded_text( $route, 1, self::MAX_ROUTE_BYTES ) ||

@@ -197,7 +197,7 @@ final class Registry {
 	 * @return array{state:string,adapters:array<string,Adapter>}
 	 */
 	public function availability_snapshot_for_user( int $user_id ): array {
-		if ( Safe_Mode::disabled() || $user_id <= 0 || ! $this->permissions->account_is_eligible( $user_id ) ) {
+		if ( $user_id <= 0 || ! $this->central_authority_allows( $user_id ) ) {
 			return array( 'state' => 'denied', 'adapters' => array() );
 		}
 
@@ -240,13 +240,20 @@ final class Registry {
 			}
 		}
 
-		if ( Safe_Mode::disabled() || ! $this->permissions->account_is_eligible( $user_id ) ) {
+		if ( ! $this->central_authority_allows( $user_id ) ) {
 			return array( 'state' => 'denied', 'adapters' => array() );
 		}
 		if ( array() !== $available ) {
 			return array( 'state' => 'available', 'adapters' => $available );
 		}
 		return array( 'state' => $has_unavailable ? 'unavailable' : 'denied', 'adapters' => array() );
+	}
+
+	/**
+	 * Re-evaluate mutable central authority at each decision boundary.
+	 */
+	private function central_authority_allows( int $user_id ): bool {
+		return ! Safe_Mode::disabled() && $this->permissions->account_is_eligible( $user_id );
 	}
 
 	/** @return array<string, Adapter> */

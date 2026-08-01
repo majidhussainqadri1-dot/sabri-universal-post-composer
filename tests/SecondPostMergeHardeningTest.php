@@ -78,7 +78,14 @@ final class Second_Post_Merge_Mutable_Adapter implements Workflow_Adapter, Diagn
 	public function submit( int $user_id, string $idempotency_key, array $payload ) { unset( $user_id, $idempotency_key, $payload ); return array( 'native_reference' => 'post-1', 'status' => 'pending_review' ); }
 	public function status( int $user_id, string $native_reference ) { unset( $user_id ); return array( 'native_reference' => $native_reference, 'status' => 'pending_review' ); }
 	public function canonical_url( int $user_id, string $native_reference ): string { unset( $user_id, $native_reference ); return '/post/1/'; }
-	public function health_report(): array { return array( 'actual_native_version' => '1.0.3', 'available' => $this->available ); }
+	public function health_report(): array {
+		return array(
+			'status'                => 'pass',
+			'codes'                 => array(),
+			'actual_native_version' => '1.0.3',
+			'available'             => $this->available,
+		);
+	}
 }
 
 final class SecondPostMergeHardeningTest extends TestCase {

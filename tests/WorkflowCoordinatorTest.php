@@ -205,6 +205,8 @@ final class WorkflowCoordinatorTest extends TestCase {
 		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'case_time' => '2026-07-29T23:10+05:99' ) )->code );
 		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'source' => 'file:///etc/passwd' ) )->code );
 		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'source' => 'https://user:pass@example.test/private' ) )->code );
+		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'source' => 'https://user@example.test/private' ) )->code );
+		$this->assertSame( 'supc_workflow_payload_field_invalid', $this->coordinator->validate( 1, 'workflow_test', array( 'category' => 'news', 'source' => 'https://user:@example.test/private' ) )->code );
 		$this->assertIsArray(
 			$this->coordinator->validate(
 				1,

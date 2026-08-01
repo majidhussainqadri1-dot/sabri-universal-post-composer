@@ -8,11 +8,13 @@
 - `includes/contracts/interface-workflow-adapter.php`
 - `includes/contracts/interface-diagnostic-adapter.php`
 - `includes/core/class-version.php`
+- `includes/core/class-contract-boundary.php`
 - `includes/core/class-runtime-trust.php`
 - `includes/core/class-safe-mode.php`
 - `includes/core/class-permission-resolver.php`
 - `includes/core/class-page-resolver.php`
 - `includes/core/class-registry.php`
+- `includes/core/class-workflow-validator.php`
 - `includes/core/class-workflow-coordinator.php`
 - `includes/core/class-plugin.php`
 - `includes/core/functions.php`

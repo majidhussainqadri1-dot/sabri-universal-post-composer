@@ -128,7 +128,7 @@ final class System_Check_Page {
 			wp_die( esc_html__( 'You are not allowed to repair File 22.', 'sabri-universal-post-composer' ) );
 		}
 		$method = filter_input( INPUT_SERVER, 'REQUEST_METHOD', FILTER_UNSAFE_RAW );
-		$method = is_string( $method ) ? strtoupper( sanitize_key( wp_unslash( $method ) ) ) : 'POST';
+		$method = is_string( $method ) ? strtoupper( sanitize_key( wp_unslash( $method ) ) ) : '';
 		if ( 'POST' !== $method ) {
 			wp_die( esc_html__( 'The repair request must use POST.', 'sabri-universal-post-composer' ) );
 		}
@@ -221,8 +221,9 @@ final class System_Check_Page {
 					$status = $this->worse( $status, 'warning' ); $codes[] = 'native_unavailable';
 				}
 				if ( $adapter instanceof Diagnostic_Adapter ) {
-					$health_status = $this->status( $adapter->health_report()['status'] ?? 'warning' );
-					$health_codes  = $this->codes( $adapter->health_report()['codes'] ?? array() );
+					$health        = $adapter->health_report();
+					$health_status = $this->status( $health['status'] ?? 'warning' );
+					$health_codes  = $this->codes( $health['codes'] ?? array() );
 					if ( 'pass' !== $health_status && array() === $health_codes ) {
 						$health_codes[] = 'diagnostic_reason_missing';
 					}

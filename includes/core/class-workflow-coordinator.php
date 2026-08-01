@@ -265,17 +265,22 @@ final class Workflow_Coordinator {
 			if ( $require_create_policy && ! $adapter->can_create( $user_id ) ) {
 				return $this->error( 'workflow_permission_denied', $adapter_key );
 			}
-			if (
-				Safe_Mode::disabled() ||
-				! $this->permissions->account_is_eligible( $user_id ) ||
-				! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] )
-			) {
+			if ( ! $this->central_authority_allows( $user_id, $contract['required_capability'] ) ) {
 				return $this->error( 'workflow_permission_denied', $adapter_key );
 			}
 			return $adapter;
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'resolve', $error );
 		}
+	}
+
+	/**
+	 * Re-evaluate mutable central authority after native policy checks.
+	 */
+	private function central_authority_allows( int $user_id, string $capability ): bool {
+		return ! Safe_Mode::disabled()
+			&& $this->permissions->account_is_eligible( $user_id )
+			&& $this->permissions->can_use_capability( $user_id, $capability );
 	}
 
 	private function native_error( string $adapter_key, string $operation, WP_Error $error ): WP_Error {

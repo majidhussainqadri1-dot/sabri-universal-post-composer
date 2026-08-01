@@ -468,7 +468,8 @@ final class Workflow_Validator {
 		$port   = isset( $parts['port'] ) ? (int) $parts['port'] : 0;
 		return in_array( $scheme, array( 'http', 'https' ), true )
 			&& '' !== (string) ( $parts['host'] ?? '' )
-			&& ! isset( $parts['user'], $parts['pass'] )
+			&& ! isset( $parts['user'] )
+			&& ! isset( $parts['pass'] )
 			&& ( 0 === $port || ( $port >= 1 && $port <= 65535 ) );
 	}
 
