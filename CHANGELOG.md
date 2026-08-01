@@ -2,6 +2,17 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Fifth complete-repository hardening
+
+- Failed closed before loading runtime files when any File 22 core constant is preclaimed, preventing foreign path, URL, version, or contract values from controlling bootstrap.
+- Treated every public API marker, including `SUPC_PUBLIC_API_COLLISIONS`, as an ownership boundary and required an empty collision marker in System Check.
+- Rejected filtered external, downgraded, credential-bearing, malformed, protocol-relative, and mismatched-port Create-page permalinks.
+- Recovered automatically from malformed, invalid-token, expired, or implausibly future-dated repair locks while preserving valid current lock serialization.
+- Refused to evaluate account or adapter state when a direct shortcode runs after output has begun and private response headers can no longer be applied.
+- Printed the Create-surface stylesheet once for a secure direct render occurring after the normal head style queue.
+- Harmonized schema documentation with the implemented normalization boundary: unknown top-level native metadata is discarded, while unknown field-contract properties remain rejected.
+- Added fifth-cycle PHPUnit and isolated collision/privacy contracts plus an exact-head evidence workflow.
+
 ### Fourth complete-repository hardening
 
 - Enqueued Create-surface CSS at the actual direct shortcode render boundary so template, widget, and programmatic renders remain styled as well as private.

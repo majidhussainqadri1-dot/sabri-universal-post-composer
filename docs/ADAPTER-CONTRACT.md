@@ -2,6 +2,10 @@
 
 Every content type is owned by a native module. File 22 coordinates discovery and creation without taking permanent ownership.
 
+## Bootstrap ownership
+
+File 22 owns its `SUPC_*` runtime path, URL, version, schema, adapter, workflow, subject-schema, and Membership Core minimum-version constants. If any of those core constants already exists before the plugin bootstrap runs, File 22 must not consume the foreign value, load runtime files through a foreign path, or continue partially. It remains inert, registers an administrator notice, and schedules its own deactivation.
+
 ## Base Adapter
 
 The base adapter supplies exact API version, canonical key, label, description, group, icon, deterministic priority, native owner and minimum version, central capability, privacy class, native availability, adapter-specific authorization, and a safe native start route.
@@ -50,15 +54,24 @@ The complete `supc_*` function family is owned only when all of these markers ag
 
 - `SUPC_PUBLIC_API_VERSION = 1.0.0`;
 - `SUPC_PUBLIC_API_OWNER = sabri-universal-post-composer`;
-- `SUPC_PUBLIC_API_FUNCTIONS_OWNED = true`.
+- `SUPC_PUBLIC_API_FUNCTIONS_OWNED = true`;
+- `SUPC_PUBLIC_API_COLLISIONS = ''`.
 
-Any pre-existing function or marker collision prevents the entire File 22 public function family from being declared. A partial mixed-version API is prohibited. Interactive functions bind to `get_current_user_id()`. The backward-compatible subject parameter on `supc_adapter_available()` is ignored and cannot query another account.
+Any pre-existing public function or any preclaimed public API marker prevents the entire File 22 public function family from being declared. A partial mixed-version API is prohibited. System Check treats a missing, non-string, or nonempty collision marker as a contract failure even when other marker values appear correct. Interactive functions bind to `get_current_user_id()`. The backward-compatible subject parameter on `supc_adapter_available()` is ignored and cannot query another account.
 
-## Authenticated-subject boundary
+## Create-page and native-route trust
+
+Native start routes, previews, and canonical URLs must be relative internal routes or absolute same-origin HTTPS URLs without credentials or a port mismatch. The canonical Create page must also resolve to an internal relative route or same-origin HTTPS permalink. A filtered external, HTTP-downgraded, protocol-relative, credential-bearing, control-character, backslash, or mismatched-port permalink is not a valid Create-page candidate and is never returned through File 20 or a login redirect.
+
+Malformed, expired, invalid-token, or implausibly future-dated Create-page repair locks are discarded before a new atomic lock is attempted. A valid current UUID-v4 lock continues to serialize concurrent repair operations.
+
+## Authenticated-subject and private-response boundary
 
 Public workflow functions accept no user ID. A future service/background API must be separate, capability-protected, auditable, and independently reviewed.
 
 `canonical_url()` receives `( int $user_id, string $native_reference )`. The native owner must enforce ownership or visibility. An opaque reference is never authorization proof.
+
+A direct template, widget, or programmatic shortcode invocation must establish no-cache and noindex headers before evaluating the current account or adapter registry. When output has already begun and those headers cannot be established, File 22 returns only a generic data-free notice. A secure direct render occurring after `wp_head` may print the File 22 stylesheet once if it was enqueued too late for the normal head queue.
 
 ## Static and subject-aware schema contract
 
@@ -76,7 +89,7 @@ Both schema variants must use the same `schema_version()` and normalized field v
 
 ## Schema envelope
 
-A schema contains only `version` and `fields`, is at most 256 KiB, contains at most 100 fields, and uses canonical field keys.
+A normalized File 22 schema response contains only `version` and `fields`, is at most 256 KiB, contains at most 100 fields, and uses canonical field keys. Native top-level metadata outside `version` and `fields` is never returned or trusted; it is discarded at the normalization boundary. Unknown properties inside a field definition are rejected because they alter the executable payload contract.
 
 Allowed types:
 
@@ -87,7 +100,7 @@ Allowed types:
 - `url`, `email`;
 - `opaque_reference`.
 
-Allowed properties:
+Allowed field properties:
 
 - `type`;
 - `label_code`, optional `description_code`;
@@ -96,7 +109,7 @@ Allowed properties:
 - numeric `minimum`/`maximum`;
 - `choices` only for `select` and `multiselect`.
 
-Every `select` or `multiselect` field must declare between one and one hundred canonical choices. Other field types must not declare `choices`. Unknown properties, data-bearing defaults, raw HTML, arbitrary metadata, malformed codes, invalid bounds, unsupported nesting, empty or excessive choice maps, and oversized schemas are rejected.
+Every `select` or `multiselect` field must declare between one and one hundred canonical choices. Other field types must not declare `choices`. Unknown field properties, data-bearing defaults, raw HTML, malformed codes, invalid bounds, unsupported nesting, empty or excessive choice maps, and oversized schemas are rejected.
 
 ## Schema-bound payload enforcement
 

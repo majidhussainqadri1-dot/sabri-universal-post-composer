@@ -17,6 +17,9 @@ final class PluginPrivacyTest extends TestCase {
 		$GLOBALS['supc_test_nocache_headers'] = 0;
 		$GLOBALS['supc_test_actions_fired'] = array();
 		$GLOBALS['supc_test_enqueued_css'] = array();
+
+		$property = new ReflectionProperty( Plugin::class, 'private_headers_applied' );
+		$property->setValue( Plugin::instance(), false );
 	}
 
 	protected function tearDown(): void {

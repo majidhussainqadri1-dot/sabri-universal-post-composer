@@ -19,6 +19,7 @@ final class Page_Resolver {
 	private const MANAGED_META = '_supc_managed_page';
 	private const REPAIR_LOCK_OPTION = 'supc_create_page_repair_lock';
 	private const REPAIR_LOCK_TTL = 60;
+	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
 	private const APPROVED_SLUGS = array( 'create', 'create-content', 'platform-create', 'sabri-create' );
 
 	private static ?int $resolved_page_id = null;
@@ -173,12 +174,7 @@ final class Page_Resolver {
 
 	public static function url(): string {
 		$page_id = self::resolve_page_id( false );
-		if ( $page_id <= 0 ) {
-			return '';
-		}
-
-		$url = get_permalink( $page_id );
-		return is_string( $url ) ? $url : '';
+		return $page_id > 0 ? self::validated_permalink( $page_id ) : '';
 	}
 
 	public static function is_ready(): bool {
@@ -195,9 +191,53 @@ final class Page_Resolver {
 			return false;
 		}
 
-		$content   = (string) get_post_field( 'post_content', $page_id );
-		$permalink = get_permalink( $page_id );
-		return has_shortcode( $content, self::SHORTCODE ) && is_string( $permalink ) && '' !== $permalink;
+		$content = (string) get_post_field( 'post_content', $page_id );
+		return has_shortcode( $content, self::SHORTCODE ) && '' !== self::validated_permalink( $page_id );
+	}
+
+	private static function validated_permalink( int $page_id ): string {
+		$url = get_permalink( $page_id );
+		if ( ! is_string( $url ) ) {
+			return '';
+		}
+
+		$url = trim( $url );
+		if ( '' === $url || 1 === preg_match( '/[\x00-\x1F\x7F]/', $url ) || str_contains( $url, '\\' ) ) {
+			return '';
+		}
+
+		$validated = wp_validate_redirect( $url, '' );
+		if ( '' === $validated ) {
+			return '';
+		}
+		if ( str_starts_with( $validated, '/' ) ) {
+			return str_starts_with( $validated, '//' ) ? '' : $validated;
+		}
+
+		$target = wp_parse_url( $validated );
+		$home   = wp_parse_url( home_url( '/' ) );
+		if ( ! is_array( $target ) || ! is_array( $home ) ) {
+			return '';
+		}
+
+		$target_scheme = strtolower( (string) ( $target['scheme'] ?? '' ) );
+		$home_scheme   = strtolower( (string) ( $home['scheme'] ?? '' ) );
+		$target_host   = strtolower( (string) ( $target['host'] ?? '' ) );
+		$home_host     = strtolower( (string) ( $home['host'] ?? '' ) );
+		if (
+			'https' !== $target_scheme ||
+			'https' !== $home_scheme ||
+			'' === $target_host ||
+			$target_host !== $home_host ||
+			isset( $target['user'] ) ||
+			isset( $target['pass'] )
+		) {
+			return '';
+		}
+
+		$target_port = isset( $target['port'] ) ? (int) $target['port'] : 443;
+		$home_port   = isset( $home['port'] ) ? (int) $home['port'] : 443;
+		return $target_port === $home_port ? $validated : '';
 	}
 
 	/**
@@ -289,12 +329,10 @@ final class Page_Resolver {
 
 	private static function acquire_repair_lock(): string {
 		$existing = get_option( self::REPAIR_LOCK_OPTION, false );
-		if ( is_array( $existing ) ) {
-			$created = (int) ( $existing['created'] ?? 0 );
-			if ( $created > 0 && $created < time() - self::REPAIR_LOCK_TTL ) {
-				delete_option( self::REPAIR_LOCK_OPTION );
-				$existing = false;
-			}
+		$now      = time();
+		if ( false !== $existing && ! self::repair_lock_is_active( $existing, $now ) ) {
+			delete_option( self::REPAIR_LOCK_OPTION );
+			$existing = false;
 		}
 
 		if ( false !== $existing ) {
@@ -304,11 +342,23 @@ final class Page_Resolver {
 		$token = wp_generate_uuid4();
 		$added = add_option(
 			self::REPAIR_LOCK_OPTION,
-			array( 'token' => $token, 'created' => time() ),
+			array( 'token' => $token, 'created' => $now ),
 			'',
 			false
 		);
 		return $added ? $token : '';
+	}
+
+	private static function repair_lock_is_active( mixed $lock, int $now ): bool {
+		if ( ! is_array( $lock ) ) {
+			return false;
+		}
+
+		$token   = (string) ( $lock['token'] ?? '' );
+		$created = (int) ( $lock['created'] ?? 0 );
+		return 1 === preg_match( self::UUID_V4_PATTERN, $token )
+			&& $created > $now - self::REPAIR_LOCK_TTL
+			&& $created <= $now + self::REPAIR_LOCK_TTL;
 	}
 
 	private static function release_repair_lock( string $token ): void {
