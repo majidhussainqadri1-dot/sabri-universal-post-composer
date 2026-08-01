@@ -3,7 +3,8 @@
 	xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
 	bootstrap="tests/workflow-bootstrap.php"
 	colors="true"
-	cacheDirectory=".phpunit.cache">
+	cacheDirectory=".phpunit.cache"
+	displayDetailsOnTestsThatTriggerWarnings="true">
 	<testsuites>
 		<testsuite name="File 22 contract tests">
 			<directory suffix="Test.php">tests</directory>

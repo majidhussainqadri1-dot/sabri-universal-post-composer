@@ -1,0 +1,67 @@
+name: File 22 Ninth Complete Review Evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-22-ninth-review-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  ninth-review-evidence:
+    name: Exact-head ninth review regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+      - name: Run cumulative PHPUnit suite
+        run: composer test
+      - name: Reject coherent foreign File 20 runtime
+        run: php tests/run-untrusted-shell-safe-mode-test.php
+      - name: Reject foreign File 20 contract producer
+        run: php tests/run-file20-contract-collision-test.php
+      - name: Reject colliding File 22 public API
+        run: php tests/run-public-api-collision-test.php
+      - name: Verify bootstrap symbol collision boundary
+        run: php tests/run-bootstrap-symbol-collision-test.php
+      - name: Verify ninth review inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            includes/core/class-runtime-trust.php
+            tests/NinthCompleteReviewTest.php
+            tests/fixtures/sabri-unified-application-shell/sabri-unified-application-shell.php
+            tests/fixtures/sabri-unified-application-shell/includes/class-safe-mode.php
+            tests/fixtures/sabri-unified-application-shell/includes/functions.php
+            docs/FILE22-NINTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
+          )
+          for file in "${required[@]}"; do
+            test -f "$file"
+            grep -Fq -- "- \`$file\`" MANIFEST.md
+          done
+          grep -Fq 'functions_declared_by_file' includes/core/class-runtime-trust.php
+          grep -Fq 'shell_symbols_owned' includes/core/class-runtime-trust.php
+          grep -Fq 'public_api_owned' includes/core/class-plugin.php
+          grep -Fq 'shell_create_contract_owned' includes/core/class-safe-mode.php
+          grep -Fq 'test_public_api_functions_are_declared_by_file22_source' tests/NinthCompleteReviewTest.php
+          grep -Fq 'Ninth complete-repository hardening' CHANGELOG.md

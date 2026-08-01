@@ -6,35 +6,63 @@
 |---|---|
 | `supc_invalid_key` | Adapter key is not canonical |
 | `supc_duplicate_key` | Adapter key already exists |
+| `supc_adapter_limit_reached` | The bounded registry already contains 100 adapters |
 | `supc_api_mismatch` | Base Adapter API is incompatible |
 | `supc_invalid_required_capability` | Adapter supplied an empty or noncanonical central capability |
 | `supc_invalid_native_module` | Adapter supplied a malformed native-module owner slug |
 | `supc_invalid_minimum_native_version` | Adapter supplied a malformed semantic minimum version |
+| `supc_invalid_priority` | Adapter supplied a priority outside `-10000..10000` |
 | `supc_invalid_privacy` | Adapter supplied a privacy classification outside the controlled vocabulary |
+| `supc_invalid_group` | Adapter supplied a noncanonical group key |
 | `supc_registration_exception` | Adapter registration threw an isolated exception |
 | `supc_availability_exception` | Adapter failed during availability/state evaluation |
-| `supc_workflow_disabled` | File 22 or unified shell Safe Mode disabled workflows |
+| `supc_workflow_disabled` | File 22 or a trusted File 20 Create contract disabled workflows |
 | `supc_invalid_workflow_request` | Current subject or adapter key is invalid |
-| `supc_workflow_adapter_unavailable` | Requested full Workflow Adapter is missing |
+| `supc_workflow_adapter_unavailable` | Requested full Workflow Adapter or its immutable workflow registration metadata is missing |
 | `supc_workflow_api_mismatch` | Captured Workflow API version is incompatible |
 | `supc_native_workflow_unavailable` | Central permission passed, but native workflow is unavailable |
-| `supc_workflow_permission_denied` | Membership Core, central capability, or adapter policy denied the authenticated subject |
+| `supc_workflow_permission_denied` | Membership Core, immutable central capability, or adapter policy denied the authenticated subject |
 | `supc_native_drafts_unsupported` | Registration contract does not support direct native drafts |
-| `supc_invalid_schema_contract` | Static or subject schema version, vocabulary, privacy, bounds, choices, or size is invalid |
-| `supc_invalid_workflow_payload` | Payload contains unsupported objects, resources, nesting, or nonfinite values |
+| `supc_invalid_schema_contract` | Static or subject schema version, vocabulary, privacy, bounds, nonempty choices, or size is invalid |
+| `supc_invalid_workflow_payload` | Payload contains unsupported objects, resources, excessive item counts/nesting, or nonfinite values |
 | `supc_workflow_payload_too_large` | Encoded payload exceeds 1 MiB |
 | `supc_workflow_payload_unknown_field` | Payload contains a field absent from the authenticated subject's schema |
-| `supc_workflow_payload_field_invalid` | Field value has the wrong type, choice, range, or format |
+| `supc_workflow_payload_field_invalid` | Field value has the wrong type, duplicate/unknown choice, count, range, or format |
 | `supc_workflow_payload_required_field_missing` | A required subject-schema field is absent or empty |
 | `supc_invalid_native_reference` | Native reference is empty, oversized, or noncanonical |
 | `supc_invalid_idempotency_key` | Submission key is not two UUID-v4 values separated by a colon |
 | `supc_invalid_native_result` | Native draft/result envelope is malformed, unsafe, oversized, or has an invalid draft state |
-| `supc_invalid_validation_result` | Native validation envelope or code collections are invalid |
+| `supc_invalid_validation_result` | Native validation envelope or bounded code collections are invalid |
 | `supc_invalid_preview_result` | Preview URL or expiry is invalid |
 | `supc_invalid_native_status` | Native status is outside controlled workflow states |
-| `supc_invalid_canonical_url` | Native owner denied the subject or returned an unsafe URL |
+| `supc_invalid_canonical_url` | Native owner denied the subject or returned an unsafe/oversized URL |
 | `supc_native_workflow_error` | Native `WP_Error` was normalized and raw message/data discarded |
 | `supc_workflow_adapter_exception` | Native operation threw; class and message were not emitted |
+
+## Registry and Create-surface diagnostic codes
+
+| Code | Meaning |
+|---|---|
+| `registry_error_limit_reached` | More than 200 unique request diagnostics were attempted; further entries were collapsed |
+| `invalid_display_metadata` | Adapter label, description, icon, or route was empty, oversized, or contained control characters |
+| `create_surface_safe_mode` | Create-surface diagnostics were not evaluated because Safe Mode was active |
+| `create_surface_subject_unavailable` | No authenticated subject was available for evaluation |
+| `create_surface_subject_not_authorized` | Membership/capability policy prevented adapter evaluation |
+| `create_surface_native_unavailable` | Central authorization passed but no native workflow was available |
+| `invalid_route` | Adapter start route failed the internal-route contract |
+| `unknown_group` | A previously registered or legacy adapter group fell back to the controlled `other` group |
+| `render_exception` | Adapter display metadata threw during isolated rendering |
+
+## Workflow contract-health codes
+
+| Code | Meaning |
+|---|---|
+| `workflow_registration_metadata_missing` | An object implements `Workflow_Adapter`, but its immutable registration snapshot is absent; health fails closed |
+| `workflow_api_mismatch` | The captured workflow API is incompatible; schema and other workflow methods are not invoked |
+| `invalid_schema_contract` | A compatible workflow returned an invalid role-neutral static schema |
+| `workflow_contract_exception` | A compatible workflow threw during static contract inspection; raw exception data was discarded |
+
+A non-workflow adapter is reported as `not_applicable`; it does not receive any of these failure codes.
 
 ## File 22 public API health codes
 
@@ -42,32 +70,41 @@
 |---|---|
 | `public_api_version_mismatch` | File 22 public API version marker is missing or wrong |
 | `public_api_owner_mismatch` | Public API owner marker is missing or foreign |
-| `public_api_function_collision` | One or more public functions/markers were preclaimed; File 22 did not declare a partial API |
+| `public_api_function_collision` | One or more public functions/markers were preclaimed or not Reflection-owned; File 22 did not declare a partial API |
 | `public_api_incomplete` | Required File 22 public functions are not all present |
 
-## File 20 Create contract health codes
+## File 20 package/Create contract health codes
 
 | Code | Meaning |
 |---|---|
-| `file20_contract_version_mismatch` | File 20 Create contract is not exact version 1.0.1 |
-| `file20_contract_owner_mismatch` | File 20 Create contract owner is missing or wrong |
-| `file20_contract_collision` | File 20 producer functions are not owned by the expected shell |
-| `file20_contract_functions_missing` | Required Create producer functions are absent |
-| `file20_contract_unavailable` | File 20 reports its Create producer contract unavailable |
+| `file20_contract_missing` | No File 20 package or Create contract is present; File 20 remains optional at source level |
+| `file20_legacy_contract_missing` | A canonical distributed File 20 version 1.0.0 package is present but the later File 22 Create contract is absent |
+| `file20_visibility_contract_missing` | Role-aware Create visibility cannot be delegated to the distributed File 20 package until it is upgraded |
+| `file20_contract_version_mismatch` | A claimed File 20 Create contract is not exact version 1.0.1 |
+| `file20_contract_owner_mismatch` | Claimed File 20 Create contract owner is missing or wrong |
+| `file20_contract_collision` | Base package or claimed Create functions/class/method are foreign, partial, inherited, or not package-owned |
+| `file20_contract_functions_missing` | A claimed Create contract does not expose both required producer functions |
+| `file20_contract_unavailable` | A trusted File 20 Create contract reports itself unavailable |
 | `file20_contract_exception` | A trusted File 20 readiness callback threw and File 22 failed closed |
+
+The distributed File 20 version 1.0.0 base constants alone are not a Create-contract claim and do not disable File 22.
 
 ## File 21 release-critical health codes
 
 Controlled codes include:
 
 - `social_publication_not_registered`;
+- `social_publication_registration_metadata_missing`;
 - `social_publication_contract_mismatch`;
 - `social_publication_native_version_unreported`;
 - `social_publication_native_version_invalid`;
 - `social_publication_native_version_too_low`;
+- `social_publication_native_version_below_declared_minimum`;
 - `social_publication_temporarily_unavailable`;
+- `social_publication_diagnostic_exception`;
 - `adapter_key_mismatch`;
 - `native_module_mismatch`;
+- `invalid_minimum_native_version`;
 - `minimum_native_version_too_low`;
 - `required_capability_mismatch`;
 - `group_mismatch`;
@@ -101,6 +138,6 @@ Allowed native codes are only:
 
 Every other native code becomes `native_error`. Exceptions use only `native_exception`.
 
-System Check applies fixed row-key and operational-code allowlists. An unknown row key becomes `unrecognized_check`, and an adapter or report-filter code outside the code list becomes `unrecognized_diagnostic`; arbitrary sanitized strings are not treated as safe merely because they look canonical.
+System Check applies fixed row-key and operational-code allowlists, renders at most 100 rows, limits each code collection to 20 normalized values, and caps a reported count at 1000. An unknown row key becomes `unrecognized_check`, and a code outside the allowlist becomes `unrecognized_diagnostic`.
 
 Public messages and diagnostics never expose stacks, paths, patient data, raw payloads, IDs, URLs, native references, raw idempotency keys, exception classes/messages, native error data, or secrets.

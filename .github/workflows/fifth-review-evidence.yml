@@ -1,0 +1,61 @@
+name: File 22 Fifth Complete Review Evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-22-fifth-review-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  fifth-review-evidence:
+    name: Exact-head fifth review regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+      - name: Run cumulative PHPUnit suite
+        run: composer test
+      - name: Verify bootstrap constant collision boundary
+        run: php tests/run-bootstrap-constant-collision-test.php
+      - name: Verify public API marker collision boundary
+        run: php tests/run-public-api-marker-collision-test.php
+      - name: Verify late shortcode privacy boundary
+        run: php tests/run-late-shortcode-privacy-test.php
+      - name: Verify fifth review inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            tests/FifthCompleteReviewTest.php
+            tests/run-bootstrap-constant-collision-test.php
+            tests/run-public-api-marker-collision-test.php
+            tests/run-late-shortcode-privacy-test.php
+            docs/FILE22-FIFTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
+          )
+          for file in "${required[@]}"; do
+            test -f "$file"
+            grep -Fq -- "- \`$file\`" MANIFEST.md
+          done
+          grep -Fq 'core constant is preclaimed' CHANGELOG.md
+          grep -Fq 'same-origin HTTPS' docs/ADAPTER-CONTRACT.md
+          grep -Fq 'private response boundary' docs/PRIVACY.md

@@ -18,7 +18,10 @@ final class Page_Resolver {
 	private const OPTION_KEY = 'supc_create_page_id';
 	private const MANAGED_META = '_supc_managed_page';
 	private const REPAIR_LOCK_OPTION = 'supc_create_page_repair_lock';
+	private const EMERGENCY_OPTION = 'supc_emergency_disabled';
 	private const REPAIR_LOCK_TTL = 60;
+	private const MAX_DISCOVERY_CANDIDATES = 100;
+	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD';
 	private const APPROVED_SLUGS = array( 'create', 'create-content', 'platform-create', 'sabri-create' );
 
 	private static ?int $resolved_page_id = null;
@@ -143,7 +146,8 @@ final class Page_Resolver {
 					return array( 'result' => 'invalid_candidate', 'page_id' => 0 );
 				}
 
-				if ( ! self::persist_mapping( $page_id ) ) {
+				$persistence = self::persist_mapping( $page_id );
+				if ( ! $persistence['persisted'] ) {
 					return array( 'result' => 'mapping_persistence_failed', 'page_id' => $page_id );
 				}
 
@@ -156,7 +160,10 @@ final class Page_Resolver {
 				return $created;
 			}
 
-			if ( ! self::persist_mapping( $created['page_id'] ) ) {
+			$persistence = self::persist_mapping( $created['page_id'] );
+			if ( ! $persistence['persisted'] ) {
+				$page_rolled_back = self::rollback_created_page( $created['page_id'] );
+				do_action( 'supc_created_page_mapping_rollback', $created['page_id'], $persistence['restored'], $page_rolled_back );
 				return array( 'result' => 'mapping_persistence_failed', 'page_id' => $created['page_id'] );
 			}
 
@@ -173,12 +180,7 @@ final class Page_Resolver {
 
 	public static function url(): string {
 		$page_id = self::resolve_page_id( false );
-		if ( $page_id <= 0 ) {
-			return '';
-		}
-
-		$url = get_permalink( $page_id );
-		return is_string( $url ) ? $url : '';
+		return $page_id > 0 ? self::validated_permalink( $page_id ) : '';
 	}
 
 	public static function is_ready(): bool {
@@ -195,12 +197,60 @@ final class Page_Resolver {
 			return false;
 		}
 
-		$content   = (string) get_post_field( 'post_content', $page_id );
-		$permalink = get_permalink( $page_id );
-		return has_shortcode( $content, self::SHORTCODE ) && is_string( $permalink ) && '' !== $permalink;
+		$content = (string) get_post_field( 'post_content', $page_id );
+		return has_shortcode( $content, self::SHORTCODE ) && '' !== self::validated_permalink( $page_id );
+	}
+
+	private static function validated_permalink( int $page_id ): string {
+		$url = get_permalink( $page_id );
+		if ( ! is_string( $url ) ) {
+			return '';
+		}
+
+		$url = trim( $url );
+		if ( '' === $url || 1 === preg_match( '/[\x00-\x1F\x7F]/', $url ) || str_contains( $url, '\\' ) ) {
+			return '';
+		}
+
+		$validated = wp_validate_redirect( $url, '' );
+		if ( '' === $validated ) {
+			return '';
+		}
+		if ( str_starts_with( $validated, '/' ) ) {
+			return str_starts_with( $validated, '//' ) ? '' : $validated;
+		}
+
+		$target = wp_parse_url( $validated );
+		$home   = wp_parse_url( home_url( '/' ) );
+		if ( ! is_array( $target ) || ! is_array( $home ) ) {
+			return '';
+		}
+
+		$target_scheme = strtolower( (string) ( $target['scheme'] ?? '' ) );
+		$home_scheme   = strtolower( (string) ( $home['scheme'] ?? '' ) );
+		$target_host   = strtolower( (string) ( $target['host'] ?? '' ) );
+		$home_host     = strtolower( (string) ( $home['host'] ?? '' ) );
+		if (
+			'https' !== $target_scheme ||
+			'https' !== $home_scheme ||
+			'' === $target_host ||
+			$target_host !== $home_host ||
+			isset( $target['user'] ) ||
+			isset( $target['pass'] )
+		) {
+			return '';
+		}
+
+		$target_port = isset( $target['port'] ) ? (int) $target['port'] : 443;
+		$home_port   = isset( $home['port'] ) ? (int) $home['port'] : 443;
+		return $target_port === $home_port ? $validated : '';
 	}
 
 	/**
+	 * Search a bounded set of likely shortcode-bearing pages. Two matches are
+	 * sufficient to classify ambiguity; the higher bound keeps administrator
+	 * selection useful without permitting an unbounded full-site scan.
+	 *
 	 * @return array<int, int>
 	 */
 	private static function find_shortcode_pages(): array {
@@ -208,7 +258,9 @@ final class Page_Resolver {
 			array(
 				'post_type'              => 'page',
 				'post_status'            => 'publish',
-				'posts_per_page'         => -1,
+				'posts_per_page'         => self::MAX_DISCOVERY_CANDIDATES + 1,
+				's'                      => self::SHORTCODE,
+				'sentence'               => true,
 				'orderby'                => 'ID',
 				'order'                  => 'ASC',
 				'fields'                 => 'ids',
@@ -223,6 +275,9 @@ final class Page_Resolver {
 			$page_id = (int) $page_id;
 			if ( self::is_valid_page( $page_id ) ) {
 				$matches[] = $page_id;
+				if ( count( $matches ) >= self::MAX_DISCOVERY_CANDIDATES ) {
+					break;
+				}
 			}
 		}
 
@@ -263,6 +318,8 @@ final class Page_Resolver {
 
 		$page_id = (int) $page_id;
 		if ( ! self::is_valid_managed_page( $page_id, $slug ) ) {
+			$rolled_back = self::rollback_created_page( $page_id );
+			do_action( 'supc_invalid_managed_page_rollback', $page_id, $rolled_back );
 			return array( 'result' => 'managed_page_validation_failed', 'page_id' => $page_id );
 		}
 
@@ -276,25 +333,101 @@ final class Page_Resolver {
 			&& in_array( $managed, array( 1, '1' ), true );
 	}
 
-	private static function persist_mapping( int $page_id ): bool {
+	/**
+	 * @return array{persisted:bool,restored:bool}
+	 */
+	private static function persist_mapping( int $page_id ): array {
+		$missing         = new \stdClass();
+		$previous        = get_option( self::OPTION_KEY, $missing );
+		$previous_exists = $missing !== $previous;
+
 		update_option( self::OPTION_KEY, $page_id, false );
-		if ( $page_id !== absint( get_option( self::OPTION_KEY, 0 ) ) ) {
-			return false;
+		if ( $page_id === absint( get_option( self::OPTION_KEY, 0 ) ) ) {
+			self::reset_cache();
+			self::$resolved_page_id = $page_id;
+			return array( 'persisted' => true, 'restored' => true );
 		}
 
+		$restored = self::restore_mapping( $previous_exists, $previous );
 		self::reset_cache();
-		self::$resolved_page_id = $page_id;
-		return true;
+		do_action( 'supc_mapping_persistence_rollback', $page_id, $restored );
+		return array( 'persisted' => false, 'restored' => $restored );
+	}
+
+	private static function restore_mapping( bool $previous_exists, mixed $previous ): bool {
+		if ( ! $previous_exists ) {
+			delete_option( self::OPTION_KEY );
+			$missing = new \stdClass();
+			return $missing === get_option( self::OPTION_KEY, $missing );
+		}
+
+		update_option( self::OPTION_KEY, $previous, false );
+		$missing = new \stdClass();
+		$current = get_option( self::OPTION_KEY, $missing );
+		return $missing !== $current && self::option_values_equal( $previous, $current );
+	}
+
+	private static function option_values_equal( mixed $left, mixed $right ): bool {
+		if ( $left === $right ) {
+			return true;
+		}
+
+		try {
+			return serialize( $left ) === serialize( $right );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return false;
+		}
+	}
+
+	private static function rollback_created_page( int $page_id ): bool {
+		if ( function_exists( 'wp_delete_post' ) ) {
+			$deleted = wp_delete_post( $page_id, true );
+			if ( false !== $deleted && null !== $deleted && self::created_record_is_quarantined( $page_id ) ) {
+				return true;
+			}
+		}
+
+		if ( function_exists( 'wp_update_post' ) ) {
+			$updated = wp_update_post(
+				array(
+					'ID'           => $page_id,
+					'post_status'  => 'draft',
+					'post_content' => '',
+				),
+				true
+			);
+			if ( ! is_wp_error( $updated ) && $page_id === (int) $updated && self::created_record_is_quarantined( $page_id ) ) {
+				return true;
+			}
+		}
+
+		if ( self::created_record_is_quarantined( $page_id ) ) {
+			return true;
+		}
+
+		update_option( self::EMERGENCY_OPTION, true, false );
+		$emergency_set = (bool) get_option( self::EMERGENCY_OPTION, false );
+		do_action( 'supc_created_page_cleanup_failed', $page_id, $emergency_set );
+		return false;
+	}
+
+	private static function created_record_is_quarantined( int $page_id ): bool {
+		$status = get_post_status( $page_id );
+		if ( false === $status || 'publish' !== $status ) {
+			return true;
+		}
+
+		$content = (string) get_post_field( 'post_content', $page_id );
+		return ! has_shortcode( $content, self::SHORTCODE );
 	}
 
 	private static function acquire_repair_lock(): string {
 		$existing = get_option( self::REPAIR_LOCK_OPTION, false );
-		if ( is_array( $existing ) ) {
-			$created = (int) ( $existing['created'] ?? 0 );
-			if ( $created > 0 && $created < time() - self::REPAIR_LOCK_TTL ) {
-				delete_option( self::REPAIR_LOCK_OPTION );
-				$existing = false;
-			}
+		$now      = time();
+		if ( false !== $existing && ! self::repair_lock_is_active( $existing, $now ) ) {
+			delete_option( self::REPAIR_LOCK_OPTION );
+			$existing = false;
 		}
 
 		if ( false !== $existing ) {
@@ -302,13 +435,29 @@ final class Page_Resolver {
 		}
 
 		$token = wp_generate_uuid4();
+		if ( 1 !== preg_match( self::UUID_V4_PATTERN, $token ) ) {
+			return '';
+		}
+
 		$added = add_option(
 			self::REPAIR_LOCK_OPTION,
-			array( 'token' => $token, 'created' => time() ),
+			array( 'token' => $token, 'created' => $now ),
 			'',
 			false
 		);
 		return $added ? $token : '';
+	}
+
+	private static function repair_lock_is_active( mixed $lock, int $now ): bool {
+		if ( ! is_array( $lock ) ) {
+			return false;
+		}
+
+		$token   = (string) ( $lock['token'] ?? '' );
+		$created = (int) ( $lock['created'] ?? 0 );
+		return 1 === preg_match( self::UUID_V4_PATTERN, $token )
+			&& $created > $now - self::REPAIR_LOCK_TTL
+			&& $created <= $now + self::REPAIR_LOCK_TTL;
 	}
 
 	private static function release_repair_lock( string $token ): void {

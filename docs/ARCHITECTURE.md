@@ -25,14 +25,22 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 
 ## Dependency model
 
-File 00 is a mandatory hard dependency. Activation fails closed if the required Membership Core version or API is unavailable.
+File 00 is a mandatory hard dependency. Activation fails closed unless the required Membership Core runtime and database versions are compatible, `SMC_FILE` and `SMC_PATH` resolve coherently to the canonical `sabri-membership-core/sabri-membership-core.php` package, and `smc_user_status()` originates from that package directory. A coherent foreign directory with copied constants and a same-named callback is not accepted as the authorization authority.
 
-File 20 is a production integration, but File 22 remains safe when the shell is absent. File 21 and all other modules are adapter-specific dependencies. An unavailable adapter is hidden without disabling unrelated healthy adapters.
+File 20 is optional when genuinely absent, so File 22 remains safe without the shell. Once any File 20 runtime or contract symbol is claimed, however, the claim must resolve to the canonical `sabri-unified-application-shell/sabri-unified-application-shell.php` package, canonical slug, coherent real paths, valid runtime version, Reflection-owned Safe Mode class, and Reflection-owned Create contract functions. An incomplete, obsolete, colliding, or foreign-source claim fails closed and cannot clear Safe Mode or be invoked by Administrator health checks.
+
+File 21 and all other content modules are adapter-specific dependencies. An unavailable adapter is hidden without disabling unrelated healthy adapters.
+
+Dependency versions use bounded strict Semantic Versioning. Core numbers are compared without integer conversion; prerelease identifiers follow numeric-before-nonnumeric and left-to-right identifier rules; a stable release outranks its prerelease; build metadata is retained for diagnostics but ignored for precedence. Malformed, whitespace-padded, leading-zero, or oversized values fail closed.
+
+## Runtime ownership model
+
+Marker constants establish declared contract identity but do not prove executable ownership. File 22 reflects every public `supc_*` function and requires the declaration source to be exactly `includes/core/functions.php`. File 20 functions and the Safe Mode class must originate inside the verified canonical File 20 package directory. Function names, class names, version strings, and owner markers copied by another plugin never become trusted execution authority.
 
 ## Permission order
 
-1. File 22 Safe Mode and File 20 Safe Mode.
-2. Membership Core availability.
+1. File 22 Safe Mode and any verified File 20 Safe Mode.
+2. Canonical Membership Core package, runtime/database compatibility, and callback provenance.
 3. Account status and suspension decision.
 4. Required central WordPress capability.
 5. Adapter-specific restriction.
@@ -44,6 +52,10 @@ An adapter may restrict access; it may never expand or bypass the central decisi
 One native record may be projected into Home, News, a profile timeline, search, and a module archive. File 22 must not create duplicate permanent records for those surfaces.
 
 A `Workflow_Adapter` creates, validates, previews, submits, and reports status through its native module. File 22 passes guarded server-side calls but does not persist the native payload, protected evidence, upload bytes, or final record.
+
+## Create-page transaction boundary
+
+Create-page mapping repair snapshots the exact prior option state without a magic sentinel. If a new File 22-managed page cannot be mapped, File 22 first attempts permanent deletion and then quarantines the exact inserted record as an empty nonpublic draft. If a published shortcode record cannot be removed or quarantined, File 22 sets its emergency-disable boundary and emits controlled rollback evidence. Existing candidate pages are never deleted or rewritten by this cleanup path.
 
 ## Registration lifecycle
 

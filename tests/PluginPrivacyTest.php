@@ -8,7 +8,7 @@ use Sabri\UniversalComposer\Core\Plugin;
 
 if ( ! function_exists( 'nocache_headers' ) ) {
 	function nocache_headers(): void {
-		++$GLOBALS['supc_test_nocache_headers'];
+		$GLOBALS['supc_test_nocache_headers'] = (int) ( $GLOBALS['supc_test_nocache_headers'] ?? 0 ) + 1;
 	}
 }
 
@@ -16,6 +16,10 @@ final class PluginPrivacyTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['supc_test_nocache_headers'] = 0;
 		$GLOBALS['supc_test_actions_fired'] = array();
+		$GLOBALS['supc_test_enqueued_css'] = array();
+
+		$property = new ReflectionProperty( Plugin::class, 'private_headers_applied' );
+		$property->setValue( Plugin::instance(), false );
 	}
 
 	protected function tearDown(): void {
@@ -42,7 +46,7 @@ final class PluginPrivacyTest extends TestCase {
 		$this->assertTrue( $robots['noarchive'] );
 	}
 
-	public function test_direct_shortcode_render_enforces_private_headers_without_detectable_page(): void {
+	public function test_direct_shortcode_render_enforces_private_headers_and_visual_assets_without_detectable_page(): void {
 		$GLOBALS['supc_test_options'] = array();
 		$GLOBALS['supc_test_pages'] = array();
 		$GLOBALS['supc_test_is_page'] = 0;
@@ -52,6 +56,7 @@ final class PluginPrivacyTest extends TestCase {
 		$output = Plugin::instance()->render_shortcode();
 
 		$this->assertIsString( $output );
+		$this->assertArrayHasKey( 'supc-create-surface', $GLOBALS['supc_test_enqueued_css'] );
 		$this->assertSame( 1, $GLOBALS['supc_test_nocache_headers'] );
 		$this->assertTrue( defined( 'DONOTCACHEPAGE' ) && DONOTCACHEPAGE );
 		$this->assertTrue( defined( 'DONOTCACHEOBJECT' ) && DONOTCACHEOBJECT );

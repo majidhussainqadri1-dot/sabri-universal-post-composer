@@ -1,0 +1,63 @@
+name: File 22 Seventh Complete Review Evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-22-seventh-review-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  seventh-review-evidence:
+    name: Exact-head seventh review regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+      - name: Run cumulative PHPUnit suite
+        run: composer test
+      - name: Verify spoofed Membership Core rejection
+        run: php tests/run-untrusted-membership-core-test.php
+      - name: Verify bootstrap and API global-scope isolation
+        run: php tests/run-global-scope-isolation-test.php
+      - name: Verify managed-page rollback contract
+        run: php tests/run-managed-page-rollback-test.php
+      - name: Verify seventh review inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            includes/core/class-version.php
+            tests/SeventhCompleteReviewTest.php
+            tests/run-untrusted-membership-core-test.php
+            tests/run-global-scope-isolation-test.php
+            docs/FILE22-SEVENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
+          )
+          for file in "${required[@]}"; do
+            test -f "$file"
+            grep -Fq -- "- \`$file\`" MANIFEST.md
+          done
+          grep -Fq 'Membership Core status callback to originate' CHANGELOG.md
+          grep -Fqi 'build metadata' docs/ARCHITECTURE.md
+          grep -Fq 'compare_prerelease' includes/core/class-version.php
+          grep -Fq 'SMC_FILE' includes/core/class-permission-resolver.php
+          grep -Fq 'supc_created_page_mapping_rollback' includes/core/class-page-resolver.php

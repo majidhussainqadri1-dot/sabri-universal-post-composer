@@ -6,6 +6,12 @@
 declare(strict_types=1);
 
 define( 'ABSPATH', __DIR__ . '/' );
+define( 'SUPC_PATH', dirname( __DIR__ ) . '/' );
+
+function get_option( string $key, mixed $default = false ): mixed {
+	unset( $key );
+	return $default;
+}
 
 function supc_register_adapter( $adapter ) {
 	unset( $adapter );
@@ -13,6 +19,9 @@ function supc_register_adapter( $adapter ) {
 }
 
 require dirname( __DIR__ ) . '/includes/core/functions.php';
+require dirname( __DIR__ ) . '/includes/core/class-version.php';
+require dirname( __DIR__ ) . '/includes/core/class-runtime-trust.php';
+require dirname( __DIR__ ) . '/includes/core/class-safe-mode.php';
 
 $failures = array();
 if ( ! defined( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' ) || false !== SUPC_PUBLIC_API_FUNCTIONS_OWNED ) {
@@ -35,10 +44,13 @@ foreach ( array( 'supc_unregister_adapter', 'supc_adapter_available', 'supc_work
 if ( 'foreign' !== supc_register_adapter( null ) ) {
 	$failures[] = 'foreign producer was overwritten';
 }
+if ( ! \Sabri\UniversalComposer\Core\Safe_Mode::disabled() ) {
+	$failures[] = 'File 22 remained interactive after a public API collision';
+}
 
 if ( array() !== $failures ) {
 	fwrite( STDERR, implode( PHP_EOL, $failures ) . PHP_EOL );
 	exit( 1 );
 }
 
-echo "File 22 public API collision contract passed.\n";
+echo "File 22 public API collision contract passed and Safe Mode engaged.\n";

@@ -2,6 +2,114 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Twelfth complete-review corrections
+
+- Restored Create-surface card rendering by correcting the Contract Boundary class reference and retained immutable registration metadata for group and privacy decisions.
+- Added the modular Workflow Validator to static-analysis and repository evidence discovery, and moved stale coordinator-only evidence probes to the validator that now owns those contracts.
+- Preserved live post-adapter authorization race checks behind explicit mutable-authority boundaries without weakening fail-closed behavior.
+- Rejected URL values containing either a username or password credential component, including username-only forms.
+- Captured each Diagnostic Adapter health report once per administrator row so status and codes derive from one coherent snapshot.
+- Made the administrator repair endpoint reject requests whose HTTP method is absent as well as methods other than POST.
+- Updated the File 21 diagnostic fixture to satisfy the explicit status/codes contract and added focused URL and health-snapshot regressions.
+- Made the cumulative test environment warning-free and added a dedicated exact-head twelfth review gate that fails on PHPUnit warnings.
+
+### Eleventh full defect census and real-package hardening
+
+- Audited File 22 against the distributed File 00 Membership Core 1.0.1 and File 20 Unified Application Shell 1.0.0 packages instead of relying only on stronger synthetic fixtures.
+- Separated canonical legacy File 20 package identity from the later optional File 20 Create contract so the real File 20 version 1.0.0 no longer falsely disables the entire Composer.
+- Detected marker-only, function-only, partial, foreign, and inherited File 20 Create claims atomically while preserving the supported legacy Create URL filter.
+- Registered role-aware File 20 visibility integration only when the complete Reflection-owned Create contract exists and reported the distributed legacy package honestly as an integration warning rather than a collision.
+- Bounded adapter registration, registry diagnostics, adapter priorities, Create-page discovery, administrator System Check rows/counts, adapter display metadata, workflow arrays, validation-code collections, multiselect values, and URL lengths.
+- Required canonical adapter group metadata, strict central Semantic Versioning for workflow and administrator contracts, valid UUID-v4 repair locks, validated generated idempotency keys, and semantically verified option rollback.
+- Prevented Create-surface System Check from reporting PASS when Safe Mode, a missing subject, central denial, or native unavailability prevented actual evaluation.
+- Added real File 20 package-shape tests, partial-contract tests, transaction tests, bounded-registry tests, strict workflow tests, and an eleventh exact-head evidence workflow.
+
+### Tenth complete-repository hardening
+
+- Forced File 22 Safe Mode when its declared public PHP API is partial, colliding, or executable from a foreign source so the internal Composer cannot run beside another producer.
+- Applied Safe Mode as the first Registry availability and creation-state gate, preventing positive fallback-removal signals or native method execution during emergency disable.
+- Prevented File 20 trust evaluation from autoloading unverified classes and required the executable Safe Mode method itself to be public, static, and declared inside the canonical package.
+- Rejected package-local child classes that inherit executable Safe Mode code from a foreign source.
+- Added focused public-API collision, no-autoload, inherited-method, Registry and exact-head evidence regressions.
+
+### Ninth complete-repository hardening
+
+- Added Reflection-backed source ownership for the complete File 22 public PHP API instead of trusting marker constants and function names alone.
+- Required a claimed File 20 runtime to resolve to the canonical `sabri-unified-application-shell/sabri-unified-application-shell.php` package with a valid version, coherent real paths, canonical slug, and owned Safe Mode class and Create contract functions.
+- Kept File 20 optional when absent, while making incomplete, obsolete, colliding, or foreign-source File 20 claims fail closed.
+- Prevented Administrator health checks from invoking an unowned File 20 producer and mapped source-provenance failures to existing controlled collision diagnostics.
+- Captured Membership Core availability once per System Check row so status and codes cannot disagree within one report.
+- Added canonical File 20 fixtures, runtime-provenance PHPUnit and isolated spoof tests, and a ninth exact-head evidence workflow.
+
+### Eighth complete-repository hardening
+
+- Replaced PHP `version_compare()` with a bounded Semantic Versioning comparator that implements numeric, nonnumeric, prerelease-length, stable-release, and build-metadata precedence correctly.
+- Bound version metadata to 255 bytes and rejected leading or trailing whitespace before any compatibility decision.
+- Required File 00 to expose a compatible `SMC_DB_VERSION` and the canonical `sabri-membership-core/sabri-membership-core.php` package identity in addition to coherent runtime provenance.
+- Removed the magic missing-option sentinel so failed Create-page mapping writes restore literal strings, `null`, and other prior option values exactly.
+- Added a delete-failure quarantine path that converts the exact newly inserted Create record to a nonpublic empty draft; an unremovable published shortcode triggers File 22 emergency disable and controlled evidence.
+- Added canonical Membership fixtures, official SemVer precedence regressions, exact mapping-state tests, rollback quarantine tests, and an eighth exact-head evidence workflow.
+
+### Seventh complete-repository hardening
+
+- Required the mandatory Membership Core status callback to originate from the declared `SMC_FILE`/`SMC_PATH` runtime before File 22 accepts it as an authorization authority.
+- Made Create-page mapping repair transactional: a failed option write restores the prior mapping and removes only the exact new File 22-managed page created by that attempt.
+- Stopped treating a `null` or `false` `wp_delete_post()` result as successful rollback evidence.
+- Added strict Semantic Versioning validation, including prerelease plus build metadata, and ignored build metadata when comparing compatibility precedence.
+- Isolated bootstrap and public-API preflight variables inside static closures so generic names do not leak into the WordPress global symbol table.
+- Added seventh-cycle PHPUnit, isolated Membership provenance/global-scope contracts, transactional repair regressions, and an exact-head evidence workflow.
+
+### Sixth complete-repository hardening
+
+- Failed closed before loading source files when any File 22-owned class or interface is preclaimed, preventing fatal redeclaration and mixed runtimes.
+- Removed authorization and operational allow caches so Membership status, Safe Mode, capability, native availability, and adapter policy are re-evaluated on every call.
+- Trusted the File 20 Safe Mode callback only when the exact version, canonical owner, and function-ownership markers agree.
+- Narrowed missing-mapping discovery to likely shortcode-bearing pages while retaining IDs-only retrieval and exact candidate validation.
+- Rolled back only the exact newly inserted File 22-managed page when post-insert ownership or route validation fails.
+- Rejected malformed Workflow API metadata atomically while retaining well-formed incompatible versions for controlled diagnostics.
+- Added sixth-cycle PHPUnit, isolated symbol/Safe-Mode/discovery/rollback contracts, and an exact-head evidence workflow.
+
+### Fifth complete-repository hardening
+
+- Failed closed before loading runtime files when any File 22 core constant is preclaimed, preventing foreign path, URL, version, or contract values from controlling bootstrap.
+- Treated every public API marker, including `SUPC_PUBLIC_API_COLLISIONS`, as an ownership boundary and required an empty collision marker in System Check.
+- Rejected filtered external, downgraded, credential-bearing, malformed, protocol-relative, and mismatched-port Create-page permalinks.
+- Recovered automatically from malformed, invalid-token, expired, or implausibly future-dated repair locks while preserving valid current lock serialization.
+- Refused to evaluate account or adapter state when a direct shortcode runs after output has begun and private response headers can no longer be applied.
+- Printed the Create-surface stylesheet once for a secure direct render occurring after the normal head style queue.
+- Harmonized schema documentation with the implemented normalization boundary: unknown top-level native metadata is discarded, while unknown field-contract properties remain rejected.
+- Added fifth-cycle PHPUnit and isolated collision/privacy contracts plus an exact-head evidence workflow.
+
+### Fourth complete-repository hardening
+
+- Enqueued Create-surface CSS at the actual direct shortcode render boundary so template, widget, and programmatic renders remain styled as well as private.
+- Required interactive workflow permission denial to precede workflow compatibility disclosure and every native or schema method.
+- Made incompatible workflow health return immediately without invoking unsupported schema methods.
+- Made a declared Workflow Adapter without immutable workflow registration metadata fail closed instead of passing as not applicable.
+- Required `select` and `multiselect` schema fields to declare at least one canonical choice.
+- Removed mutable capability re-reading from the legacy adapter permission helper and made adapter authorization exceptions fail closed.
+- Pinned Phase 22D evidence checkout to the exact pull-request head and expanded the repository contract to every cumulative review asset.
+- Added the fourth complete-repository review record and focused regression coverage for direct assets, workflow health, authorization ordering, choice schemas, and immutable helper authorization.
+
+### Third post-merge hardening
+
+- Applied the immutable central capability gate before workflow compatibility and native availability classification.
+- Isolated duplicate-key collision diagnostics from the active registered adapter's runtime error slot.
+- Made equal-priority ordering deterministic by canonical adapter key instead of mutable labels.
+- Required administrator static adapter health to use immutable registration metadata for API, owner, capability, minimum version, group, and privacy.
+- Required File 21's actual native version to satisfy both the platform floor and the adapter's declared minimum.
+- Preserved newly introduced controlled registration and File 21 diagnostic codes in the administrator allowlist.
+- Added a third independent review record and focused regression coverage for authorization ordering, duplicate diagnostics, deterministic ordering, immutable administrator health, and monotonic native-version compatibility.
+
+### Second post-merge hardening
+
+- Extended the immutable registration contract to include privacy class, group, priority, and minimum native version alongside capability and native owner.
+- Prevented mutable adapters from relabeling sensitive workflows as public, moving Create cards between groups, changing ordering, or rewriting declared compatibility after registration.
+- Required File 21 release-readiness diagnostics to use immutable base/workflow contracts while retaining dynamic operational health and actual native-version reporting.
+- Kept incompatible Workflow Adapters available for controlled diagnostics but removed them from invokable Create-surface availability.
+- Cleared stale registration/runtime errors after successful corrected re-registration or explicit unregistration.
+- Added independent second-post-merge regression coverage for structural metadata snapshots, Create-surface privacy/group integrity, workflow compatibility, stale diagnostics, and File 21 readiness.
+
 ### Cumulative corrective reconciliation
 
 - Reconciled Phases 22B–22E into one Draft PR targeting canonical `main`.
@@ -27,7 +135,7 @@
 - Mandatory Sabri Membership Core activation and permission boundary.
 - Versioned adapter API with base, workflow, and diagnostic contracts.
 - Canonical adapter-key validation and collision diagnostics.
-- Per-adapter exception isolation and per-request availability caching.
+- Per-adapter exception isolation with live authorization and availability re-evaluation.
 - Deterministic adapter ordering.
 - Safe Create page creation and resolution without overwriting existing pages.
 - Private-surface noindex, noarchive, and no-cache controls.
@@ -63,7 +171,7 @@
 - File 21 version `1.0.3` is the frozen minimum owner for the first release-critical social publication adapter.
 - File 21 must implement the diagnostic contract and declare the canonical `sabri_feed_create_posts` capability.
 - Wrong owner, wrong capability, wrong group/privacy class, old declared version, old actual runtime version, route-only integration, and missing subject schema are release failures.
-- Empty capability, malformed native owner, malformed minimum version, and unknown privacy metadata are rejected at registration for every adapter type.
+- Empty capability, malformed native owner, malformed minimum version, malformed Workflow API version, and unknown privacy metadata are rejected at registration for every relevant adapter type.
 - A duplicate `social_publication` key is not accepted as successful File 21 registration.
 - File 21 fallback removal requires the exact File 20 producer contract and current-user Create visibility; a version string alone is insufficient.
 - WordPress readme no longer declares a stable development tag.
