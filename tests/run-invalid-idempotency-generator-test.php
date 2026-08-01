@@ -17,6 +17,7 @@ require dirname( __DIR__ ) . '/includes/contracts/interface-workflow-adapter.php
 require dirname( __DIR__ ) . '/includes/core/class-version.php';
 require dirname( __DIR__ ) . '/includes/core/class-permission-resolver.php';
 require dirname( __DIR__ ) . '/includes/core/class-registry.php';
+require dirname( __DIR__ ) . '/includes/core/class-workflow-validator.php';
 require dirname( __DIR__ ) . '/includes/core/class-workflow-coordinator.php';
 
 $permissions = new \Sabri\UniversalComposer\Core\Permission_Resolver();

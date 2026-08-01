@@ -59,9 +59,15 @@ final class Workflow_Validator {
 			if ( ! Contract_Boundary::version( $version ) ) {
 				return $this->error( 'invalid_schema_contract', $adapter_key );
 			}
-			$schema = $user_id > 0 && $contract['subject_schema_extension']
-				? $adapter->schema_for_user( $user_id )
-				: $adapter->schema();
+			if ( $user_id > 0 && $contract['subject_schema_extension'] ) {
+				$subject_schema = array( $adapter, 'schema_for_user' );
+				if ( ! is_callable( $subject_schema ) ) {
+					return $this->error( 'invalid_schema_contract', $adapter_key );
+				}
+				$schema = call_user_func( $subject_schema, $user_id );
+			} else {
+				$schema = $adapter->schema();
+			}
 			if ( ! is_array( $schema ) || ! $this->bounded_array( $schema, self::MAX_SCHEMA_BYTES ) ) {
 				return $this->error( 'invalid_schema_contract', $adapter_key );
 			}
@@ -129,7 +135,10 @@ final class Workflow_Validator {
 		return null;
 	}
 
-	/** @param mixed $result @return array{valid:bool,errors:array<int,string>,warnings:array<int,string>}|WP_Error */
+	/**
+	 * @param mixed $result Native result.
+	 * @return array{valid:bool,errors:array<int,string>,warnings:array<int,string>}|WP_Error
+	 */
 	public function validation_result( mixed $result, string $adapter_key ): array|WP_Error {
 		if (
 			! is_array( $result ) ||
@@ -153,7 +162,10 @@ final class Workflow_Validator {
 		return array( 'valid' => $result['valid'], 'errors' => $errors, 'warnings' => $warnings );
 	}
 
-	/** @param mixed $result @return array{preview_url:string,expires_at:int}|WP_Error */
+	/**
+	 * @param mixed $result Native result.
+	 * @return array{preview_url:string,expires_at:int}|WP_Error
+	 */
 	public function preview_result( mixed $result, string $adapter_key ): array|WP_Error {
 		if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) ) {
 			return $this->error( 'invalid_preview_result', $adapter_key );
@@ -167,7 +179,10 @@ final class Workflow_Validator {
 		return array( 'preview_url' => $url, 'expires_at' => $expires_at );
 	}
 
-	/** @param mixed $result @return array<string,mixed>|WP_Error */
+	/**
+	 * @param mixed $result Native result.
+	 * @return array<string,mixed>|WP_Error
+	 */
 	public function draft_result( mixed $result, string $adapter_key ): array|WP_Error {
 		if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) ) {
 			return $this->error( 'invalid_native_result', $adapter_key );
@@ -185,7 +200,10 @@ final class Workflow_Validator {
 		return array( 'native_reference' => $reference, 'status' => $status );
 	}
 
-	/** @param mixed $result @return array<string,mixed>|WP_Error */
+	/**
+	 * @param mixed $result Native result.
+	 * @return array<string,mixed>|WP_Error
+	 */
 	public function status_result( mixed $result, string $adapter_key ): array|WP_Error {
 		if ( ! is_array( $result ) || ! $this->bounded_array( $result, self::MAX_RESULT_BYTES ) ) {
 			return $this->error( 'invalid_native_result', $adapter_key );
@@ -253,7 +271,10 @@ final class Workflow_Validator {
 		return $target_port === $home_port ? $validated : '';
 	}
 
-	/** @param array<mixed> $fields @return array<string,array<string,mixed>>|null */
+	/**
+	 * @param array<mixed> $fields Native field definitions.
+	 * @return array<string,array<string,mixed>>|null
+	 */
 	private function fields( array $fields ): ?array {
 		if ( count( $fields ) > self::MAX_SCHEMA_FIELDS ) {
 			return null;

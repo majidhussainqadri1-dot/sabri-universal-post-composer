@@ -90,7 +90,10 @@ final class Workflow_Coordinator {
 		);
 	}
 
-	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
+	/**
+	 * @param array<string,mixed> $payload Native payload.
+	 * @return array<string,mixed>|WP_Error
+	 */
 	public function create_draft( int $user_id, string $adapter_key, ?string $native_reference, array $payload ): array|WP_Error {
 		if ( null !== $native_reference && ! $this->validator->valid_reference( $native_reference ) ) {
 			return $this->error( 'invalid_native_reference', $adapter_key );
@@ -117,7 +120,10 @@ final class Workflow_Coordinator {
 		}
 	}
 
-	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
+	/**
+	 * @param array<string,mixed> $payload Native payload.
+	 * @return array<string,mixed>|WP_Error
+	 */
 	public function validate( int $user_id, string $adapter_key, array $payload ): array|WP_Error {
 		$adapter = $this->resolve( $user_id, $adapter_key, true );
 		if ( $adapter instanceof WP_Error ) {
@@ -141,7 +147,10 @@ final class Workflow_Coordinator {
 		}
 	}
 
-	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
+	/**
+	 * @param array<string,mixed> $payload Native payload.
+	 * @return array<string,mixed>|WP_Error
+	 */
 	public function preview( int $user_id, string $adapter_key, array $payload ): array|WP_Error {
 		$adapter = $this->resolve( $user_id, $adapter_key, true );
 		if ( $adapter instanceof WP_Error ) {
@@ -165,7 +174,10 @@ final class Workflow_Coordinator {
 		}
 	}
 
-	/** @param array<string,mixed> $payload @return array<string,mixed>|WP_Error */
+	/**
+	 * @param array<string,mixed> $payload Native payload.
+	 * @return array<string,mixed>|WP_Error
+	 */
 	public function submit( int $user_id, string $adapter_key, string $idempotency_key, array $payload ): array|WP_Error {
 		if ( ! $this->validator->valid_idempotency_key( $idempotency_key ) ) {
 			return $this->error( 'invalid_idempotency_key', $adapter_key );
