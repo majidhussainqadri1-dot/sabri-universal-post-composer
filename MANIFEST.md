@@ -111,6 +111,7 @@ Historical phase review records remain evidence for their exact earlier source h
 - `tests/EleventhCompleteReviewTest.php`
 - `tests/EleventhWorkflowHardeningTest.php`
 - `tests/FifthCompleteReviewTest.php`
+- `tests/FounderAdminCreateSurfaceRegressionTest.php`
 - `tests/FourthCompleteReviewTest.php`
 - `tests/NinthCompleteReviewTest.php`
 - `tests/PageResolverRepairTest.php`
