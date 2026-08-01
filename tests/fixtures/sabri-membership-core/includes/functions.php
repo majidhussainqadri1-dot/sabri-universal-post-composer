@@ -26,32 +26,24 @@ function smc_membership_state( int $user_id ): array {
 		return $GLOBALS['supc_test_membership_states'][ $user_id ];
 	}
 
-	$status      = $GLOBALS['supc_test_statuses'][ $user_id ] ?? 'draft';
-	$application = $GLOBALS['supc_test_membership_applications'][ $user_id ] ?? null;
-	$founder     = ! empty( $GLOBALS['supc_test_founders'][ $user_id ] );
-	$admin       = function_exists( 'user_can' ) && user_can( $user_id, 'manage_options' );
-	$hard_block  = in_array( $status, array( 'rejected', 'suspended', 'appeal_review', 'erasure_pending' ), true );
+	$status             = $GLOBALS['supc_test_statuses'][ $user_id ] ?? 'draft';
+	$application_exists = array_key_exists( $user_id, $GLOBALS['supc_test_membership_applications'] ?? array() )
+		&& null !== $GLOBALS['supc_test_membership_applications'][ $user_id ];
 
-	if ( $founder || $admin ) {
-		return array(
-			'contract_version'      => SMC_CONTRACT_VERSION,
-			'application_exists'    => null !== $application,
-			'application_status'    => null !== $application ? $status : '',
-			'status'                => $hard_block ? $status : 'verified',
-			'institutional_account' => true,
-			'account_class'         => $founder ? 'founder' : 'administrator',
-			'approved'              => ! $hard_block,
-		);
-	}
-
+	/*
+	 * Historical tests set status directly and do not model File 00 rows. Keep
+	 * that established fixture contract unless a test supplies a complete
+	 * explicit state above. This prevents test-only Administrator authority from
+	 * changing unrelated workflow and registry expectations.
+	 */
 	return array(
 		'contract_version'      => SMC_CONTRACT_VERSION,
-		'application_exists'    => null !== $application,
-		'application_status'    => null !== $application ? $status : '',
-		'status'                => null !== $application ? $status : 'not_enrolled',
+		'application_exists'    => $application_exists,
+		'application_status'    => $application_exists ? $status : '',
+		'status'                => $status,
 		'institutional_account' => false,
 		'account_class'         => 'member',
-		'approved'              => 'approved' === $status,
+		'approved'              => in_array( $status, array( 'approved', 'verified' ), true ),
 	);
 }
 
