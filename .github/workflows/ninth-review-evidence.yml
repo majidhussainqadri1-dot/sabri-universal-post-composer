@@ -61,7 +61,7 @@ jobs:
           done
           grep -Fq 'functions_declared_by_file' includes/core/class-runtime-trust.php
           grep -Fq 'shell_symbols_owned' includes/core/class-runtime-trust.php
-          grep -Fq 'Runtime_Trust::functions_declared_by_file' includes/core/class-plugin.php
-          grep -Fq 'Runtime_Trust::shell_symbols_owned' includes/core/class-safe-mode.php
+          grep -Fq 'public_api_owned' includes/core/class-plugin.php
+          grep -Fq 'shell_create_contract_owned' includes/core/class-safe-mode.php
           grep -Fq 'test_public_api_functions_are_declared_by_file22_source' tests/NinthCompleteReviewTest.php
           grep -Fq 'Ninth complete-repository hardening' CHANGELOG.md

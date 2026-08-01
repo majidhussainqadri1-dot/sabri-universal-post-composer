@@ -2,6 +2,36 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Twelfth complete-review corrections
+
+- Restored Create-surface card rendering by correcting the Contract Boundary class reference and retained immutable registration metadata for group and privacy decisions.
+- Added the modular Workflow Validator to static-analysis and repository evidence discovery, and moved stale coordinator-only evidence probes to the validator that now owns those contracts.
+- Preserved live post-adapter authorization race checks behind explicit mutable-authority boundaries without weakening fail-closed behavior.
+- Rejected URL values containing either a username or password credential component, including username-only forms.
+- Captured each Diagnostic Adapter health report once per administrator row so status and codes derive from one coherent snapshot.
+- Made the administrator repair endpoint reject requests whose HTTP method is absent as well as methods other than POST.
+- Updated the File 21 diagnostic fixture to satisfy the explicit status/codes contract and added focused URL and health-snapshot regressions.
+- Made the cumulative test environment warning-free and added a dedicated exact-head twelfth review gate that fails on PHPUnit warnings.
+
+### Eleventh full defect census and real-package hardening
+
+- Audited File 22 against the distributed File 00 Membership Core 1.0.1 and File 20 Unified Application Shell 1.0.0 packages instead of relying only on stronger synthetic fixtures.
+- Separated canonical legacy File 20 package identity from the later optional File 20 Create contract so the real File 20 version 1.0.0 no longer falsely disables the entire Composer.
+- Detected marker-only, function-only, partial, foreign, and inherited File 20 Create claims atomically while preserving the supported legacy Create URL filter.
+- Registered role-aware File 20 visibility integration only when the complete Reflection-owned Create contract exists and reported the distributed legacy package honestly as an integration warning rather than a collision.
+- Bounded adapter registration, registry diagnostics, adapter priorities, Create-page discovery, administrator System Check rows/counts, adapter display metadata, workflow arrays, validation-code collections, multiselect values, and URL lengths.
+- Required canonical adapter group metadata, strict central Semantic Versioning for workflow and administrator contracts, valid UUID-v4 repair locks, validated generated idempotency keys, and semantically verified option rollback.
+- Prevented Create-surface System Check from reporting PASS when Safe Mode, a missing subject, central denial, or native unavailability prevented actual evaluation.
+- Added real File 20 package-shape tests, partial-contract tests, transaction tests, bounded-registry tests, strict workflow tests, and an eleventh exact-head evidence workflow.
+
+### Tenth complete-repository hardening
+
+- Forced File 22 Safe Mode when its declared public PHP API is partial, colliding, or executable from a foreign source so the internal Composer cannot run beside another producer.
+- Applied Safe Mode as the first Registry availability and creation-state gate, preventing positive fallback-removal signals or native method execution during emergency disable.
+- Prevented File 20 trust evaluation from autoloading unverified classes and required the executable Safe Mode method itself to be public, static, and declared inside the canonical package.
+- Rejected package-local child classes that inherit executable Safe Mode code from a foreign source.
+- Added focused public-API collision, no-autoload, inherited-method, Registry and exact-head evidence regressions.
+
 ### Ninth complete-repository hardening
 
 - Added Reflection-backed source ownership for the complete File 22 public PHP API instead of trusting marker constants and function names alone.

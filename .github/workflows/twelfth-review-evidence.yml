@@ -1,0 +1,63 @@
+name: File 22 Twelfth Complete Review Evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-22-twelfth-review-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  twelfth-review-evidence:
+    name: Exact-head twelfth review regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+      - name: Run cumulative PHPUnit suite without warnings
+        run: vendor/bin/phpunit --configuration=phpunit.xml.dist --fail-on-warning
+      - name: Run PHPStan
+        run: composer phpstan
+      - name: Run WordPress Coding Standards and security checks
+        run: composer phpcs
+      - name: Reject malformed idempotency generator output
+        run: php tests/run-invalid-idempotency-generator-test.php
+      - name: Verify twelfth review inventory and corrected owners
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            .github/workflows/twelfth-review-evidence.yml
+            tests/TwelfthCompleteReviewTest.php
+            docs/FILE22-TWELFTH-COMPLETE-REVIEW-AND-CORRECTION-2026-08-01.md
+          )
+          for file in "${required[@]}"; do
+            test -f "$file"
+            grep -Fq -- "- \`$file\`" MANIFEST.md
+          done
+          grep -Fq '! Contract_Boundary::bounded_text' includes/presentation/class-create-surface.php
+          ! grep -Fq '_Contract_Boundary' includes/presentation/class-create-surface.php
+          grep -Fq "! isset( \$parts['user'] )" includes/core/class-workflow-validator.php
+          grep -Fq "! isset( \$parts['pass'] )" includes/core/class-workflow-validator.php
+          grep -Fq 'class-workflow-validator.php' phpstan.neon.dist
+          grep -Fq "\$health        = \$adapter->health_report();" includes/admin/class-system-check-page.php
+          grep -Fq 'Twelfth complete-review corrections' CHANGELOG.md

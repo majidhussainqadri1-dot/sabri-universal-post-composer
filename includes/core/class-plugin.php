@@ -37,7 +37,6 @@ final class Plugin {
 		'sabri_shell_create_contract_available',
 		'sabri_shell_create_visible_for_current_user',
 	);
-	private const SHELL_SAFE_MODE_CLASS = '\Sabri\UnifiedShell\SafeMode';
 
 	private static ?self $instance = null;
 	private Permission_Resolver $permissions;
@@ -235,18 +234,49 @@ final class Plugin {
 		if ( 'sabri-universal-post-composer' !== $owner ) { $codes[] = 'public_api_owner_mismatch'; }
 		if ( true !== $owned || ! is_string( $collisions ) || '' !== $collisions ) { $codes[] = 'public_api_function_collision'; }
 		if ( ! $functions_complete ) { $codes[] = 'public_api_incomplete'; }
-		if (
-			$functions_complete &&
-			! Runtime_Trust::functions_declared_by_file( self::PUBLIC_API_FUNCTIONS, SUPC_PATH . 'includes/core/functions.php' )
-		) {
+		if ( ! Runtime_Trust::public_api_owned( SUPC_PATH . 'includes/core/functions.php' ) ) {
 			$codes[] = 'public_api_function_collision';
 		}
 
-		return array( 'key' => 'public_api_contract', 'status' => array() === $codes ? 'pass' : 'fail', 'count' => count( array_unique( $codes ) ), 'codes' => array_values( array_unique( $codes ) ) );
+		$codes = array_values( array_unique( $codes ) );
+		return array( 'key' => 'public_api_contract', 'status' => array() === $codes ? 'pass' : 'fail', 'count' => count( $codes ), 'codes' => $codes );
 	}
 
 	/** @return array<string, mixed> */
 	private function file20_contract_row(): array {
+		$package_claimed  = Runtime_Trust::shell_package_claimed();
+		$contract_claimed = Runtime_Trust::shell_create_contract_claimed();
+
+		if ( ! $package_claimed && ! $contract_claimed ) {
+			return array(
+				'key'    => 'file20_create_contract',
+				'status' => 'warning',
+				'count'  => 1,
+				'codes'  => array( 'file20_contract_missing' ),
+			);
+		}
+
+		if ( $package_claimed && ! Runtime_Trust::shell_package_owned() ) {
+			return array(
+				'key'    => 'file20_create_contract',
+				'status' => 'fail',
+				'count'  => 1,
+				'codes'  => array( 'file20_contract_collision' ),
+			);
+		}
+
+		// The distributed File 20 version 1.0.0 supports the Create URL filter but
+		// predates File 22's atomic visibility/health contract. It is compatible as
+		// an optional legacy shell, but production integration remains incomplete.
+		if ( ! $contract_claimed ) {
+			return array(
+				'key'    => 'file20_create_contract',
+				'status' => 'warning',
+				'count'  => 2,
+				'codes'  => array( 'file20_legacy_contract_missing', 'file20_visibility_contract_missing' ),
+			);
+		}
+
 		$codes                 = array();
 		$version               = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' );
 		$owner                 = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
@@ -258,33 +288,31 @@ final class Plugin {
 		if ( 'sabri-unified-application-shell' !== $owner ) { $codes[] = 'file20_contract_owner_mismatch'; }
 		if ( true !== $owned ) { $codes[] = 'file20_contract_collision'; }
 		if ( ! $functions_complete ) { $codes[] = 'file20_contract_functions_missing'; }
+		if ( ! Runtime_Trust::shell_create_contract_owned() ) { $codes[] = 'file20_contract_collision'; }
 
-		$source_owned = $functions_complete
-			&& Runtime_Trust::shell_symbols_owned( self::FILE20_FUNCTIONS, self::SHELL_SAFE_MODE_CLASS );
-		if ( Runtime_Trust::shell_claimed() && ! $source_owned ) {
-			$codes[] = 'file20_contract_collision';
-		}
-		if ( $source_owned ) {
+		if ( array() === $codes ) {
 			$availability_callback = Runtime_Trust::owned_shell_function( self::FILE20_FUNCTIONS[0] );
+			if ( ! $availability_callback instanceof \Closure ) {
+				$codes[] = 'file20_contract_collision';
+			}
 		}
 
-		$trusted = '1.0.1' === $version
-			&& 'sabri-unified-application-shell' === $owner
-			&& true === $owned
-			&& $source_owned
-			&& $availability_callback instanceof \Closure;
-		if ( $trusted ) {
+		$status = array() === $codes ? 'pass' : 'fail';
+		if ( 'pass' === $status && $availability_callback instanceof \Closure ) {
 			try {
 				if ( ! (bool) $availability_callback() ) {
+					$status  = 'warning';
 					$codes[] = 'file20_contract_unavailable';
 				}
 			} catch ( \Throwable $error ) {
 				unset( $error );
+				$status  = 'fail';
 				$codes[] = 'file20_contract_exception';
 			}
 		}
 
-		return array( 'key' => 'file20_create_contract', 'status' => array() === $codes ? 'pass' : 'fail', 'count' => count( array_unique( $codes ) ), 'codes' => array_values( array_unique( $codes ) ) );
+		$codes = array_values( array_unique( $codes ) );
+		return array( 'key' => 'file20_create_contract', 'status' => $status, 'count' => count( $codes ), 'codes' => $codes );
 	}
 
 	private function runtime_constant( string $name ): mixed {

@@ -10,6 +10,8 @@ use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
 
 final class Admin_Health_Test_Adapter implements Diagnostic_Adapter {
+	public int $health_calls = 0;
+
 	public function api_version(): string { return '1.0.0'; }
 	public function key(): string { return 'health_adapter'; }
 	public function label(): string { return 'Private label must not appear in health rows'; }
@@ -25,6 +27,7 @@ final class Admin_Health_Test_Adapter implements Diagnostic_Adapter {
 	public function can_create( int $user_id ): bool { return $user_id > 0; }
 	public function start_url( int $user_id ): string { return '/create-post/?user=' . $user_id; }
 	public function health_report(): array {
+		++$this->health_calls;
 		return array(
 			'status'  => 'warning',
 			'codes'   => array( 'native_version_pending', 'native_version_pending', 'Bad Code!' ),
@@ -106,12 +109,13 @@ final class AdminSystemCheckTest extends TestCase {
 		$this->assertCount( 1, $rows );
 		$this->assertSame( 'unrecognized_check', $rows[0]['key'] );
 		$this->assertSame( 'warning', $rows[0]['status'] );
-		$this->assertSame( 0, $rows[0]['count'] );
+		$this->assertSame( 1, $rows[0]['count'] );
 		$this->assertSame( array( 'unrecognized_diagnostic' ), $rows[0]['codes'] );
 	}
 
 	public function test_adapter_health_rows_are_privacy_safe_and_deterministic(): void {
-		$this->assertTrue( $this->registry->register( new Admin_Health_Test_Adapter() ) );
+		$adapter = new Admin_Health_Test_Adapter();
+		$this->assertTrue( $this->registry->register( $adapter ) );
 
 		$rows = $this->page->adapter_rows();
 
@@ -123,6 +127,7 @@ final class AdminSystemCheckTest extends TestCase {
 		$this->assertArrayNotHasKey( 'label', $rows[0] );
 		$this->assertArrayNotHasKey( 'description', $rows[0] );
 		$this->assertStringNotContainsString( 'secret.example', implode( ' ', $rows[0] ) );
+		$this->assertSame( 1, $adapter->health_calls );
 	}
 
 	public function test_unavailable_adapter_cannot_override_warning_with_passing_health_report(): void {
@@ -134,13 +139,12 @@ final class AdminSystemCheckTest extends TestCase {
 		$this->assertSame( 'native_unavailable', $rows[0]['codes'] );
 	}
 
-	public function test_unknown_group_warns_without_using_current_user_authorization(): void {
-		$this->assertTrue( $this->registry->register( new Admin_Invalid_Static_Contract_Adapter() ) );
+	public function test_noncanonical_group_is_rejected_before_static_health(): void {
+		$result = $this->registry->register( new Admin_Invalid_Static_Contract_Adapter() );
 
-		$rows = $this->page->adapter_rows();
-
-		$this->assertSame( 'warning', $rows[0]['status'] );
-		$this->assertSame( 'unknown_group', $rows[0]['codes'] );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'supc_invalid_group', $result->code );
+		$this->assertSame( array(), $this->page->adapter_rows() );
 	}
 
 	public function test_repair_buttons_submit_exact_control_values_and_tables_are_accessible(): void {
