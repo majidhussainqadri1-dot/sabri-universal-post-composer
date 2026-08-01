@@ -17,13 +17,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Permission_Resolver {
 	private const STATUS_CALLBACK = 'smc_user_status';
+	private const CORE_DIRECTORY  = 'sabri-membership-core';
+	private const CORE_FILE       = 'sabri-membership-core.php';
 
 	public function core_available(): bool {
 		if (
 			! defined( 'SMC_VERSION' ) ||
+			! defined( 'SMC_DB_VERSION' ) ||
 			! defined( 'SMC_FILE' ) ||
 			! defined( 'SMC_PATH' ) ||
 			! Version::at_least( (string) SMC_VERSION, SUPC_MIN_SMC_VERSION ) ||
+			! Version::at_least( (string) SMC_DB_VERSION, SUPC_MIN_SMC_VERSION ) ||
 			! function_exists( self::STATUS_CALLBACK )
 		) {
 			return false;
@@ -32,7 +36,13 @@ final class Permission_Resolver {
 		try {
 			$smc_file = realpath( (string) SMC_FILE );
 			$smc_path = realpath( (string) SMC_PATH );
-			if ( false === $smc_file || false === $smc_path || dirname( $smc_file ) !== $smc_path ) {
+			if (
+				false === $smc_file ||
+				false === $smc_path ||
+				dirname( $smc_file ) !== $smc_path ||
+				self::CORE_FILE !== basename( $smc_file ) ||
+				self::CORE_DIRECTORY !== basename( $smc_path )
+			) {
 				return false;
 			}
 

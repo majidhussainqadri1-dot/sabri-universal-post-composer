@@ -1,4 +1,4 @@
-name: File 22 Seventh Complete Review Evidence
+name: File 22 Eighth Complete Review Evidence
 
 on:
   pull_request:
@@ -7,15 +7,15 @@ permissions:
   contents: read
 
 concurrency:
-  group: file-22-seventh-review-${{ github.ref }}
+  group: file-22-eighth-review-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
 
 jobs:
-  seventh-review-evidence:
-    name: Exact-head seventh review regressions
+  eighth-review-evidence:
+    name: Exact-head eighth review regressions
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -35,29 +35,29 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist --quiet
       - name: Run cumulative PHPUnit suite
         run: composer test
-      - name: Verify spoofed Membership Core rejection
+      - name: Verify canonical Membership Core rejection boundary
         run: php tests/run-untrusted-membership-core-test.php
+      - name: Verify managed-page rollback and quarantine contract
+        run: php tests/run-managed-page-rollback-test.php
       - name: Verify bootstrap and API global-scope isolation
         run: php tests/run-global-scope-isolation-test.php
-      - name: Verify managed-page rollback contract
-        run: php tests/run-managed-page-rollback-test.php
-      - name: Verify seventh review inventory
+      - name: Verify eighth review inventory
         shell: bash
         run: |
           set -euo pipefail
           required=(
             includes/core/class-version.php
-            tests/SeventhCompleteReviewTest.php
-            tests/run-untrusted-membership-core-test.php
-            tests/run-global-scope-isolation-test.php
-            docs/FILE22-SEVENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
+            tests/EighthCompleteReviewTest.php
+            tests/fixtures/sabri-membership-core/sabri-membership-core.php
+            tests/fixtures/sabri-membership-core/includes/functions.php
+            docs/FILE22-EIGHTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
           )
           for file in "${required[@]}"; do
             test -f "$file"
             grep -Fq -- "- \`$file\`" MANIFEST.md
           done
-          grep -Fq 'Membership Core status callback to originate' CHANGELOG.md
-          grep -Fqi 'build metadata' docs/ARCHITECTURE.md
           grep -Fq 'compare_prerelease' includes/core/class-version.php
-          grep -Fq 'SMC_FILE' includes/core/class-permission-resolver.php
-          grep -Fq 'supc_created_page_mapping_rollback' includes/core/class-page-resolver.php
+          grep -Fq "CORE_DIRECTORY  = 'sabri-membership-core'" includes/core/class-permission-resolver.php
+          grep -Fq "SMC_DB_VERSION" includes/core/class-permission-resolver.php
+          grep -Fq 'supc_created_page_cleanup_failed' includes/core/class-page-resolver.php
+          grep -Fq 'Eighth complete-repository hardening' CHANGELOG.md

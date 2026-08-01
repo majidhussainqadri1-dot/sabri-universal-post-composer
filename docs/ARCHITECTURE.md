@@ -25,16 +25,16 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 
 ## Dependency model
 
-File 00 is a mandatory hard dependency. Activation fails closed unless the required Membership Core version and API are available and the `smc_user_status()` callback originates from the real path declared by `SMC_FILE` and `SMC_PATH`. A version constant plus a same-named foreign callback is not accepted as the authorization authority.
+File 00 is a mandatory hard dependency. Activation fails closed unless the required Membership Core runtime and database versions are compatible, `SMC_FILE` and `SMC_PATH` resolve coherently to the canonical `sabri-membership-core/sabri-membership-core.php` package, and `smc_user_status()` originates from that package directory. A coherent foreign directory with copied constants and a same-named callback is not accepted as the authorization authority.
 
 File 20 is a production integration, but File 22 remains safe when the shell is absent. File 21 and all other modules are adapter-specific dependencies. An unavailable adapter is hidden without disabling unrelated healthy adapters.
 
-Dependency versions use strict Semantic Versioning. Prerelease and build metadata may appear together; malformed or leading-zero numeric identifiers are rejected. Build metadata is retained for diagnostics but ignored when compatibility precedence is compared.
+Dependency versions use bounded strict Semantic Versioning. Core numbers are compared without integer conversion; prerelease identifiers follow numeric-before-nonnumeric and left-to-right identifier rules; a stable release outranks its prerelease; build metadata is retained for diagnostics but ignored for precedence. Malformed, whitespace-padded, leading-zero, or oversized values fail closed.
 
 ## Permission order
 
 1. File 22 Safe Mode and File 20 Safe Mode.
-2. Membership Core availability and callback provenance.
+2. Canonical Membership Core package, runtime/database compatibility, and callback provenance.
 3. Account status and suspension decision.
 4. Required central WordPress capability.
 5. Adapter-specific restriction.
@@ -46,6 +46,10 @@ An adapter may restrict access; it may never expand or bypass the central decisi
 One native record may be projected into Home, News, a profile timeline, search, and a module archive. File 22 must not create duplicate permanent records for those surfaces.
 
 A `Workflow_Adapter` creates, validates, previews, submits, and reports status through its native module. File 22 passes guarded server-side calls but does not persist the native payload, protected evidence, upload bytes, or final record.
+
+## Create-page transaction boundary
+
+Create-page mapping repair snapshots the exact prior option state without a magic sentinel. If a new File 22-managed page cannot be mapped, File 22 first attempts permanent deletion and then quarantines the exact inserted record as an empty nonpublic draft. If a published shortcode record cannot be removed or quarantined, File 22 sets its emergency-disable boundary and emits controlled rollback evidence. Existing candidate pages are never deleted or rewritten by this cleanup path.
 
 ## Registration lifecycle
 

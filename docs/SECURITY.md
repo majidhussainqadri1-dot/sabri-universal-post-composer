@@ -1,6 +1,6 @@
 # Security and Privacy Baseline
 
-File 22 fails closed for authorization, account suspension, invalid or colliding contracts, unsafe routing, ambiguous ownership, malformed payloads, weak idempotency, unsafe previews, invalid native results, and dependency mismatch.
+File 22 fails closed for authorization, account suspension, invalid or colliding contracts, unsafe routing, ambiguous ownership, malformed payloads, weak idempotency, unsafe previews, invalid native results, dependency mismatch, and failed Create-page cleanup.
 
 ## Required controls
 
@@ -20,6 +20,21 @@ The File 22 `supc_*` API is valid only when its version, owner, function-ownersh
 Bootstrap applies the same fail-closed rule to every File 22 core constant, interface, and runtime class before loading source files. A preclaimed symbol cannot produce a mixed runtime or fatal redeclaration.
 
 Interactive workflow functions bind to `get_current_user_id()`. A supplied compatibility user ID on the read-only adapter-availability helper is ignored and cannot be used to inspect another account.
+
+## Membership Core authority and version boundary
+
+File 00 is accepted only when all of the following agree:
+
+- compatible `SMC_VERSION` and `SMC_DB_VERSION` values;
+- strict bounded Semantic Versioning without whitespace, malformed identifiers, or leading-zero numeric identifiers;
+- canonical package directory `sabri-membership-core`;
+- canonical bootstrap file `sabri-membership-core.php`;
+- coherent real paths declared by `SMC_FILE` and `SMC_PATH`;
+- `smc_user_status()` originating from that canonical package directory.
+
+A foreign component cannot become the authorization authority merely by copying constants, using a high version string, and defining a same-named callback inside its own coherent directory.
+
+Semantic Versioning precedence is implemented independently of PHP `version_compare()`: numeric identifiers are compared numerically without integer conversion, numeric prerelease identifiers rank below nonnumeric identifiers, shorter equal prerelease prefixes rank lower, stable releases outrank their prereleases, and build metadata does not affect precedence.
 
 ## Account, availability, and authorization order
 
@@ -63,7 +78,16 @@ Start, preview, canonical, and Create-page URLs must be relative internal routes
 
 ## Create-page repair boundary
 
-Discovery narrows the WordPress query to likely shortcode-bearing pages, returns IDs only, and still revalidates every candidate. If a newly inserted File 22-managed page fails ownership, slug, type, content, publication, or URL validation, File 22 permanently deletes only that exact newly created object and records a privacy-safe rollback event. Pre-existing unrelated pages are never edited or deleted.
+Discovery narrows the WordPress query to likely shortcode-bearing pages, returns IDs only, and still revalidates every candidate. Existing candidate or unrelated pages are never edited or deleted by failed-repair cleanup.
+
+If a newly inserted File 22-managed object fails ownership, slug, type, content, publication, URL, or mapping-persistence validation, cleanup is limited to that exact inserted ID:
+
+1. attempt permanent deletion;
+2. verify that it is no longer a public shortcode surface;
+3. if deletion fails, convert it to an empty nonpublic draft and verify quarantine;
+4. if both operations fail while it remains public, set `supc_emergency_disabled` and emit `supc_created_page_cleanup_failed`.
+
+Mapping rollback snapshots existence separately from value, so absence, literal strings, and `null` are restored exactly. No magic value may be mistaken for a missing option.
 
 ## Draft, preview, and submission boundary
 
