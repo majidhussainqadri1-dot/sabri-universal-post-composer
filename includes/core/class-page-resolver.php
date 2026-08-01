@@ -241,6 +241,9 @@ final class Page_Resolver {
 	}
 
 	/**
+	 * Search only likely shortcode-bearing pages instead of hydrating every
+	 * published page ID when the canonical mapping is missing or damaged.
+	 *
 	 * @return array<int, int>
 	 */
 	private static function find_shortcode_pages(): array {
@@ -249,6 +252,8 @@ final class Page_Resolver {
 				'post_type'              => 'page',
 				'post_status'            => 'publish',
 				'posts_per_page'         => -1,
+				's'                      => self::SHORTCODE,
+				'sentence'               => true,
 				'orderby'                => 'ID',
 				'order'                  => 'ASC',
 				'fields'                 => 'ids',
@@ -303,6 +308,11 @@ final class Page_Resolver {
 
 		$page_id = (int) $page_id;
 		if ( ! self::is_valid_managed_page( $page_id, $slug ) ) {
+			$rolled_back = false;
+			if ( function_exists( 'wp_delete_post' ) ) {
+				$rolled_back = false !== wp_delete_post( $page_id, true );
+			}
+			do_action( 'supc_invalid_managed_page_rollback', $page_id, $rolled_back );
 			return array( 'result' => 'managed_page_validation_failed', 'page_id' => $page_id );
 		}
 

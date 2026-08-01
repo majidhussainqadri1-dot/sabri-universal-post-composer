@@ -1,0 +1,65 @@
+name: File 22 Sixth Complete Review Evidence
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file-22-sixth-review-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  sixth-review-evidence:
+    name: Exact-head sixth review regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+      - name: Run cumulative PHPUnit suite
+        run: composer test
+      - name: Verify bootstrap symbol collision boundary
+        run: php tests/run-bootstrap-symbol-collision-test.php
+      - name: Verify untrusted shell Safe Mode boundary
+        run: php tests/run-untrusted-shell-safe-mode-test.php
+      - name: Verify bounded Create-page discovery
+        run: php tests/run-page-discovery-query-test.php
+      - name: Verify invalid managed-page rollback
+        run: php tests/run-managed-page-rollback-test.php
+      - name: Verify sixth review inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            .github/workflows/sixth-review-evidence.yml
+            tests/SixthCompleteReviewTest.php
+            tests/run-bootstrap-symbol-collision-test.php
+            tests/run-untrusted-shell-safe-mode-test.php
+            tests/run-page-discovery-query-test.php
+            tests/run-managed-page-rollback-test.php
+            docs/FILE22-SIXTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
+          )
+          for file in "${required[@]}"; do
+            test -f "$file"
+            grep -Fq -- "- \`$file\`" MANIFEST.md
+          done
+          grep -Fq 'Sixth complete-repository hardening' CHANGELOG.md
+          grep -Fq 're-evaluated on every call' docs/SECURITY.md
+          grep -Fq 'exact File 20 contract' docs/SECURITY.md

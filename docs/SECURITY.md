@@ -15,15 +15,25 @@ File 22 fails closed for authorization, account suspension, invalid or colliding
 
 ## Public API ownership and collision safety
 
-The File 22 `supc_*` API is valid only when its version, owner, and function-ownership markers agree. Any pre-existing function or marker collision prevents the complete API family from being declared. File 22 never silently produces a partial mixed-version API.
+The File 22 `supc_*` API is valid only when its version, owner, function-ownership, and empty collision markers agree. Any pre-existing function or marker collision prevents the complete API family from being declared. File 22 never silently produces a partial mixed-version API.
+
+Bootstrap applies the same fail-closed rule to every File 22 core constant, interface, and runtime class before loading source files. A preclaimed symbol cannot produce a mixed runtime or fatal redeclaration.
 
 Interactive workflow functions bind to `get_current_user_id()`. A supplied compatibility user ID on the read-only adapter-availability helper is ignored and cannot be used to inspect another account.
 
 ## Account, availability, and authorization order
 
-The coordinator checks Safe Mode, valid current subject, Membership Core eligibility, registered workflow metadata, exact API, and central capability before native availability. Native availability is then evaluated before adapter-specific authorization so an offline integration is not misreported as a permission denial.
+The coordinator checks Safe Mode, valid current subject, Membership Core eligibility, immutable workflow metadata, and the central capability before disclosing Workflow API compatibility or native health. Compatible workflows then evaluate native availability before adapter-specific authorization.
+
+Every authorization and operational allow decision is re-evaluated on every call. File 22 does not cache an approved Membership state, capability, Safe Mode result, native availability, or adapter-specific permission across later same-request changes.
 
 Pending, draft, rejected, suspended, expired-document, deleted, logged-out, unknown, and otherwise unapproved accounts are denied before native methods execute. Administrators and Founders cannot use WordPress role or `manage_options` privileges to expand a Membership Core denial and remain subject to emergency-disable controls.
+
+Malformed Workflow API metadata is rejected atomically at registration. A syntactically valid but unsupported version remains available only for controlled compatibility diagnostics and is never invokable.
+
+## Unified Shell Safe Mode ownership
+
+A callable File 20 Safe Mode class is trusted only when the exact File 20 contract version, canonical owner, and function-ownership marker agree. An obsolete, incomplete, or colliding shell class fails closed and cannot clear File 22's emergency boundary.
 
 ## Create-surface privacy and cache boundary
 
@@ -49,7 +59,11 @@ Founder/Administrator-only choices must never appear in a doctor's subject schem
 
 Native references are opaque identifiers, not authorization. Status and canonical URL operations pass the authenticated subject to the native owner, which must enforce ownership or visibility.
 
-Start, preview, and canonical URLs must be relative internal routes or absolute same-origin HTTPS URLs with matching effective port and no credentials, backslashes, protocol-relative form, control characters, or downgrade.
+Start, preview, canonical, and Create-page URLs must be relative internal routes or absolute same-origin HTTPS URLs with matching effective port and no credentials, backslashes, protocol-relative form, control characters, or downgrade.
+
+## Create-page repair boundary
+
+Discovery narrows the WordPress query to likely shortcode-bearing pages, returns IDs only, and still revalidates every candidate. If a newly inserted File 22-managed page fails ownership, slug, type, content, publication, or URL validation, File 22 permanently deletes only that exact newly created object and records a privacy-safe rollback event. Pre-existing unrelated pages are never edited or deleted.
 
 ## Draft, preview, and submission boundary
 
