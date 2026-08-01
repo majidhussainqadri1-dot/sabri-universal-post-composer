@@ -23,11 +23,12 @@ final class Registry {
 	private array $adapters = array();
 
 	/**
-	 * Immutable registration-time base metadata used by every authorization and
-	 * exact-owner decision. Native adapter methods may report health dynamically,
-	 * but they cannot weaken the capability or change the owner after acceptance.
+	 * Immutable registration-time base metadata used by authorization, exact-owner,
+	 * privacy, grouping, ordering, and minimum-version decisions. Native adapters
+	 * may report operational health dynamically, but cannot rewrite structural or
+	 * security metadata after registration.
 	 *
-	 * @var array<string, array{api_version:string,required_capability:string,native_module:string,minimum_native_version:string,privacy_classification:string}>
+	 * @var array<string, array{api_version:string,required_capability:string,native_module:string,minimum_native_version:string,privacy_classification:string,group:string,priority:int}>
 	 */
 	private array $adapter_contracts = array();
 
@@ -87,10 +88,17 @@ final class Registry {
 				return $this->registration_error( 'invalid_minimum_native_version', $key, 'Adapter minimum native version is invalid.' );
 			}
 
-			$privacy_classification = $adapter->privacy_classification();
+			$privacy_classification = trim( $adapter->privacy_classification() );
 			if ( ! in_array( $privacy_classification, array( 'public', 'private', 'sensitive' ), true ) ) {
 				return $this->registration_error( 'invalid_privacy', $key, 'Adapter privacy classification is invalid.' );
 			}
+
+			$group = trim( $adapter->group() );
+			if ( '' === $group || strlen( $group ) > 64 ) {
+				return $this->registration_error( 'invalid_group', $key, 'Adapter group is invalid.' );
+			}
+
+			$priority = $adapter->priority();
 
 			$base_contract = array(
 				'api_version'            => $api_version,
@@ -98,6 +106,8 @@ final class Registry {
 				'native_module'          => $native_module,
 				'minimum_native_version' => $minimum_native_version,
 				'privacy_classification' => $privacy_classification,
+				'group'                   => $group,
+				'priority'                => $priority,
 			);
 
 			$workflow_contract = null;
@@ -117,6 +127,9 @@ final class Registry {
 				$this->workflow_contracts[ $key ] = $workflow_contract;
 			}
 
+			// A corrected re-registration must not inherit a stale diagnostic from an
+			// earlier failed attempt using the same canonical key.
+			unset( $this->errors[ $key ] );
 			$this->flush_cache();
 			return true;
 		} catch ( Throwable $error ) {
@@ -135,7 +148,7 @@ final class Registry {
 			return false;
 		}
 
-		unset( $this->adapters[ $key ], $this->adapter_contracts[ $key ], $this->workflow_contracts[ $key ] );
+		unset( $this->adapters[ $key ], $this->adapter_contracts[ $key ], $this->workflow_contracts[ $key ], $this->errors[ $key ] );
 		$this->flush_cache();
 		return true;
 	}
@@ -149,7 +162,7 @@ final class Registry {
 	}
 
 	/**
-	 * @return array{api_version:string,required_capability:string,native_module:string,minimum_native_version:string,privacy_classification:string}|null
+	 * @return array{api_version:string,required_capability:string,native_module:string,minimum_native_version:string,privacy_classification:string,group:string,priority:int}|null
 	 */
 	public function adapter_contract( string $key ): ?array {
 		return $this->adapter_contracts[ $key ] ?? null;
@@ -167,7 +180,7 @@ final class Registry {
 	 */
 	public function all(): array {
 		$adapters = $this->adapters;
-		uasort( $adapters, array( $this, 'compare_adapters' ) );
+		uksort( $adapters, array( $this, 'compare_adapter_keys' ) );
 		return $adapters;
 	}
 
@@ -177,7 +190,8 @@ final class Registry {
 	 * Central account and immutable capability checks always run before native
 	 * availability. Native availability is then resolved before adapter-specific
 	 * authorization so an offline integration is never mislabeled as a permission
-	 * denial.
+	 * denial. An incompatible Workflow Adapter remains registered for diagnostics,
+	 * but is never exposed as an invokable Create-surface adapter.
 	 *
 	 * @return array<string, Adapter>
 	 */
@@ -197,6 +211,10 @@ final class Registry {
 				$contract = $this->adapter_contract( $key );
 				if ( null === $contract ) {
 					$this->runtime_error( $key, 'registration_exception' );
+					continue;
+				}
+				if ( $adapter instanceof Workflow_Adapter && ! $this->workflow_is_compatible( $key ) ) {
+					$this->runtime_error( $key, 'workflow_api_mismatch' );
 					continue;
 				}
 				if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
@@ -252,6 +270,11 @@ final class Registry {
 					$this->runtime_error( $key, 'registration_exception' );
 					continue;
 				}
+				if ( $adapter instanceof Workflow_Adapter && ! $this->workflow_is_compatible( $key ) ) {
+					$has_unavailable = true;
+					$this->runtime_error( $key, 'workflow_api_mismatch' );
+					continue;
+				}
 				if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
 					continue;
 				}
@@ -298,18 +321,29 @@ final class Registry {
 		$this->state_cache     = array();
 	}
 
-	private function compare_adapters( Adapter $left, Adapter $right ): int {
-		try {
-			$priority = $left->priority() <=> $right->priority();
-			if ( 0 !== $priority ) {
-				return $priority;
-			}
+	private function workflow_is_compatible( string $key ): bool {
+		$contract = $this->workflow_contract( $key );
+		return null !== $contract && SUPC_WORKFLOW_API_VERSION === $contract['workflow_api_version'];
+	}
 
-			$label = strcasecmp( $left->label(), $right->label() );
-			return 0 !== $label ? $label : strcmp( $left->key(), $right->key() );
+	private function compare_adapter_keys( string $left_key, string $right_key ): int {
+		$left_contract  = $this->adapter_contracts[ $left_key ] ?? null;
+		$right_contract = $this->adapter_contracts[ $right_key ] ?? null;
+		$left_priority  = null !== $left_contract ? $left_contract['priority'] : PHP_INT_MAX;
+		$right_priority = null !== $right_contract ? $right_contract['priority'] : PHP_INT_MAX;
+		$priority       = $left_priority <=> $right_priority;
+		if ( 0 !== $priority ) {
+			return $priority;
+		}
+
+		try {
+			$left_label  = isset( $this->adapters[ $left_key ] ) ? $this->adapters[ $left_key ]->label() : $left_key;
+			$right_label = isset( $this->adapters[ $right_key ] ) ? $this->adapters[ $right_key ]->label() : $right_key;
+			$label       = strcasecmp( $left_label, $right_label );
+			return 0 !== $label ? $label : strcmp( $left_key, $right_key );
 		} catch ( Throwable $error ) {
 			unset( $error );
-			return 0;
+			return strcmp( $left_key, $right_key );
 		}
 	}
 

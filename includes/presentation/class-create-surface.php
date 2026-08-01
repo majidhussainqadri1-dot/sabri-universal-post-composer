@@ -181,12 +181,19 @@ final class Create_Surface {
 
 		foreach ( $adapters as $key => $adapter ) {
 			try {
-				$card = $this->card_from_adapter( $key, $adapter, $user_id );
+				$contract = $this->registry->adapter_contract( $key );
+				if ( null === $contract ) {
+					$this->record_diagnostic( $key, 'registration_contract_missing', 'fail' );
+					do_action( 'supc_adapter_render_error', $key, 'registration_contract_missing' );
+					continue;
+				}
+
+				$card = $this->card_from_adapter( $key, $adapter, $user_id, $contract );
 				if ( null === $card ) {
 					continue;
 				}
 
-				$declared_group = $adapter->group();
+				$declared_group = $contract['group'];
 				$group_key      = $this->canonical_group( $declared_group );
 				if ( 'other' === $group_key && 'other' !== sanitize_key( $declared_group ) ) {
 					$this->record_diagnostic( $key, 'unknown_group', 'warning' );
@@ -217,9 +224,10 @@ final class Create_Surface {
 	}
 
 	/**
+	 * @param array{api_version:string,required_capability:string,native_module:string,minimum_native_version:string,privacy_classification:string,group:string,priority:int} $contract Registration-time adapter contract.
 	 * @return array<string,string>|null
 	 */
-	private function card_from_adapter( string $key, Adapter $adapter, int $user_id ): ?array {
+	private function card_from_adapter( string $key, Adapter $adapter, int $user_id, array $contract ): ?array {
 		$url = $this->validate_internal_route( $adapter->start_url( $user_id ) );
 		if ( '' === $url ) {
 			$this->record_diagnostic( $key, 'invalid_route', 'fail' );
@@ -227,7 +235,7 @@ final class Create_Surface {
 			return null;
 		}
 
-		$privacy = $this->canonical_privacy( $adapter->privacy_classification() );
+		$privacy = $this->canonical_privacy( $contract['privacy_classification'] );
 		if ( null === $privacy ) {
 			$this->record_diagnostic( $key, 'invalid_privacy', 'fail' );
 			do_action( 'supc_adapter_privacy_rejected', $key );
