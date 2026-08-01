@@ -16,21 +16,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Permission_Resolver {
-	private const STATUS_CALLBACK = 'smc_user_status';
-	private const APPLICATION_CALLBACK = 'smc_application';
-	private const FOUNDER_CALLBACK = 'smc_is_founder';
-	private const CORE_DIRECTORY  = 'sabri-membership-core';
-	private const CORE_FILE       = 'sabri-membership-core.php';
+	private const STATUS_CALLBACK     = 'smc_user_status';
+	private const STATE_CALLBACK      = 'smc_membership_state';
+	private const CORE_DIRECTORY      = 'sabri-membership-core';
+	private const CORE_FILE           = 'sabri-membership-core.php';
+	private const HARD_BLOCK_STATUSES = array( 'rejected', 'suspended', 'appeal_review', 'erasure_pending' );
 
 	public function core_available(): bool {
 		if (
 			! defined( 'SMC_VERSION' ) ||
 			! defined( 'SMC_DB_VERSION' ) ||
+			! defined( 'SMC_CONTRACT_VERSION' ) ||
 			! defined( 'SMC_FILE' ) ||
 			! defined( 'SMC_PATH' ) ||
-			! Version::at_least( (string) SMC_VERSION, SUPC_MIN_SMC_VERSION ) ||
-			! Version::at_least( (string) SMC_DB_VERSION, SUPC_MIN_SMC_VERSION ) ||
-			! function_exists( self::STATUS_CALLBACK )
+			! defined( 'SUPC_MIN_SMC_VERSION' ) ||
+			! defined( 'SUPC_MIN_SMC_DB_VERSION' ) ||
+			! defined( 'SUPC_MIN_SMC_CONTRACT_VERSION' ) ||
+			! Version::at_least( (string) SMC_VERSION, (string) SUPC_MIN_SMC_VERSION ) ||
+			! Version::at_least( (string) SMC_DB_VERSION, (string) SUPC_MIN_SMC_DB_VERSION ) ||
+			! Version::at_least( (string) SMC_CONTRACT_VERSION, (string) SUPC_MIN_SMC_CONTRACT_VERSION ) ||
+			! function_exists( self::STATUS_CALLBACK ) ||
+			! function_exists( self::STATE_CALLBACK )
 		) {
 			return false;
 		}
@@ -48,7 +54,8 @@ final class Permission_Resolver {
 				return false;
 			}
 
-			return $this->callback_owned_by_core( self::STATUS_CALLBACK, $smc_file, $smc_path );
+			return $this->callback_owned_by_core( self::STATUS_CALLBACK, $smc_file, $smc_path )
+				&& $this->callback_owned_by_core( self::STATE_CALLBACK, $smc_file, $smc_path );
 		} catch ( \Throwable $error ) {
 			unset( $error );
 			return false;
@@ -56,48 +63,82 @@ final class Permission_Resolver {
 	}
 
 	public function account_is_eligible( int $user_id ): bool {
-		if ( $user_id <= 0 || Safe_Mode::disabled() || ! $this->core_available() ) {
-			return false;
+		$report = $this->eligibility_report( $user_id );
+		return true === $report['eligible'];
+	}
+
+	/**
+	 * Return a privacy-safe, bounded explanation of the central account decision.
+	 * No name, email, phone, application payload, or clinical data is exposed.
+	 *
+	 * @return array{eligible:bool,reason:string,status:string,application_status:string,application_exists:bool,institutional_account:bool,approved:bool}
+	 */
+	public function eligibility_report( int $user_id ): array {
+		$report = array(
+			'eligible'              => false,
+			'reason'                => 'membership_account_not_eligible',
+			'status'                => '',
+			'application_status'    => '',
+			'application_exists'    => false,
+			'institutional_account' => false,
+			'approved'              => false,
+		);
+
+		if ( $user_id <= 0 ) {
+			$report['reason'] = 'authorization_subject_missing';
+			return $report;
+		}
+		if ( Safe_Mode::disabled() ) {
+			$report['reason'] = 'supc_safe_mode_active';
+			return $report;
+		}
+		if ( ! $this->core_available() ) {
+			$report['reason'] = 'membership_core_unavailable';
+			return $report;
 		}
 
 		try {
 			$user = get_userdata( $user_id );
 			if ( ! $user ) {
-				return false;
+				$report['reason'] = 'authorization_subject_missing';
+				return $report;
 			}
 
-			$status = (string) call_user_func( self::STATUS_CALLBACK, $user_id );
+			$state = call_user_func( self::STATE_CALLBACK, $user_id );
+			if ( ! is_array( $state ) ) {
+				$report['reason'] = 'membership_contract_exception';
+				return $report;
+			}
+
+			$status             = isset( $state['status'] ) && is_string( $state['status'] ) ? sanitize_key( $state['status'] ) : '';
+			$application_status = isset( $state['application_status'] ) && is_string( $state['application_status'] ) ? sanitize_key( $state['application_status'] ) : $status;
+			$application_exists = ! empty( $state['application_exists'] );
+			$institutional      = ! empty( $state['institutional_account'] );
+			$approved           = true === (bool) ( $state['approved'] ?? false );
+
+			$report['status']                = $status;
+			$report['application_status']    = $application_status;
+			$report['application_exists']    = $application_exists;
+			$report['institutional_account'] = $institutional;
+			$report['approved']              = $approved;
+
+			if ( in_array( $status, self::HARD_BLOCK_STATUSES, true ) || in_array( $application_status, self::HARD_BLOCK_STATUSES, true ) ) {
+				$report['reason'] = 'membership_hard_block';
+				return $report;
+			}
+
+			if ( $approved && ( $institutional || in_array( $status, array( 'approved', 'verified' ), true ) ) ) {
+				$report['eligible'] = true;
+				$report['reason']   = 'current_user_authorized';
+				return $report;
+			}
+
+			$report['reason'] = $application_exists ? 'membership_application_blocking' : 'membership_account_not_eligible';
+			return $report;
 		} catch ( \Throwable $error ) {
 			unset( $error );
-			return false;
-		}
-
-		if ( in_array( $status, array( 'approved', 'verified' ), true ) ) {
-			return true;
-		}
-
-		/*
-		 * Founder and Administrator accounts may predate File 00 applications.
-		 * They are eligible only when File 00 reports the legacy no-application
-		 * state. Any explicit draft, pending, rejected, suspended, expired, or
-		 * otherwise non-approved application remains controlling and fails closed.
-		 *
-		 * This is not an adapter permission bypass: can_use_capability() still
-		 * requires the immutable native capability registered by each adapter.
-		 */
-		if ( 'draft' !== $status || ! $this->has_no_membership_application( $user_id ) ) {
-			return false;
-		}
-
-		if ( $this->is_canonical_founder( $user_id ) ) {
-			return true;
-		}
-
-		try {
-			return function_exists( 'user_can' ) && user_can( $user_id, 'manage_options' );
-		} catch ( \Throwable $error ) {
-			unset( $error );
-			return false;
+			$report['reason'] = 'membership_contract_exception';
+			return $report;
 		}
 	}
 
@@ -135,47 +176,6 @@ final class Permission_Resolver {
 			unset( $error );
 			return false;
 		}
-	}
-
-	private function has_no_membership_application( int $user_id ): bool {
-		if ( ! $this->trusted_optional_callback_available( self::APPLICATION_CALLBACK ) ) {
-			return false;
-		}
-
-		try {
-			$application = call_user_func( self::APPLICATION_CALLBACK, $user_id );
-			return null === $application || false === $application || array() === $application;
-		} catch ( \Throwable $error ) {
-			unset( $error );
-			return false;
-		}
-	}
-
-	private function is_canonical_founder( int $user_id ): bool {
-		if ( ! $this->trusted_optional_callback_available( self::FOUNDER_CALLBACK ) ) {
-			return false;
-		}
-
-		try {
-			return true === (bool) call_user_func( self::FOUNDER_CALLBACK, $user_id );
-		} catch ( \Throwable $error ) {
-			unset( $error );
-			return false;
-		}
-	}
-
-	private function trusted_optional_callback_available( string $callback ): bool {
-		if ( ! function_exists( $callback ) || ! defined( 'SMC_FILE' ) || ! defined( 'SMC_PATH' ) ) {
-			return false;
-		}
-
-		$smc_file = realpath( (string) SMC_FILE );
-		$smc_path = realpath( (string) SMC_PATH );
-		if ( false === $smc_file || false === $smc_path ) {
-			return false;
-		}
-
-		return $this->callback_owned_by_core( $callback, $smc_file, $smc_path );
 	}
 
 	private function callback_owned_by_core( string $callback, string $smc_file, string $smc_path ): bool {

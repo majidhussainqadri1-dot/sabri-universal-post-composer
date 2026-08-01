@@ -72,17 +72,19 @@ final class FounderAdminCreateSurfaceRegressionTest extends TestCase {
 		$GLOBALS['supc_test_statuses']                = array();
 		$GLOBALS['supc_test_capabilities']            = array();
 		$GLOBALS['supc_test_membership_applications'] = array();
+		$GLOBALS['supc_test_membership_states']       = array();
 		$GLOBALS['supc_test_founders']                = array();
 		$GLOBALS['supc_test_options']                 = array();
 		$GLOBALS['supc_test_logged_in']               = true;
-		$GLOBALS['supc_test_manage_options']           = false;
-		$GLOBALS['supc_test_unique_id']                = 0;
+		$GLOBALS['supc_test_manage_options']          = false;
+		$GLOBALS['supc_test_unique_id']               = 0;
 	}
 
 	public function test_administrator_without_membership_application_receives_create_card(): void {
-		$GLOBALS['supc_test_current_user']    = 41;
-		$GLOBALS['supc_test_manage_options']  = true;
+		$GLOBALS['supc_test_current_user'] = 41;
+		$GLOBALS['supc_test_manage_options'] = true;
 		$GLOBALS['supc_test_capabilities'][41] = array( 'publish_posts' => true );
+		$GLOBALS['supc_test_membership_states'][41] = $this->institutional_state( 'administrator' );
 
 		$html = $this->render_surface();
 
@@ -92,9 +94,10 @@ final class FounderAdminCreateSurfaceRegressionTest extends TestCase {
 	}
 
 	public function test_canonical_founder_without_membership_application_receives_create_card(): void {
-		$GLOBALS['supc_test_current_user']    = 42;
-		$GLOBALS['supc_test_founders'][42]    = true;
+		$GLOBALS['supc_test_current_user'] = 42;
+		$GLOBALS['supc_test_founders'][42] = true;
 		$GLOBALS['supc_test_capabilities'][42] = array( 'publish_posts' => true );
+		$GLOBALS['supc_test_membership_states'][42] = $this->institutional_state( 'founder' );
 
 		$html = $this->render_surface();
 
@@ -103,8 +106,9 @@ final class FounderAdminCreateSurfaceRegressionTest extends TestCase {
 	}
 
 	public function test_administrator_without_native_capability_still_receives_permission_denial(): void {
-		$GLOBALS['supc_test_current_user']   = 43;
+		$GLOBALS['supc_test_current_user'] = 43;
 		$GLOBALS['supc_test_manage_options'] = true;
+		$GLOBALS['supc_test_membership_states'][43] = $this->institutional_state( 'administrator' );
 
 		$html = $this->render_surface();
 
@@ -116,5 +120,17 @@ final class FounderAdminCreateSurfaceRegressionTest extends TestCase {
 		$registry = new Registry( new Permission_Resolver() );
 		$this->assertTrue( $registry->register( new Founder_Admin_Surface_Adapter() ) );
 		return ( new Create_Surface( $registry ) )->render();
+	}
+
+	/** @return array<string,mixed> */
+	private function institutional_state( string $account_class ): array {
+		return array(
+			'application_exists'    => false,
+			'application_status'    => '',
+			'status'                => 'verified',
+			'institutional_account' => true,
+			'account_class'         => $account_class,
+			'approved'              => true,
+		);
 	}
 }

@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Universal Post Composer
  * Plugin URI:  https://www.sabrihomeopathy.com/
  * Description: Role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform.
- * Version:     0.1.0-dev
+ * Version:     0.1.1
  * Author:      Dr. Allamah Majid Hussain Sabri Muhaddith Mursheed
  * Text Domain: sabri-universal-post-composer
  * Requires at least: 6.5
@@ -27,6 +27,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'SUPC_WORKFLOW_API_VERSION',
 		'SUPC_SUBJECT_SCHEMA_API_VERSION',
 		'SUPC_MIN_SMC_VERSION',
+		'SUPC_MIN_SMC_DB_VERSION',
+		'SUPC_MIN_SMC_CONTRACT_VERSION',
 		'SUPC_FILE',
 		'SUPC_PATH',
 		'SUPC_URL',
@@ -81,12 +83,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 		return;
 	}
 
-	define( 'SUPC_VERSION', '0.1.0-dev' );
+	define( 'SUPC_VERSION', '0.1.1' );
 	define( 'SUPC_SCHEMA_VERSION', '0.1.0' );
 	define( 'SUPC_ADAPTER_API_VERSION', '1.0.0' );
 	define( 'SUPC_WORKFLOW_API_VERSION', '1.0.0' );
 	define( 'SUPC_SUBJECT_SCHEMA_API_VERSION', '1.0.0' );
-	define( 'SUPC_MIN_SMC_VERSION', '1.0.1' );
+	define( 'SUPC_MIN_SMC_VERSION', '1.2.2' );
+	define( 'SUPC_MIN_SMC_DB_VERSION', '1.2.0' );
+	define( 'SUPC_MIN_SMC_CONTRACT_VERSION', '1.1.1' );
 	define( 'SUPC_FILE', __FILE__ );
 	define( 'SUPC_PATH', plugin_dir_path( __FILE__ ) );
 	define( 'SUPC_URL', plugin_dir_url( __FILE__ ) );
@@ -135,7 +139,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 			$permissions = new \Sabri\UniversalComposer\Core\Permission_Resolver();
 			if ( ! $permissions->core_available() ) {
-				$failure( __( 'An owned Sabri Membership Core 1.0.1 or later API must be active before File 22 can be activated.', 'sabri-universal-post-composer' ) );
+				$failure( __( 'Sabri Membership Core 1.2.2 or later, database schema 1.2.0 or later, and contract 1.1.1 or later must be active before File 22 can be activated.', 'sabri-universal-post-composer' ) );
 			}
 
 			\Sabri\UniversalComposer\Core\Page_Resolver::activate();

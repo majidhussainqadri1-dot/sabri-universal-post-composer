@@ -33,10 +33,14 @@ final class System_Check_Page {
 	private const PRIVACY = array( 'public', 'private', 'sensitive' );
 	private const SYSTEM_KEYS = array(
 		'membership_core', 'create_page', 'adapter_errors', 'public_api_contract', 'file20_create_contract',
-		'create_surface_diagnostics', 'social_publication_adapter', 'unrecognized_check', 'system_check_pipeline',
+		'current_user_authorization', 'create_surface_diagnostics', 'social_publication_adapter', 'unrecognized_check',
+		'system_check_pipeline',
 	);
 	private const SAFE_CODES = array(
-		'membership_core_unavailable', 'create_page_ready', 'create_page_repairable', 'create_page_ambiguous', 'create_page_missing',
+		'membership_core_unavailable', 'authorization_subject_missing', 'supc_safe_mode_active',
+		'membership_account_not_eligible', 'membership_hard_block', 'membership_application_blocking',
+		'membership_contract_exception', 'current_user_authorized',
+		'create_page_ready', 'create_page_repairable', 'create_page_ambiguous', 'create_page_missing',
 		'create_page_candidate_limit_exceeded', 'invalid_key', 'duplicate_key', 'adapter_limit_reached', 'registry_error_limit_reached',
 		'api_mismatch', 'invalid_required_capability', 'invalid_native_module', 'invalid_minimum_native_version', 'invalid_priority',
 		'invalid_privacy', 'invalid_group', 'registration_exception', 'registration_contract_missing', 'registration_metadata_missing',
@@ -56,6 +60,11 @@ final class System_Check_Page {
 		'minimum_native_version_too_low', 'required_capability_mismatch', 'group_mismatch', 'privacy_classification_mismatch',
 		'diagnostic_contract_missing', 'workflow_contract_missing', 'subject_schema_api_mismatch', 'subject_schema_contract_missing',
 		'workflow_registration_metadata_missing', 'workflow_capability_mismatch', 'native_draft_contract_missing',
+		'native_capability_missing', 'native_capability_check_exception', 'file21_runtime_missing', 'file21_runtime_too_low',
+		'file21_duplicate_installed_copies', 'file21_duplicate_active_copies', 'file21_general_disabled',
+		'file21_composer_disabled', 'file21_settings_exception', 'file21_emergency_disabled', 'file21_safe_mode_active',
+		'file21_safe_mode_exception', 'native_adapter_unavailable', 'native_adapter_create_denied',
+		'native_adapter_authorization_exception',
 		'diagnostic_exception', 'native_version_pending', 'native_version_mismatch', 'native_version_unreported',
 		'configuration_missing', 'route_missing', 'dependency_missing', 'dependency_incompatible', 'safe_mode', 'contract_mismatch',
 		'temporarily_unavailable', 'schema_invalid', 'permission_configuration_invalid', 'diagnostic_reason_missing',

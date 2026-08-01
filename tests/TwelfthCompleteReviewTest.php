@@ -9,13 +9,14 @@ use Sabri\UniversalComposer\Core\Registry;
 
 final class TwelfthCompleteReviewTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['supc_test_current_user']             = 1;
-		$GLOBALS['supc_test_manage_options']           = true;
-		$GLOBALS['supc_test_nonce_checked']            = false;
-		$GLOBALS['supc_test_statuses']                 = array( 1 => 'approved', 2 => 'suspended' );
-		$GLOBALS['supc_test_capabilities']             = array( 1 => array( 'sabri_feed_create_posts' => true ) );
-		$GLOBALS['supc_test_membership_applications']  = array();
-		$GLOBALS['supc_test_founders']                 = array();
+		$GLOBALS['supc_test_current_user']            = 1;
+		$GLOBALS['supc_test_manage_options']          = true;
+		$GLOBALS['supc_test_nonce_checked']           = false;
+		$GLOBALS['supc_test_statuses']                = array( 1 => 'approved', 2 => 'suspended' );
+		$GLOBALS['supc_test_capabilities']            = array( 1 => array( 'sabri_feed_create_posts' => true ) );
+		$GLOBALS['supc_test_membership_applications'] = array();
+		$GLOBALS['supc_test_membership_states']       = array();
+		$GLOBALS['supc_test_founders']                = array();
 	}
 
 	public function test_missing_request_method_fails_closed_before_nonce_processing(): void {
@@ -44,6 +45,7 @@ final class TwelfthCompleteReviewTest extends TestCase {
 		$GLOBALS['supc_test_manage_options'] = false;
 		$GLOBALS['supc_test_founders'][3] = true;
 		$GLOBALS['supc_test_capabilities'][3] = array( 'sabri_feed_create_posts' => true );
+		$GLOBALS['supc_test_membership_states'][3] = $this->institutional_state( 'founder' );
 
 		$resolver = new Permission_Resolver();
 
@@ -54,6 +56,7 @@ final class TwelfthCompleteReviewTest extends TestCase {
 		$GLOBALS['supc_test_current_user'] = 4;
 		$GLOBALS['supc_test_manage_options'] = true;
 		$GLOBALS['supc_test_capabilities'][4] = array( 'sabri_feed_create_posts' => true );
+		$GLOBALS['supc_test_membership_states'][4] = $this->institutional_state( 'administrator' );
 
 		$resolver = new Permission_Resolver();
 
@@ -64,32 +67,53 @@ final class TwelfthCompleteReviewTest extends TestCase {
 		$GLOBALS['supc_test_current_user'] = 4;
 		$GLOBALS['supc_test_manage_options'] = true;
 		$GLOBALS['supc_test_capabilities'][4] = array();
+		$GLOBALS['supc_test_membership_states'][4] = $this->institutional_state( 'administrator' );
 
 		$resolver = new Permission_Resolver();
 
 		$this->assertFalse( $resolver->can_use_capability( 4, 'sabri_feed_create_posts' ) );
 	}
 
-	public function test_explicit_draft_application_remains_denied_for_administrator(): void {
+	public function test_legacy_draft_application_does_not_cancel_administrator_authority(): void {
 		$GLOBALS['supc_test_current_user'] = 4;
 		$GLOBALS['supc_test_manage_options'] = true;
 		$GLOBALS['supc_test_capabilities'][4] = array( 'sabri_feed_create_posts' => true );
 		$GLOBALS['supc_test_membership_applications'][4] = array( 'status' => 'draft' );
+		$GLOBALS['supc_test_membership_states'][4] = $this->institutional_state( 'administrator', true, 'draft' );
 
 		$resolver = new Permission_Resolver();
 
-		$this->assertFalse( $resolver->can_use_capability( 4, 'sabri_feed_create_posts' ) );
+		$this->assertTrue( $resolver->can_use_capability( 4, 'sabri_feed_create_posts' ) );
 	}
 
 	public function test_suspended_founder_remains_denied(): void {
 		$GLOBALS['supc_test_current_user'] = 5;
 		$GLOBALS['supc_test_manage_options'] = false;
-		$GLOBALS['supc_test_statuses'][5] = 'suspended';
 		$GLOBALS['supc_test_founders'][5] = true;
 		$GLOBALS['supc_test_capabilities'][5] = array( 'sabri_feed_create_posts' => true );
+		$GLOBALS['supc_test_membership_states'][5] = array(
+			'application_exists'    => true,
+			'application_status'    => 'suspended',
+			'status'                => 'suspended',
+			'institutional_account' => true,
+			'account_class'         => 'founder',
+			'approved'              => false,
+		);
 
 		$resolver = new Permission_Resolver();
 
 		$this->assertFalse( $resolver->can_use_capability( 5, 'sabri_feed_create_posts' ) );
+	}
+
+	/** @return array<string,mixed> */
+	private function institutional_state( string $account_class, bool $application_exists = false, string $application_status = '' ): array {
+		return array(
+			'application_exists'    => $application_exists,
+			'application_status'    => $application_status,
+			'status'                => 'verified',
+			'institutional_account' => true,
+			'account_class'         => $account_class,
+			'approved'              => true,
+		);
 	}
 }
