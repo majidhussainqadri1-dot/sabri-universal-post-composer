@@ -57,7 +57,7 @@ jobs:
             grep -Fq -- "- \`$file\`" MANIFEST.md
           done
           grep -Fq 'compare_prerelease' includes/core/class-version.php
-          grep -Fq "CORE_DIRECTORY  = 'sabri-membership-core'" includes/core/class-permission-resolver.php
+          grep -Eq "CORE_DIRECTORY[[:space:]]*=[[:space:]]*'sabri-membership-core'" includes/core/class-permission-resolver.php
           grep -Fq "SMC_DB_VERSION" includes/core/class-permission-resolver.php
           grep -Fq 'supc_created_page_cleanup_failed' includes/core/class-page-resolver.php
           grep -Fq 'Eighth complete-repository hardening' CHANGELOG.md
