@@ -46,3 +46,9 @@ if ( ! function_exists( 'nocache_headers' ) ) {
 	function nocache_headers(): void {
 	}
 }
+
+if ( ! function_exists( 'is_email' ) ) {
+	function is_email( string $email ): string|false {
+		return false !== filter_var( $email, FILTER_VALIDATE_EMAIL ) ? $email : false;
+	}
+}

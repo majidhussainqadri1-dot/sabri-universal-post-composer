@@ -61,6 +61,8 @@ final class File21_Contract_Adapter implements Workflow_Adapter, Diagnostic_Adap
 	public function canonical_url( int $user_id, string $native_reference ): string { unset( $user_id, $native_reference ); return '/post/1/'; }
 	public function health_report(): array {
 		return array(
+			'status'                => 'pass',
+			'codes'                 => array(),
 			'actual_native_version' => $this->actualVersion,
 			'available'             => $this->available,
 		);
@@ -82,7 +84,7 @@ final class Route_Only_File21_Adapter implements Diagnostic_Adapter {
 	public function is_available(): bool { return true; }
 	public function can_create( int $user_id ): bool { return $user_id > 0; }
 	public function start_url( int $user_id ): string { return '/create-post/?user=' . $user_id; }
-	public function health_report(): array { return array( 'actual_native_version' => '1.0.3' ); }
+	public function health_report(): array { return array( 'status' => 'pass', 'codes' => array(), 'actual_native_version' => '1.0.3' ); }
 }
 
 final class CoreAdapterRequirementsTest extends TestCase {

@@ -8,7 +8,7 @@ use Sabri\UniversalComposer\Core\Plugin;
 
 if ( ! function_exists( 'nocache_headers' ) ) {
 	function nocache_headers(): void {
-		++$GLOBALS['supc_test_nocache_headers'];
+		$GLOBALS['supc_test_nocache_headers'] = (int) ( $GLOBALS['supc_test_nocache_headers'] ?? 0 ) + 1;
 	}
 }
 

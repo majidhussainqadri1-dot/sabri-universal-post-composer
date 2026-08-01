@@ -37,6 +37,13 @@ if ( true !== ( $args['sentence'] ?? null ) ) {
 if ( 'ids' !== ( $args['fields'] ?? null ) ) {
 	$failures[] = 'discovery query hydrates more than page IDs';
 }
+$limit = (int) ( $args['posts_per_page'] ?? 0 );
+if ( $limit <= 1 || $limit > 101 ) {
+	$failures[] = 'discovery query is not bounded to a finite candidate window';
+}
+if ( -1 === $limit ) {
+	$failures[] = 'discovery query still requests every published page';
+}
 
 if ( array() !== $failures ) {
 	fwrite( STDERR, implode( PHP_EOL, $failures ) . PHP_EOL );

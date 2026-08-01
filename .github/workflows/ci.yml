@@ -61,7 +61,8 @@ jobs:
           ref: ${{ env.EXPECTED_SHA }}
       - name: Verify exact source head
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
         with:
           php-version: '8.3'
           coverage: none
@@ -94,7 +95,8 @@ jobs:
           ref: ${{ env.EXPECTED_SHA }}
       - name: Verify exact source head
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
         with:
           php-version: '8.3'
           coverage: none
@@ -113,7 +115,8 @@ jobs:
           ref: ${{ env.EXPECTED_SHA }}
       - name: Verify exact source head
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
         with:
           php-version: '8.3'
           coverage: none
@@ -143,7 +146,7 @@ jobs:
   phpunit:
     name: PHPUnit contract tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - name: Check out exact source head
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -151,28 +154,42 @@ jobs:
           ref: ${{ env.EXPECTED_SHA }}
       - name: Verify exact source head
         run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
-      - uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+      - name: Set up PHP
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
         with:
           php-version: '8.3'
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --no-progress --prefer-dist --quiet
-      - run: composer test
+      - name: Run cumulative PHPUnit suite
+        run: composer test
       - name: Run isolated public API collision contract
         run: php tests/run-public-api-collision-test.php
       - name: Run isolated File 20 producer collision contract
         run: php tests/run-file20-contract-collision-test.php
       - name: Run isolated File 20 runtime provenance contract
         run: php tests/run-untrusted-shell-safe-mode-test.php
+      - name: Run distributed File 20 version 1.0.0 compatibility contract
+        run: php tests/run-file20-legacy-1-0-0-compatibility-test.php
+      - name: Run partial File 20 Create-contract contract
+        run: php tests/run-file20-partial-create-contract-test.php
       - name: Run isolated canonical Membership Core contract
         run: php tests/run-untrusted-membership-core-test.php
       - name: Run isolated managed-page rollback contract
         run: php tests/run-managed-page-rollback-test.php
+      - name: Run finite page-discovery contract
+        run: php tests/run-page-discovery-query-test.php
+      - name: Run page-transaction hardening contract
+        run: php tests/run-page-transaction-hardening-test.php
+      - name: Run malformed idempotency-generator contract
+        run: php tests/run-invalid-idempotency-generator-test.php
+      - name: Run File 20 no-autoload contract
+        run: php tests/run-shell-safe-mode-no-autoload-test.php
 
   repository-contract:
     name: Repository contract
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 6
     steps:
       - name: Check out exact source head
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -189,95 +206,81 @@ jobs:
           required=(
             README.md readme.txt LICENSE.md CHANGELOG.md MANIFEST.md .distignore uninstall.php
             composer.json composer.lock phpunit.xml.dist phpstan.neon.dist phpcs.xml.dist
-            sabri-universal-post-composer.php
-            assets/css/create-surface.css
+            sabri-universal-post-composer.php assets/css/create-surface.css
             includes/contracts/interface-adapter.php
             includes/contracts/interface-workflow-adapter.php
             includes/contracts/interface-diagnostic-adapter.php
-            includes/core/class-version.php
+            includes/core/class-version.php includes/core/class-contract-boundary.php
             includes/core/class-runtime-trust.php
-            includes/core/class-permission-resolver.php
-            includes/core/class-page-resolver.php
-            includes/core/class-safe-mode.php
-            includes/core/class-plugin.php
-            includes/core/class-registry.php
+            includes/core/class-permission-resolver.php includes/core/class-page-resolver.php
+            includes/core/class-safe-mode.php includes/core/class-plugin.php
+            includes/core/class-registry.php includes/core/class-workflow-validator.php
             includes/core/class-workflow-coordinator.php
-            includes/core/functions.php
-            includes/presentation/class-create-surface.php
-            includes/integration/class-shell-bridge.php
-            includes/integration/class-core-adapter-requirements.php
+            includes/core/functions.php includes/presentation/class-create-surface.php
+            includes/integration/class-shell-bridge.php includes/integration/class-core-adapter-requirements.php
             includes/admin/class-system-check-page.php
-            tests/CreateSurfaceTest.php
-            tests/RegistryTest.php
-            tests/AccessibilityContrastTest.php
-            tests/AdminSystemCheckTest.php
-            tests/PageResolverRepairTest.php
-            tests/WorkflowCoordinatorTest.php
-            tests/PluginPrivacyTest.php
-            tests/PublicApiSubjectBindingTest.php
-            tests/SubjectSchemaTest.php
-            tests/CoreAdapterRequirementsTest.php
-            tests/SafeModeTest.php
-            tests/ShellBridgeTest.php
-            tests/SecondPostMergeHardeningTest.php
-            tests/ThirdPostMergeHardeningTest.php
-            tests/FourthCompleteReviewTest.php
-            tests/FifthCompleteReviewTest.php
-            tests/SixthCompleteReviewTest.php
-            tests/SeventhCompleteReviewTest.php
-            tests/EighthCompleteReviewTest.php
-            tests/NinthCompleteReviewTest.php
+            tests/CreateSurfaceTest.php tests/RegistryTest.php tests/AccessibilityContrastTest.php
+            tests/AdminSystemCheckTest.php tests/PageResolverRepairTest.php tests/WorkflowCoordinatorTest.php
+            tests/PluginPrivacyTest.php tests/PublicApiSubjectBindingTest.php tests/SubjectSchemaTest.php
+            tests/CoreAdapterRequirementsTest.php tests/SafeModeTest.php tests/ShellBridgeTest.php
+            tests/SecondPostMergeHardeningTest.php tests/ThirdPostMergeHardeningTest.php
+            tests/FourthCompleteReviewTest.php tests/FifthCompleteReviewTest.php tests/SixthCompleteReviewTest.php
+            tests/SeventhCompleteReviewTest.php tests/EighthCompleteReviewTest.php tests/NinthCompleteReviewTest.php
+            tests/TenthCompleteReviewTest.php tests/EleventhCompleteReviewTest.php tests/EleventhWorkflowHardeningTest.php
+            tests/TwelfthCompleteReviewTest.php
             tests/fixtures/sabri-membership-core/sabri-membership-core.php
             tests/fixtures/sabri-membership-core/includes/functions.php
             tests/fixtures/sabri-unified-application-shell/sabri-unified-application-shell.php
             tests/fixtures/sabri-unified-application-shell/includes/class-safe-mode.php
+            tests/fixtures/sabri-unified-application-shell/includes/class-inherited-safe-mode.php
             tests/fixtures/sabri-unified-application-shell/includes/functions.php
-            tests/run-public-api-collision-test.php
-            tests/run-file20-contract-collision-test.php
-            tests/run-untrusted-shell-safe-mode-test.php
-            tests/run-untrusted-membership-core-test.php
-            tests/run-managed-page-rollback-test.php
-            tests/phpstan-wordpress-stubs.php
+            tests/fixtures/file20-legacy-1.0.0/sabri-unified-application-shell/sabri-unified-application-shell.php
+            tests/run-public-api-collision-test.php tests/run-file20-contract-collision-test.php
+            tests/run-untrusted-shell-safe-mode-test.php tests/run-file20-legacy-1-0-0-compatibility-test.php
+            tests/run-file20-partial-create-contract-test.php tests/run-untrusted-membership-core-test.php
+            tests/run-managed-page-rollback-test.php tests/run-page-discovery-query-test.php
+            tests/run-page-transaction-hardening-test.php tests/run-invalid-idempotency-generator-test.php
+            tests/run-shell-safe-mode-no-autoload-test.php tests/phpstan-wordpress-stubs.php
             docs/ARCHITECTURE.md docs/ADAPTER-CONTRACT.md docs/DECISION-LOG.md docs/SECURITY.md
             docs/PRIVACY.md docs/ACCESSIBILITY.md docs/MIGRATION.md docs/ROLLBACK.md
             docs/STAGING-ACCEPTANCE.md docs/COMPATIBILITY-MATRIX.md docs/ERROR-CODES.md
             docs/FILE21-INTEGRATION.md docs/MASTER-PLAN-AMENDMENT-v2.1.md docs/SYSTEM-CHECK.md
-            docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
-            docs/FILE22-CUMULATIVE-POST-CORRECTION-VERIFICATION-2026-07-30.md
-            docs/FILE22-POST-MERGE-INDEPENDENT-REVIEW-AND-CORRECTION-2026-07-30.md
-            docs/FILE22-SECOND-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md
-            docs/FILE22-THIRD-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md
-            docs/FILE22-FOURTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
-            docs/FILE22-FIFTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
-            docs/FILE22-SIXTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
-            docs/FILE22-SEVENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
-            docs/FILE22-EIGHTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
-            docs/FILE22-NINTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
-            docs/PHASE-22C-CREATE-SURFACE.md
-            docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
-            docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
-            docs/PHASE-22C-POST-CORRECTION-VERIFICATION-2026-07-29.md
-            docs/PHASE-22D-ADMIN-SYSTEM-CHECK.md
-            docs/PHASE-22D-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
-            docs/PHASE-22D-POST-CORRECTION-VERIFICATION-2026-07-29.md
-            docs/PHASE-22D-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
-            docs/PHASE-22D-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md
-            docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md
-            docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
-            docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md
-            docs/PHASE-22E-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
-            docs/PHASE-22E-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md
+            docs/FILE22-TENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
+            docs/FILE22-ELEVENTH-FULL-DEFECT-CENSUS-AND-CORRECTION-2026-07-31.md
+            docs/FILE22-TWELFTH-COMPLETE-REVIEW-AND-CORRECTION-2026-08-01.md
             .github/workflows/cumulative-review-evidence.yml
             .github/workflows/fifth-review-evidence.yml
             .github/workflows/sixth-review-evidence.yml
             .github/workflows/seventh-review-evidence.yml
             .github/workflows/eighth-review-evidence.yml
             .github/workflows/ninth-review-evidence.yml
+            .github/workflows/tenth-review-evidence.yml
+            .github/workflows/eleventh-review-evidence.yml
+            .github/workflows/twelfth-review-evidence.yml
             .github/workflows/phase22d-review-evidence.yml
             .github/workflows/phase22e-review-evidence.yml
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
+          done
+          manifest_required=(
+            tests/EleventhCompleteReviewTest.php
+            tests/EleventhWorkflowHardeningTest.php
+            tests/run-file20-legacy-1-0-0-compatibility-test.php
+            tests/run-file20-partial-create-contract-test.php
+            tests/run-page-transaction-hardening-test.php
+            tests/run-invalid-idempotency-generator-test.php
+            tests/fixtures/file20-legacy-1.0.0/sabri-unified-application-shell/sabri-unified-application-shell.php
+            docs/FILE22-TENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
+            docs/FILE22-ELEVENTH-FULL-DEFECT-CENSUS-AND-CORRECTION-2026-07-31.md
+            .github/workflows/tenth-review-evidence.yml
+            .github/workflows/eleventh-review-evidence.yml
+            tests/TwelfthCompleteReviewTest.php
+            docs/FILE22-TWELFTH-COMPLETE-REVIEW-AND-CORRECTION-2026-08-01.md
+            .github/workflows/twelfth-review-evidence.yml
+          )
+          for file in "${manifest_required[@]}"; do
+            grep -Fq -- "- \`$file\`" MANIFEST.md || { echo "Manifest entry missing: $file" >&2; exit 1; }
           done
           grep -q 'Plugin Name: Sabri Universal Post Composer' sabri-universal-post-composer.php
           grep -q "define( 'SUPC_ADAPTER_API_VERSION'" sabri-universal-post-composer.php
@@ -286,28 +289,23 @@ jobs:
           grep -q 'One canonical native record' README.md
           grep -q 'social_publication' docs/FILE21-INTEGRATION.md
           grep -q 'File 23' docs/MASTER-PLAN-AMENDMENT-v2.1.md
-          grep -q 'workflow_payload_unknown_field' includes/core/class-workflow-coordinator.php
+          grep -q 'workflow_payload_unknown_field' includes/core/class-workflow-validator.php
           grep -q 'workflow_registration_metadata_missing' includes/core/class-workflow-coordinator.php
-          grep -q 'schema_for_user' includes/core/class-workflow-coordinator.php
+          grep -q 'schema_for_user' includes/core/class-workflow-validator.php
+          grep -q 'MAX_ARRAY_ITEMS = 1000' includes/core/class-workflow-validator.php
           grep -q 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' includes/core/functions.php
           grep -q 'functions_declared_by_file' includes/core/class-runtime-trust.php
-          grep -q 'shell_symbols_owned' includes/core/class-runtime-trust.php
-          grep -q 'Runtime_Trust::functions_declared_by_file' includes/core/class-plugin.php
-          grep -q 'Runtime_Trust::shell_symbols_owned' includes/core/class-safe-mode.php
-          grep -q 'file20_create_contract' includes/core/class-plugin.php
+          grep -q 'shell_create_contract_claimed' includes/core/class-runtime-trust.php
+          grep -q 'shell_create_contract_owned' includes/core/class-safe-mode.php
+          grep -q 'MAX_ADAPTERS = 100' includes/core/class-registry.php
+          grep -q 'MAX_DISCOVERY_CANDIDATES = 100' includes/core/class-page-resolver.php
+          grep -q 'MAX_SYSTEM_ROWS = 100' includes/admin/class-system-check-page.php
+          grep -q 'invalid_display_metadata' includes/presentation/class-create-surface.php
+          grep -q 'file20_legacy_contract_missing' includes/core/class-plugin.php
           grep -q 'subject_schema_contract_missing' includes/integration/class-core-adapter-requirements.php
-          grep -q 'subject_schema_extension' includes/admin/class-system-check-page.php
           grep -q 'compare_prerelease' includes/core/class-version.php
           grep -q 'SMC_DB_VERSION' includes/core/class-permission-resolver.php
-          grep -q "CORE_DIRECTORY  = 'sabri-membership-core'" includes/core/class-permission-resolver.php
-          grep -q 'supc_created_page_cleanup_failed' includes/core/class-page-resolver.php
-          grep -q 'noncanonical_shortcode_surface' tests/PluginPrivacyTest.php
-          grep -q 'visual_assets_without_detectable_page' tests/PluginPrivacyTest.php
-          grep -q 'test_incompatible_contract_health_does_not_invoke_schema' tests/FourthCompleteReviewTest.php
-          grep -q 'test_interactive_schema_and_payload_validation_use_subject_schema' tests/SubjectSchemaTest.php
-          grep -q 'test_official_semver_prerelease_precedence_chain' tests/EighthCompleteReviewTest.php
-          grep -q 'test_public_api_functions_are_declared_by_file22_source' tests/NinthCompleteReviewTest.php
           grep -q 'Complete account, role, status, and document matrix' docs/STAGING-ACCEPTANCE.md
-          grep -q 'EXPECTED_SHA' .github/workflows/phase22d-review-evidence.yml
-          grep -q 'EXPECTED_SHA' .github/workflows/eighth-review-evidence.yml
-          grep -q 'EXPECTED_SHA' .github/workflows/ninth-review-evidence.yml
+          grep -q 'Eleventh full defect census' CHANGELOG.md
+          grep -q 'Twelfth complete-review corrections' CHANGELOG.md
+          grep -q 'EXPECTED_SHA' .github/workflows/eleventh-review-evidence.yml
