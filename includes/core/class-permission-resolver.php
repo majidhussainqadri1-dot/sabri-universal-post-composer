@@ -28,11 +28,17 @@ final class Permission_Resolver {
 		if (
 			! defined( 'SMC_VERSION' ) ||
 			! defined( 'SMC_DB_VERSION' ) ||
+			! defined( 'SMC_CONTRACT_VERSION' ) ||
 			! defined( 'SMC_FILE' ) ||
 			! defined( 'SMC_PATH' ) ||
-			! Version::at_least( (string) SMC_VERSION, SUPC_MIN_SMC_VERSION ) ||
-			! Version::at_least( (string) SMC_DB_VERSION, SUPC_MIN_SMC_VERSION ) ||
-			! function_exists( self::STATUS_CALLBACK )
+			! defined( 'SUPC_MIN_SMC_VERSION' ) ||
+			! defined( 'SUPC_MIN_SMC_DB_VERSION' ) ||
+			! defined( 'SUPC_MIN_SMC_CONTRACT_VERSION' ) ||
+			! Version::at_least( (string) SMC_VERSION, (string) SUPC_MIN_SMC_VERSION ) ||
+			! Version::at_least( (string) SMC_DB_VERSION, (string) SUPC_MIN_SMC_DB_VERSION ) ||
+			! Version::at_least( (string) SMC_CONTRACT_VERSION, (string) SUPC_MIN_SMC_CONTRACT_VERSION ) ||
+			! function_exists( self::STATUS_CALLBACK ) ||
+			! function_exists( self::STATE_CALLBACK )
 		) {
 			return false;
 		}
@@ -50,7 +56,8 @@ final class Permission_Resolver {
 				return false;
 			}
 
-			return $this->callback_owned_by_core( self::STATUS_CALLBACK, $smc_file, $smc_path );
+			return $this->callback_owned_by_core( self::STATUS_CALLBACK, $smc_file, $smc_path )
+				&& $this->callback_owned_by_core( self::STATE_CALLBACK, $smc_file, $smc_path );
 		} catch ( \Throwable $error ) {
 			unset( $error );
 			return false;
@@ -99,82 +106,42 @@ final class Permission_Resolver {
 				return $report;
 			}
 
-			if ( $this->trusted_optional_callback_available( self::STATE_CALLBACK ) ) {
-				$state = call_user_func( self::STATE_CALLBACK, $user_id );
-				if ( is_array( $state ) ) {
-					$status             = isset( $state['status'] ) && is_string( $state['status'] ) ? sanitize_key( $state['status'] ) : '';
-					$application_status = isset( $state['application_status'] ) && is_string( $state['application_status'] ) ? sanitize_key( $state['application_status'] ) : $status;
-					$application_exists = ! empty( $state['application_exists'] );
-					$institutional      = ! empty( $state['institutional_account'] );
-					$approved           = true === (bool) ( $state['approved'] ?? false );
-
-					$report['status']                = $status;
-					$report['application_status']    = $application_status;
-					$report['application_exists']    = $application_exists;
-					$report['institutional_account'] = $institutional;
-					$report['approved']              = $approved;
-
-					if ( in_array( $status, self::HARD_BLOCK_STATUSES, true ) || in_array( $application_status, self::HARD_BLOCK_STATUSES, true ) ) {
-						$report['reason'] = 'membership_hard_block';
-						return $report;
-					}
-
-					if ( $approved && ( $institutional || in_array( $status, array( 'approved', 'verified' ), true ) ) ) {
-						$report['eligible'] = true;
-						$report['reason']   = 'current_user_authorized';
-						return $report;
-					}
-
-					$report['reason'] = $application_exists ? 'membership_application_blocking' : 'membership_account_not_eligible';
-					return $report;
-				}
+			$state = call_user_func( self::STATE_CALLBACK, $user_id );
+			if ( ! is_array( $state ) ) {
+				$report['reason'] = 'membership_contract_invalid';
+				return $report;
 			}
 
-			$status                      = (string) call_user_func( self::STATUS_CALLBACK, $user_id );
-			$report['status']            = sanitize_key( $status );
-			$report['application_status'] = $report['status'];
+			$status             = isset( $state['status'] ) && is_string( $state['status'] ) ? sanitize_key( $state['status'] ) : '';
+			$application_status = isset( $state['application_status'] ) && is_string( $state['application_status'] ) ? sanitize_key( $state['application_status'] ) : $status;
+			$application_exists = ! empty( $state['application_exists'] );
+			$institutional      = ! empty( $state['institutional_account'] );
+			$approved           = true === (bool) ( $state['approved'] ?? false );
+
+			$report['status']                = $status;
+			$report['application_status']    = $application_status;
+			$report['application_exists']    = $application_exists;
+			$report['institutional_account'] = $institutional;
+			$report['approved']              = $approved;
+
+			if ( in_array( $status, self::HARD_BLOCK_STATUSES, true ) || in_array( $application_status, self::HARD_BLOCK_STATUSES, true ) ) {
+				$report['reason'] = 'membership_hard_block';
+				return $report;
+			}
+
+			if ( $approved && ( $institutional || in_array( $status, array( 'approved', 'verified' ), true ) ) ) {
+				$report['eligible'] = true;
+				$report['reason']   = 'current_user_authorized';
+				return $report;
+			}
+
+			$report['reason'] = $application_exists ? 'membership_application_blocking' : 'membership_account_not_eligible';
+			return $report;
 		} catch ( \Throwable $error ) {
 			unset( $error );
 			$report['reason'] = 'membership_contract_exception';
 			return $report;
 		}
-
-		if ( in_array( $report['status'], self::HARD_BLOCK_STATUSES, true ) ) {
-			$report['reason'] = 'membership_hard_block';
-			return $report;
-		}
-		if ( in_array( $report['status'], array( 'approved', 'verified' ), true ) ) {
-			$report['eligible'] = true;
-			$report['approved'] = true;
-			$report['reason']   = 'current_user_authorized';
-			return $report;
-		}
-
-		/* Compatibility path for File 00 releases before the explicit state API. */
-		if ( 'draft' === $report['status'] && $this->has_no_membership_application( $user_id ) ) {
-			$report['application_status'] = '';
-			if ( $this->is_canonical_founder( $user_id ) ) {
-				$report['eligible']              = true;
-				$report['approved']              = true;
-				$report['institutional_account'] = true;
-				$report['reason']                = 'current_user_authorized';
-				return $report;
-			}
-			try {
-				if ( function_exists( 'user_can' ) && user_can( $user_id, 'manage_options' ) ) {
-					$report['eligible']              = true;
-					$report['approved']              = true;
-					$report['institutional_account'] = true;
-					$report['reason']                = 'current_user_authorized';
-					return $report;
-				}
-			} catch ( \Throwable $error ) {
-				unset( $error );
-			}
-		}
-
-		$report['reason'] = $this->has_no_membership_application( $user_id ) ? 'membership_account_not_eligible' : 'membership_application_blocking';
-		return $report;
 	}
 
 	public function can_use_capability( int $user_id, string $capability ): bool {
