@@ -16,11 +16,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Permission_Resolver {
-	private const STATUS_CALLBACK      = 'smc_user_status';
+	private const STATUS_CALLBACK = 'smc_user_status';
 	private const APPLICATION_CALLBACK = 'smc_application';
-	private const FOUNDER_CALLBACK     = 'smc_is_founder';
-	private const CORE_DIRECTORY       = 'sabri-membership-core';
-	private const CORE_FILE            = 'sabri-membership-core.php';
+	private const FOUNDER_CALLBACK = 'smc_is_founder';
+	private const CORE_DIRECTORY  = 'sabri-membership-core';
+	private const CORE_FILE       = 'sabri-membership-core.php';
 
 	public function core_available(): bool {
 		if (
