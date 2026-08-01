@@ -7,13 +7,13 @@ use Sabri\UniversalComposer\Core\Permission_Resolver;
 
 final class CompleteAuthorizationForensicTest extends TestCase {
 	protected function setUp(): void {
-		$GLOBALS['supc_test_current_user']              = 1;
-		$GLOBALS['supc_test_manage_options']            = true;
-		$GLOBALS['supc_test_statuses']                  = array();
-		$GLOBALS['supc_test_capabilities']              = array();
-		$GLOBALS['supc_test_membership_applications']   = array();
-		$GLOBALS['supc_test_membership_states']         = array();
-		$GLOBALS['supc_test_founders']                  = array();
+		$GLOBALS['supc_test_current_user']            = 1;
+		$GLOBALS['supc_test_manage_options']          = true;
+		$GLOBALS['supc_test_statuses']                = array();
+		$GLOBALS['supc_test_capabilities']            = array();
+		$GLOBALS['supc_test_membership_applications'] = array();
+		$GLOBALS['supc_test_membership_states']       = array();
+		$GLOBALS['supc_test_founders']                = array();
 	}
 
 	public function test_institutional_account_with_legacy_draft_application_is_eligible(): void {
@@ -83,11 +83,13 @@ final class CompleteAuthorizationForensicTest extends TestCase {
 	}
 
 	public function test_forensic_row_collects_all_independent_blockers_without_identity_data(): void {
-		$plugin = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-plugin.php' );
+		$plugin   = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-plugin.php' );
+		$resolver = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-permission-resolver.php' );
 
 		$this->assertIsString( $plugin );
+		$this->assertIsString( $resolver );
+		$this->assertStringContainsString( 'membership_application_blocking', $resolver );
 		foreach ( array(
-			'membership_application_blocking',
 			'native_capability_missing',
 			'file21_runtime_missing',
 			'file21_duplicate_installed_copies',
