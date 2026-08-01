@@ -52,19 +52,13 @@ final class EleventhCompleteReviewTest extends TestCase {
 	}
 
 	public function test_noncanonical_group_is_rejected_at_registration(): void {
-		$result = $this->registry()->register(
-			new Eleventh_Review_Adapter( 'bad_group_adapter', "publishing\nadmin" )
-		);
-
+		$result = $this->registry()->register( new Eleventh_Review_Adapter( 'bad_group_adapter', "publishing\nadmin" ) );
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'supc_invalid_group', $result->code );
 	}
 
 	public function test_out_of_range_priority_is_rejected(): void {
-		$result = $this->registry()->register(
-			new Eleventh_Review_Adapter( 'bad_priority_adapter', 'publishing', 10001 )
-		);
-
+		$result = $this->registry()->register( new Eleventh_Review_Adapter( 'bad_priority_adapter', 'publishing', 10001 ) );
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'supc_invalid_priority', $result->code );
 	}
@@ -75,7 +69,6 @@ final class EleventhCompleteReviewTest extends TestCase {
 			$key = 'bounded_adapter_' . str_pad( (string) $index, 3, '0', STR_PAD_LEFT );
 			$this->assertTrue( $registry->register( new Eleventh_Review_Adapter( $key ) ) );
 		}
-
 		$result = $registry->register( new Eleventh_Review_Adapter( 'bounded_adapter_overflow' ) );
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'supc_adapter_limit_reached', $result->code );
@@ -88,7 +81,6 @@ final class EleventhCompleteReviewTest extends TestCase {
 			$key = 'bad_group_' . str_pad( (string) $index, 3, '0', STR_PAD_LEFT );
 			$registry->register( new Eleventh_Review_Adapter( $key, "bad\ngroup" ) );
 		}
-
 		$errors = $registry->errors();
 		$this->assertLessThanOrEqual( 201, count( $errors ) );
 		$this->assertArrayHasKey( '[registry-limit]', $errors );
@@ -97,16 +89,7 @@ final class EleventhCompleteReviewTest extends TestCase {
 
 	public function test_oversized_display_metadata_is_rejected_before_rendering(): void {
 		$registry = $this->registry();
-		$this->assertTrue(
-			$registry->register(
-				new Eleventh_Review_Adapter(
-					'oversized_label_adapter',
-					'publishing',
-					10,
-					str_repeat( 'L', 161 )
-				)
-			)
-		);
+		$this->assertTrue( $registry->register( new Eleventh_Review_Adapter( 'oversized_label_adapter', 'publishing', 10, str_repeat( 'L', 161 ) ) ) );
 		$surface = new Create_Surface( $registry );
 		$this->assertSame( array(), $surface->collect_groups( 1 ) );
 		$codes = array_column( $surface->diagnostics(), 'code' );
@@ -116,18 +99,8 @@ final class EleventhCompleteReviewTest extends TestCase {
 	public function test_create_surface_count_matches_unique_normalized_codes(): void {
 		$registry = $this->registry();
 		foreach ( array( 'oversized_label_one', 'oversized_label_two' ) as $key ) {
-			$this->assertTrue(
-				$registry->register(
-					new Eleventh_Review_Adapter(
-						$key,
-						'publishing',
-						10,
-						str_repeat( 'L', 161 )
-					)
-				)
-			);
+			$this->assertTrue( $registry->register( new Eleventh_Review_Adapter( $key, 'publishing', 10, str_repeat( 'L', 161 ) ) ) );
 		}
-
 		$row = ( new Create_Surface( $registry ) )->system_check_row( 1 );
 		$this->assertSame( array( 'invalid_display_metadata' ), $row['codes'] );
 		$this->assertSame( 1, $row['count'] );
@@ -145,10 +118,12 @@ final class EleventhCompleteReviewTest extends TestCase {
 			);
 		}
 		$GLOBALS['supc_test_filter_values']['supc_system_check_report'] = $raw;
-		$page = new System_Check_Page( $this->registry() );
-		$rows = $page->system_rows();
+		$rows = ( new System_Check_Page( $this->registry() ) )->system_rows();
 
-		$this->assertCount( 100, $rows );
+		$this->assertCount( 1, $rows );
 		$this->assertSame( 1000, $rows[0]['count'] );
+		$this->assertSame( 'warning', $rows[0]['status'] );
+		$this->assertContains( 'availability_exception', $rows[0]['codes'] );
+		$this->assertContains( 'duplicate_system_check', $rows[0]['codes'] );
 	}
 }

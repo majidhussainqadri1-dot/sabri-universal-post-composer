@@ -25,8 +25,6 @@ final class Safe_Mode {
 			return true;
 		}
 
-		// File 22 may not continue as an internal Composer while its declared public
-		// integration API is partial, colliding, or executable from a foreign source.
 		if (
 			Runtime_Trust::public_api_claimed() &&
 			(
@@ -37,10 +35,13 @@ final class Safe_Mode {
 			return true;
 		}
 
-		// File 20 version 1.0.0 is a real, canonical legacy package, but it predates
-		// the optional Create contract. Its base constants alone must not disable the
-		// Composer. Only a component that actually claims the atomic Create contract
-		// may become a File 22 emergency-state authority.
+		// A canonical legacy File 20 package may predate the optional Create
+		// contract, but a foreign or incoherent base package claim must never be
+		// ignored merely because it did not also claim the later contract.
+		if ( Runtime_Trust::shell_package_claimed() && ! Runtime_Trust::shell_package_owned() ) {
+			return true;
+		}
+
 		if ( ! Runtime_Trust::shell_create_contract_claimed() ) {
 			return false;
 		}

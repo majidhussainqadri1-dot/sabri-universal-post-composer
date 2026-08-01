@@ -78,10 +78,12 @@ final class CreateSurfaceTest extends TestCase {
 
 		$surface = new Create_Surface( $this->registry );
 		$groups  = $surface->collect_groups( 1 );
+		$row     = $surface->system_check_row( 1 );
 
 		$this->assertSame( array(), $groups );
-		$this->assertSame( 2, $surface->system_check_row( 1 )['error_count'] );
-		$this->assertContains( 'invalid_route', $surface->system_check_row( 1 )['codes'] );
+		$this->assertSame( 1, $row['error_count'] );
+		$this->assertSame( 1, $row['count'] );
+		$this->assertContains( 'invalid_route', $row['codes'] );
 	}
 
 	public function test_same_origin_https_and_relative_routes_are_accepted(): void {

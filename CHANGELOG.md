@@ -2,6 +2,17 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Twelfth complete-review corrections
+
+- Restored Create-surface card rendering by correcting the Contract Boundary class reference and retained immutable registration metadata for group and privacy decisions.
+- Added the modular Workflow Validator to static-analysis and repository evidence discovery, and moved stale coordinator-only evidence probes to the validator that now owns those contracts.
+- Preserved live post-adapter authorization race checks behind explicit mutable-authority boundaries without weakening fail-closed behavior.
+- Rejected URL values containing either a username or password credential component, including username-only forms.
+- Captured each Diagnostic Adapter health report once per administrator row so status and codes derive from one coherent snapshot.
+- Made the administrator repair endpoint reject requests whose HTTP method is absent as well as methods other than POST.
+- Updated the File 21 diagnostic fixture to satisfy the explicit status/codes contract and added focused URL and health-snapshot regressions.
+- Made the cumulative test environment warning-free and added a dedicated exact-head twelfth review gate that fails on PHPUnit warnings.
+
 ### Eleventh full defect census and real-package hardening
 
 - Audited File 22 against the distributed File 00 Membership Core 1.0.1 and File 20 Unified Application Shell 1.0.0 packages instead of relying only on stronger synthetic fixtures.

@@ -73,5 +73,5 @@ jobs:
           grep -Fq 'MAX_ADAPTERS = 100' includes/core/class-registry.php
           grep -Fq 'MAX_DISCOVERY_CANDIDATES = 100' includes/core/class-page-resolver.php
           grep -Fq 'MAX_SYSTEM_ROWS = 100' includes/admin/class-system-check-page.php
-          grep -Fq 'MAX_ARRAY_ITEMS = 1000' includes/core/class-workflow-coordinator.php
+          grep -Fq 'MAX_ARRAY_ITEMS = 1000' includes/core/class-workflow-validator.php
           grep -Fq 'Eleventh full defect census' CHANGELOG.md
