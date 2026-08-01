@@ -214,60 +214,57 @@ final class Plugin {
 		return $post instanceof \WP_Post && has_shortcode( (string) $post->post_content, 'sabri_universal_composer' );
 	}
 
-	/** @return array<string,mixed> */
+	/**
+	 * Audit every independent authorization gate in one pass. One failed gate
+	 * never prevents the remaining safe, read-only checks from running.
+	 *
+	 * @return array<string,mixed>
+	 */
 	private function current_user_authorization_row(): array {
 		$user_id = get_current_user_id();
 		$codes   = array();
-		$status  = 'pass';
 		$report  = $this->permissions->eligibility_report( $user_id );
 
 		if ( ! $report['eligible'] ) {
 			$codes[] = $report['reason'];
-			return array( 'key' => 'current_user_authorization', 'status' => 'fail', 'count' => 1, 'codes' => $codes );
 		}
 
 		$adapter  = $this->registry->get( self::SOCIAL_ADAPTER_KEY );
 		$contract = $this->registry->adapter_contract( self::SOCIAL_ADAPTER_KEY );
 		if ( null === $adapter ) {
 			$codes[] = 'social_publication_not_registered';
-			return array( 'key' => 'current_user_authorization', 'status' => 'fail', 'count' => 1, 'codes' => $codes );
 		}
 		if ( null === $contract ) {
 			$codes[] = 'social_publication_registration_metadata_missing';
-			return array( 'key' => 'current_user_authorization', 'status' => 'fail', 'count' => 1, 'codes' => $codes );
-		}
-		if ( self::SOCIAL_CAPABILITY !== $contract['required_capability'] ) {
+		} elseif ( self::SOCIAL_CAPABILITY !== $contract['required_capability'] ) {
 			$codes[] = 'required_capability_mismatch';
-			$status  = 'fail';
 		}
 
-		try {
-			if ( ! user_can( $user_id, self::SOCIAL_CAPABILITY ) ) {
-				$codes[] = 'native_capability_missing';
-				$status  = 'fail';
+		if ( $user_id <= 0 ) {
+			$codes[] = 'authorization_subject_missing';
+		} else {
+			try {
+				if ( ! user_can( $user_id, self::SOCIAL_CAPABILITY ) ) {
+					$codes[] = 'native_capability_missing';
+				}
+			} catch ( \Throwable $error ) {
+				unset( $error );
+				$codes[] = 'native_capability_check_exception';
 			}
-		} catch ( \Throwable $error ) {
-			unset( $error );
-			$codes[] = 'native_capability_check_exception';
-			$status  = 'fail';
 		}
 
 		if ( ! defined( 'SABRI_HNF_VERSION' ) ) {
 			$codes[] = 'file21_runtime_missing';
-			$status  = 'fail';
 		} elseif ( ! Version::valid( (string) SABRI_HNF_VERSION ) || version_compare( (string) SABRI_HNF_VERSION, '1.0.3', '<' ) ) {
 			$codes[] = 'file21_runtime_too_low';
-			$status  = 'fail';
 		}
 
 		$copies = $this->file21_copy_counts();
 		if ( $copies['installed'] > 1 ) {
 			$codes[] = 'file21_duplicate_installed_copies';
-			$status  = 'fail';
 		}
 		if ( $copies['active'] > 1 ) {
 			$codes[] = 'file21_duplicate_active_copies';
-			$status  = 'fail';
 		}
 
 		if ( class_exists( '\\Sabri\\HomeNewsFeed\\Settings' ) && is_callable( array( '\\Sabri\\HomeNewsFeed\\Settings', 'get' ) ) ) {
@@ -275,52 +272,54 @@ final class Plugin {
 				$settings = \Sabri\HomeNewsFeed\Settings::get();
 				if ( empty( $settings['general']['enabled'] ) ) {
 					$codes[] = 'file21_general_disabled';
-					$status  = 'fail';
 				}
 				if ( empty( $settings['composer']['public_composer_enabled'] ) ) {
 					$codes[] = 'file21_composer_disabled';
-					$status  = 'fail';
 				}
 			} catch ( \Throwable $error ) {
 				unset( $error );
 				$codes[] = 'file21_settings_exception';
-				$status  = 'fail';
 			}
+		} elseif ( defined( 'SABRI_HNF_VERSION' ) ) {
+			$codes[] = 'file21_settings_exception';
 		}
 
 		if ( class_exists( '\\Sabri\\HomeNewsFeed\\SafeMode' ) ) {
 			try {
 				if ( \Sabri\HomeNewsFeed\SafeMode::emergency_disabled() ) {
 					$codes[] = 'file21_emergency_disabled';
-					$status  = 'fail';
 				}
 				if ( \Sabri\HomeNewsFeed\SafeMode::query_safe_mode() ) {
 					$codes[] = 'file21_safe_mode_active';
-					$status  = 'fail';
 				}
 			} catch ( \Throwable $error ) {
 				unset( $error );
 				$codes[] = 'file21_safe_mode_exception';
-				$status  = 'fail';
 			}
+		} elseif ( defined( 'SABRI_HNF_VERSION' ) ) {
+			$codes[] = 'file21_safe_mode_exception';
 		}
 
-		try {
-			if ( ! $adapter->is_available() ) {
-				$codes[] = 'native_adapter_unavailable';
-				$status  = 'fail';
-			} elseif ( ! $adapter->can_create( $user_id ) ) {
-				$codes[] = 'native_adapter_create_denied';
-				$status  = 'fail';
+		if ( null !== $adapter ) {
+			try {
+				if ( ! $adapter->is_available() ) {
+					$codes[] = 'native_adapter_unavailable';
+				} elseif ( $user_id <= 0 || ! $adapter->can_create( $user_id ) ) {
+					$codes[] = 'native_adapter_create_denied';
+				}
+			} catch ( \Throwable $error ) {
+				unset( $error );
+				$codes[] = 'native_adapter_authorization_exception';
 			}
-		} catch ( \Throwable $error ) {
-			unset( $error );
-			$codes[] = 'native_adapter_authorization_exception';
-			$status  = 'fail';
 		}
 
 		$codes = array_values( array_unique( $codes ) );
-		return array( 'key' => 'current_user_authorization', 'status' => $status, 'count' => count( $codes ), 'codes' => $codes );
+		return array(
+			'key'    => 'current_user_authorization',
+			'status' => array() === $codes ? 'pass' : 'fail',
+			'count'  => count( $codes ),
+			'codes'  => $codes,
+		);
 	}
 
 	/** @return array{installed:int,active:int} */
