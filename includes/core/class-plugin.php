@@ -37,6 +37,8 @@ final class Plugin {
 		'sabri_shell_create_contract_available',
 		'sabri_shell_create_visible_for_current_user',
 	);
+	private const SOCIAL_ADAPTER_KEY = 'social_publication';
+	private const SOCIAL_CAPABILITY = 'sabri_feed_create_posts';
 
 	private static ?self $instance = null;
 	private Permission_Resolver $permissions;
@@ -97,9 +99,6 @@ final class Plugin {
 	}
 
 	public function render_shortcode(): string {
-		// Template/widget/direct do_shortcode() invocation may not be detectable at
-		// wp_enqueue_scripts or template_redirect. Never evaluate subject state or
-		// adapters when the private response boundary can no longer be established.
 		if ( ! $this->send_private_surface_headers() ) {
 			return $this->privacy_boundary_notice();
 		}
@@ -152,20 +151,14 @@ final class Plugin {
 		);
 		$rows[] = $this->public_api_contract_row();
 		$rows[] = $this->file20_contract_row();
+		$rows[] = $this->current_user_authorization_row();
 		$rows[] = $this->create_surface->system_check_row( get_current_user_id() );
 		return $rows;
 	}
 
 	private function ensure_create_surface_assets(): void {
-		wp_enqueue_style(
-			'supc-create-surface',
-			SUPC_URL . 'assets/css/create-surface.css',
-			array( 'dashicons' ),
-			SUPC_VERSION
-		);
+		wp_enqueue_style( 'supc-create-surface', SUPC_URL . 'assets/css/create-surface.css', array( 'dashicons' ), SUPC_VERSION );
 
-		// A direct shortcode may run after wp_head. WordPress otherwise leaves a
-		// newly enqueued stylesheet pending for the rest of the response.
 		if (
 			function_exists( 'did_action' ) &&
 			function_exists( 'wp_style_is' ) &&
@@ -221,6 +214,145 @@ final class Plugin {
 		return $post instanceof \WP_Post && has_shortcode( (string) $post->post_content, 'sabri_universal_composer' );
 	}
 
+	/** @return array<string,mixed> */
+	private function current_user_authorization_row(): array {
+		$user_id = get_current_user_id();
+		$codes   = array();
+		$status  = 'pass';
+		$report  = $this->permissions->eligibility_report( $user_id );
+
+		if ( ! $report['eligible'] ) {
+			$codes[] = $report['reason'];
+			return array( 'key' => 'current_user_authorization', 'status' => 'fail', 'count' => 1, 'codes' => $codes );
+		}
+
+		$adapter  = $this->registry->get( self::SOCIAL_ADAPTER_KEY );
+		$contract = $this->registry->adapter_contract( self::SOCIAL_ADAPTER_KEY );
+		if ( null === $adapter ) {
+			$codes[] = 'social_publication_not_registered';
+			return array( 'key' => 'current_user_authorization', 'status' => 'fail', 'count' => 1, 'codes' => $codes );
+		}
+		if ( null === $contract ) {
+			$codes[] = 'social_publication_registration_metadata_missing';
+			return array( 'key' => 'current_user_authorization', 'status' => 'fail', 'count' => 1, 'codes' => $codes );
+		}
+		if ( self::SOCIAL_CAPABILITY !== $contract['required_capability'] ) {
+			$codes[] = 'required_capability_mismatch';
+			$status  = 'fail';
+		}
+
+		try {
+			if ( ! user_can( $user_id, self::SOCIAL_CAPABILITY ) ) {
+				$codes[] = 'native_capability_missing';
+				$status  = 'fail';
+			}
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			$codes[] = 'native_capability_check_exception';
+			$status  = 'fail';
+		}
+
+		if ( ! defined( 'SABRI_HNF_VERSION' ) ) {
+			$codes[] = 'file21_runtime_missing';
+			$status  = 'fail';
+		} elseif ( ! Version::valid( (string) SABRI_HNF_VERSION ) || version_compare( (string) SABRI_HNF_VERSION, '1.0.3', '<' ) ) {
+			$codes[] = 'file21_runtime_too_low';
+			$status  = 'fail';
+		}
+
+		$copies = $this->file21_copy_counts();
+		if ( $copies['installed'] > 1 ) {
+			$codes[] = 'file21_duplicate_installed_copies';
+			$status  = 'fail';
+		}
+		if ( $copies['active'] > 1 ) {
+			$codes[] = 'file21_duplicate_active_copies';
+			$status  = 'fail';
+		}
+
+		if ( class_exists( '\\Sabri\\HomeNewsFeed\\Settings' ) && is_callable( array( '\\Sabri\\HomeNewsFeed\\Settings', 'get' ) ) ) {
+			try {
+				$settings = \Sabri\HomeNewsFeed\Settings::get();
+				if ( empty( $settings['general']['enabled'] ) ) {
+					$codes[] = 'file21_general_disabled';
+					$status  = 'fail';
+				}
+				if ( empty( $settings['composer']['public_composer_enabled'] ) ) {
+					$codes[] = 'file21_composer_disabled';
+					$status  = 'fail';
+				}
+			} catch ( \Throwable $error ) {
+				unset( $error );
+				$codes[] = 'file21_settings_exception';
+				$status  = 'fail';
+			}
+		}
+
+		if ( class_exists( '\\Sabri\\HomeNewsFeed\\SafeMode' ) ) {
+			try {
+				if ( \Sabri\HomeNewsFeed\SafeMode::emergency_disabled() ) {
+					$codes[] = 'file21_emergency_disabled';
+					$status  = 'fail';
+				}
+				if ( \Sabri\HomeNewsFeed\SafeMode::query_safe_mode() ) {
+					$codes[] = 'file21_safe_mode_active';
+					$status  = 'fail';
+				}
+			} catch ( \Throwable $error ) {
+				unset( $error );
+				$codes[] = 'file21_safe_mode_exception';
+				$status  = 'fail';
+			}
+		}
+
+		try {
+			if ( ! $adapter->is_available() ) {
+				$codes[] = 'native_adapter_unavailable';
+				$status  = 'fail';
+			} elseif ( ! $adapter->can_create( $user_id ) ) {
+				$codes[] = 'native_adapter_create_denied';
+				$status  = 'fail';
+			}
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			$codes[] = 'native_adapter_authorization_exception';
+			$status  = 'fail';
+		}
+
+		$codes = array_values( array_unique( $codes ) );
+		return array( 'key' => 'current_user_authorization', 'status' => $status, 'count' => count( $codes ), 'codes' => $codes );
+	}
+
+	/** @return array{installed:int,active:int} */
+	private function file21_copy_counts(): array {
+		$result = array( 'installed' => 0, 'active' => 0 );
+		if ( ! function_exists( 'get_plugins' ) && defined( 'ABSPATH' ) ) {
+			$plugin_api = ABSPATH . 'wp-admin/includes/plugin.php';
+			if ( is_readable( $plugin_api ) ) {
+				require_once $plugin_api;
+			}
+		}
+		if ( ! function_exists( 'get_plugins' ) ) {
+			return $result;
+		}
+
+		foreach ( get_plugins() as $basename => $headers ) {
+			$name   = isset( $headers['Name'] ) ? (string) $headers['Name'] : '';
+			$domain = isset( $headers['TextDomain'] ) ? (string) $headers['TextDomain'] : '';
+			$match  = 'sabri-complete-home-news-feed' === $domain
+				|| in_array( $name, array( 'Sabri Complete Home and News Feed', 'Sabri News Feed and Publishing' ), true )
+				|| str_ends_with( (string) $basename, '/sabri-complete-home-news-feed.php' );
+			if ( ! $match ) {
+				continue;
+			}
+			++$result['installed'];
+			if ( function_exists( 'is_plugin_active' ) && is_plugin_active( $basename ) ) {
+				++$result['active'];
+			}
+		}
+		return $result;
+	}
+
 	/** @return array<string, mixed> */
 	private function public_api_contract_row(): array {
 		$codes              = array();
@@ -248,26 +380,13 @@ final class Plugin {
 		$contract_claimed = Runtime_Trust::shell_create_contract_claimed();
 
 		if ( ! $package_claimed && ! $contract_claimed ) {
-			return array(
-				'key'    => 'file20_create_contract',
-				'status' => 'warning',
-				'count'  => 1,
-				'codes'  => array( 'file20_contract_missing' ),
-			);
+			return array( 'key' => 'file20_create_contract', 'status' => 'warning', 'count' => 1, 'codes' => array( 'file20_contract_missing' ) );
 		}
 
 		if ( $package_claimed && ! Runtime_Trust::shell_package_owned() ) {
-			return array(
-				'key'    => 'file20_create_contract',
-				'status' => 'fail',
-				'count'  => 1,
-				'codes'  => array( 'file20_contract_collision' ),
-			);
+			return array( 'key' => 'file20_create_contract', 'status' => 'fail', 'count' => 1, 'codes' => array( 'file20_contract_collision' ) );
 		}
 
-		// The distributed File 20 version 1.0.0 supports the Create URL filter but
-		// predates File 22's atomic visibility/health contract. It is compatible as
-		// an optional legacy shell, but production integration remains incomplete.
 		if ( ! $contract_claimed ) {
 			return array(
 				'key'    => 'file20_create_contract',
