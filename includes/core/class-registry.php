@@ -23,6 +23,15 @@ final class Registry {
 	private array $adapters = array();
 
 	/**
+	 * Immutable registration-time base metadata used by every authorization and
+	 * exact-owner decision. Native adapter methods may report health dynamically,
+	 * but they cannot weaken the capability or change the owner after acceptance.
+	 *
+	 * @var array<string, array{api_version:string,required_capability:string,native_module:string,minimum_native_version:string,privacy_classification:string}>
+	 */
+	private array $adapter_contracts = array();
+
+	/**
 	 * Immutable registration-time workflow metadata. Runtime authorization uses
 	 * this snapshot before invoking any native adapter method.
 	 *
@@ -46,6 +55,8 @@ final class Registry {
 	 * @return true|WP_Error
 	 */
 	public function register( Adapter $adapter ) {
+		$key = 'unknown_' . count( $this->errors );
+
 		try {
 			$key = $adapter->key();
 			if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{2,63}$/', $key ) ) {
@@ -56,7 +67,8 @@ final class Registry {
 				return $this->registration_error( 'duplicate_key', $key, 'Adapter key is already registered.' );
 			}
 
-			if ( SUPC_ADAPTER_API_VERSION !== $adapter->api_version() ) {
+			$api_version = trim( $adapter->api_version() );
+			if ( SUPC_ADAPTER_API_VERSION !== $api_version ) {
 				return $this->registration_error( 'api_mismatch', $key, 'Adapter API version is incompatible.' );
 			}
 
@@ -75,24 +87,45 @@ final class Registry {
 				return $this->registration_error( 'invalid_minimum_native_version', $key, 'Adapter minimum native version is invalid.' );
 			}
 
-			if ( ! in_array( $adapter->privacy_classification(), array( 'public', 'private', 'sensitive' ), true ) ) {
+			$privacy_classification = $adapter->privacy_classification();
+			if ( ! in_array( $privacy_classification, array( 'public', 'private', 'sensitive' ), true ) ) {
 				return $this->registration_error( 'invalid_privacy', $key, 'Adapter privacy classification is invalid.' );
 			}
 
-			$this->adapters[ $key ] = $adapter;
+			$base_contract = array(
+				'api_version'            => $api_version,
+				'required_capability'    => $capability,
+				'native_module'          => $native_module,
+				'minimum_native_version' => $minimum_native_version,
+				'privacy_classification' => $privacy_classification,
+			);
+
+			$workflow_contract = null;
 			if ( $adapter instanceof Workflow_Adapter ) {
-				$this->workflow_contracts[ $key ] = array(
+				$workflow_contract = array(
 					'workflow_api_version'   => trim( $adapter->workflow_api_version() ),
 					'required_capability'    => $capability,
 					'supports_native_drafts' => $adapter->supports_native_drafts(),
 				);
 			}
 
+			// Registration is atomic: no adapter becomes visible until every required
+			// base and workflow metadata method has completed successfully.
+			$this->adapters[ $key ]          = $adapter;
+			$this->adapter_contracts[ $key ] = $base_contract;
+			if ( null !== $workflow_contract ) {
+				$this->workflow_contracts[ $key ] = $workflow_contract;
+			}
+
 			$this->flush_cache();
 			return true;
 		} catch ( Throwable $error ) {
 			unset( $error );
-			$key = 'unknown_' . count( $this->errors );
+
+			// Defensive rollback protects against future edits that accidentally move
+			// a mutation above the final atomic commit block.
+			unset( $this->adapters[ $key ], $this->adapter_contracts[ $key ], $this->workflow_contracts[ $key ] );
+			$this->flush_cache();
 			return $this->runtime_error( $key, 'registration_exception' );
 		}
 	}
@@ -102,7 +135,7 @@ final class Registry {
 			return false;
 		}
 
-		unset( $this->adapters[ $key ], $this->workflow_contracts[ $key ] );
+		unset( $this->adapters[ $key ], $this->adapter_contracts[ $key ], $this->workflow_contracts[ $key ] );
 		$this->flush_cache();
 		return true;
 	}
@@ -113,6 +146,13 @@ final class Registry {
 		}
 
 		return $this->adapters[ $key ] ?? null;
+	}
+
+	/**
+	 * @return array{api_version:string,required_capability:string,native_module:string,minimum_native_version:string,privacy_classification:string}|null
+	 */
+	public function adapter_contract( string $key ): ?array {
+		return $this->adapter_contracts[ $key ] ?? null;
 	}
 
 	/**
@@ -134,9 +174,10 @@ final class Registry {
 	/**
 	 * Return only healthy adapters the user can actually invoke.
 	 *
-	 * Central account and capability checks always run before native availability.
-	 * Native availability is then resolved before adapter-specific authorization so
-	 * an offline integration is never mislabeled as a permission denial.
+	 * Central account and immutable capability checks always run before native
+	 * availability. Native availability is then resolved before adapter-specific
+	 * authorization so an offline integration is never mislabeled as a permission
+	 * denial.
 	 *
 	 * @return array<string, Adapter>
 	 */
@@ -153,8 +194,12 @@ final class Registry {
 		$available = array();
 		foreach ( $this->all() as $key => $adapter ) {
 			try {
-				$capability = trim( $adapter->required_capability() );
-				if ( ! $this->permissions->can_use_capability( $user_id, $capability ) ) {
+				$contract = $this->adapter_contract( $key );
+				if ( null === $contract ) {
+					$this->runtime_error( $key, 'registration_exception' );
+					continue;
+				}
+				if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
 					continue;
 				}
 				if ( ! $adapter->is_available() ) {
@@ -192,11 +237,22 @@ final class Registry {
 			return 'denied';
 		}
 
+		$adapters = $this->all();
+		if ( array() === $adapters ) {
+			$this->state_cache[ $user_id ] = 'unavailable';
+			return 'unavailable';
+		}
+
 		$has_unavailable = false;
-		foreach ( $this->all() as $key => $adapter ) {
+		foreach ( $adapters as $key => $adapter ) {
 			try {
-				$capability = trim( $adapter->required_capability() );
-				if ( ! $this->permissions->can_use_capability( $user_id, $capability ) ) {
+				$contract = $this->adapter_contract( $key );
+				if ( null === $contract ) {
+					$has_unavailable = true;
+					$this->runtime_error( $key, 'registration_exception' );
+					continue;
+				}
+				if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
 					continue;
 				}
 				if ( ! $adapter->is_available() ) {
@@ -223,7 +279,8 @@ final class Registry {
 	/**
 	 * Compatibility query used by the Create surface. True means that the
 	 * central gate permits a registered workflow but its native service is not
-	 * available; adapter-specific authorization denial remains false.
+	 * available, or that no native adapter has registered at all. Adapter-specific
+	 * authorization denial remains false.
 	 */
 	public function has_central_capability_for_user( int $user_id ): bool {
 		return 'unavailable' === $this->creation_state_for_user( $user_id );

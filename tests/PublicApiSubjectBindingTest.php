@@ -6,6 +6,8 @@ use PHPUnit\Framework\TestCase;
 use Sabri\UniversalComposer\Contracts\Adapter;
 
 final class Public_API_Subject_Test_Adapter implements Adapter {
+	public string $native_module = 'public-api-subject-test';
+
 	public function api_version(): string { return '1.0.0'; }
 	public function key(): string { return 'public_api_subject_test'; }
 	public function label(): string { return 'Public API subject test'; }
@@ -13,7 +15,7 @@ final class Public_API_Subject_Test_Adapter implements Adapter {
 	public function group(): string { return 'publishing'; }
 	public function icon(): string { return 'admin-post'; }
 	public function priority(): int { return 10; }
-	public function native_module(): string { return 'public-api-subject-test'; }
+	public function native_module(): string { return $this->native_module; }
 	public function minimum_native_version(): string { return '1.0.0'; }
 	public function required_capability(): string { return 'publish_posts'; }
 	public function privacy_classification(): string { return 'public'; }
@@ -23,13 +25,16 @@ final class Public_API_Subject_Test_Adapter implements Adapter {
 }
 
 final class PublicApiSubjectBindingTest extends TestCase {
+	private Public_API_Subject_Test_Adapter $adapter;
+
 	protected function setUp(): void {
-		$GLOBALS['supc_test_statuses']     = array( 1 => 'approved', 2 => 'suspended' );
+		$GLOBALS['supc_test_statuses'] = array( 1 => 'approved', 2 => 'suspended' );
 		$GLOBALS['supc_test_capabilities'] = array( 1 => array( 'publish_posts' => true ) );
-		$GLOBALS['supc_test_options']      = array();
+		$GLOBALS['supc_test_options'] = array();
 		$GLOBALS['supc_test_current_user'] = 1;
 		supc_unregister_adapter( 'public_api_subject_test' );
-		$this->assertTrue( supc_register_adapter( new Public_API_Subject_Test_Adapter() ) );
+		$this->adapter = new Public_API_Subject_Test_Adapter();
+		$this->assertTrue( supc_register_adapter( $this->adapter ) );
 	}
 
 	protected function tearDown(): void {
@@ -39,8 +44,13 @@ final class PublicApiSubjectBindingTest extends TestCase {
 	public function test_owner_match_requires_current_subject_availability(): void {
 		$this->assertTrue( supc_adapter_matches( 'public_api_subject_test', 'public-api-subject-test' ) );
 		$this->assertFalse( supc_adapter_matches( 'public_api_subject_test', 'foreign-module' ) );
-
 		$GLOBALS['supc_test_current_user'] = 2;
 		$this->assertFalse( supc_adapter_matches( 'public_api_subject_test', 'public-api-subject-test' ) );
+	}
+
+	public function test_owner_match_uses_registration_snapshot(): void {
+		$this->adapter->native_module = 'changed-after-registration';
+		$this->assertTrue( supc_adapter_matches( 'public_api_subject_test', 'public-api-subject-test' ) );
+		$this->assertFalse( supc_adapter_matches( 'public_api_subject_test', 'changed-after-registration' ) );
 	}
 }

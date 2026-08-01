@@ -19,6 +19,8 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 
 File 22 owns the universal content-type selector, adapter registry, shared creation experience, temporary orchestration boundaries, page resolution, and integration health. Native modules own permanent records, review decisions, secure storage, canonical URLs, durable idempotency reconciliation, and module-specific lifecycle rules.
 
+Authorization-critical adapter metadata—API version, required capability, native owner, minimum native version, and privacy class—is captured atomically at registration. A native adapter cannot weaken its central capability or change its exact owner after acceptance by returning different metadata later in the same request.
+
 ## Current development stack
 
 - **Phase 22A:** governance, contracts, central permission enforcement, page routing, Safe Mode, and automated contract tests.
@@ -27,7 +29,7 @@ File 22 owns the universal content-type selector, adapter registry, shared creat
 - **Phase 22D:** capability-protected administrator health dashboard, privacy-safe adapter diagnostics, and bounded Create-page mapping repair with dry-run support.
 - **Phase 22E:** guarded server-side native workflow orchestration for schema, native drafts, validation, preview, idempotent submission, status, and canonical URL retrieval.
 
-All phases remain stacked Draft pull requests. No merge, staging approval, package approval, or production approval is implied.
+Phases 22A–22E were integrated into canonical `main` through merged PR #6. That merge establishes a reviewed source baseline only; it does not constitute staging acceptance, package approval, live deployment, or production completion.
 
 ## Technical baseline
 
@@ -49,7 +51,7 @@ $result = supc_register_adapter( $adapter );
 
 Adapters must implement `Sabri\UniversalComposer\Contracts\Adapter`. Full native draft orchestration additionally implements `Workflow_Adapter`.
 
-Every adapter must declare a nonempty canonical central capability, canonical native-module slug, semantic minimum native version, and one of the controlled privacy classes. Registration rejects malformed metadata before the adapter can reach the Create surface or workflow coordinator.
+Every adapter must declare a nonempty canonical central capability, canonical native-module slug, semantic minimum native version, and one of the controlled privacy classes. Registration rejects malformed metadata before the adapter can reach the Create surface or workflow coordinator. Registration is atomic: if any required metadata method throws, no partial adapter or workflow contract remains registered.
 
 ## Create surface
 
@@ -58,6 +60,8 @@ The resolved Create page groups only authorized and available adapters into cont
 Every route must be either a relative internal path or an absolute same-origin HTTPS URL. External hosts, HTTP downgrade routes, credentials, mismatched ports, protocol-relative URLs, control characters, and backslashes are rejected.
 
 Unknown privacy classifications are not relabeled. The invalid adapter is omitted, a privacy-safe diagnostic is reported, and healthy adapters remain available.
+
+An eligible account with no registered native adapter is reported as a service-integration outage, not falsely as an account-permission denial.
 
 The user-facing law is:
 
@@ -93,6 +97,6 @@ Audit → branch → coding → short automated checks → separate post-impleme
 
 ## Status
 
-Development version `0.1.0-dev`. No production package, staging acceptance, live deployment, or completion claim has been issued.
+Development version `0.1.0-dev`. Source phases are merged on `main`, but no production package, controlled staging acceptance, live deployment, or completion claim has been issued. The post-merge independent audit dated 30 July 2026 corrects atomic registration, immutable authorization/owner metadata, empty-registry state classification, and repository-status documentation.
 
 See the `docs/` directory for architecture, privacy, security, accessibility, migration, rollback, compatibility, error codes, staging acceptance, phase contracts, review records, and the formal File 22/File 23 amendment.

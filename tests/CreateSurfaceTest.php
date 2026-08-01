@@ -122,9 +122,15 @@ final class CreateSurfaceTest extends TestCase {
 	}
 
 	public function test_permission_and_integration_failures_have_distinct_messages(): void {
+		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'permission_item', 'Permission' ) ) );
+		$GLOBALS['supc_test_capabilities'][1] = array();
+		$this->registry->flush_cache();
+
 		$permission_html = ( new Create_Surface( $this->registry ) )->render();
 		$this->assertStringContainsString( 'No creation permission is available for this account.', $permission_html );
 
+		$this->assertTrue( $this->registry->unregister( 'permission_item' ) );
+		$GLOBALS['supc_test_capabilities'][1] = array( 'publish_posts' => true );
 		$this->assertTrue( $this->registry->register( new Surface_Test_Adapter( 'broken_route', 'Broken', 'publishing', 'public', 'https://external.example/create/' ) ) );
 		$integration_html = ( new Create_Surface( $this->registry ) )->render();
 		$this->assertStringContainsString( 'Authorized creation services are temporarily unavailable.', $integration_html );

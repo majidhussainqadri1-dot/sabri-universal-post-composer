@@ -27,12 +27,12 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          HEAD_BRANCH: ${{ github.head_ref }}
         run: |
           set -euo pipefail
 
           corrections='docs/PHASE-22E-SECOND-REVIEW-CORRECTIONS-2026-07-29.md'
           verification='docs/PHASE-22E-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md'
+          cumulative_merge_sha='6d965f1bd2ebcf481f4561f2fe37086cecee04f8'
 
           test -f "$corrections"
           test -f "$verification"
@@ -66,8 +66,13 @@ jobs:
           grep -Fq "run \`$ci_run_number\`" "$corrections"
           grep -Fq "\`$ci_run_id\`" "$corrections"
 
-          if [ "$HEAD_BRANCH" = 'fix/file22-cumulative-post-merge-corrections' ]; then
-            echo 'Phase 22E evidence remains valid historical evidence and is superseded for current runtime approval by the cumulative post-merge review.'
+          # PR #6 merged the cumulative corrective runtime and formally superseded
+          # Phase 22E as the current approval boundary. Descendants must preserve
+          # the historical records, but must not fail merely because later runtime
+          # files changed under a new independent review.
+          git cat-file -e "${cumulative_merge_sha}^{commit}"
+          if git merge-base --is-ancestor "$cumulative_merge_sha" HEAD; then
+            echo 'Phase 22E evidence remains valid historical evidence and is superseded by the merged cumulative corrective baseline.'
             exit 0
           fi
 
