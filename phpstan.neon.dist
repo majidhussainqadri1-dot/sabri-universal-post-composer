@@ -4,6 +4,7 @@ parameters:
     paths:
         - includes/contracts
         - includes/core/class-version.php
+        - includes/core/class-runtime-trust.php
         - includes/core/class-safe-mode.php
         - includes/core/class-permission-resolver.php
         - includes/core/class-page-resolver.php

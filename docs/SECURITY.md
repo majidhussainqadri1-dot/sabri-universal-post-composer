@@ -1,6 +1,6 @@
 # Security and Privacy Baseline
 
-File 22 fails closed for authorization, account suspension, invalid or colliding contracts, unsafe routing, ambiguous ownership, malformed payloads, weak idempotency, unsafe previews, invalid native results, dependency mismatch, and failed Create-page cleanup.
+File 22 fails closed for authorization, account suspension, invalid or colliding contracts, unsafe routing, ambiguous ownership, malformed payloads, weak idempotency, unsafe previews, invalid native results, dependency mismatch, executable-source mismatch, and failed Create-page cleanup.
 
 ## Required controls
 
@@ -15,7 +15,7 @@ File 22 fails closed for authorization, account suspension, invalid or colliding
 
 ## Public API ownership and collision safety
 
-The File 22 `supc_*` API is valid only when its version, owner, function-ownership, and empty collision markers agree. Any pre-existing function or marker collision prevents the complete API family from being declared. File 22 never silently produces a partial mixed-version API.
+The File 22 `supc_*` API is valid only when its version, owner, function-ownership, and empty collision markers agree **and** Reflection resolves every required public function to File 22's exact `includes/core/functions.php` source file. Any pre-existing function or marker collision prevents the complete API family from being declared. A coherent foreign function family with copied markers is classified through the controlled collision boundary and is never treated as owned execution authority.
 
 Bootstrap applies the same fail-closed rule to every File 22 core constant, interface, and runtime class before loading source files. A preclaimed symbol cannot produce a mixed runtime or fatal redeclaration.
 
@@ -46,9 +46,19 @@ Pending, draft, rejected, suspended, expired-document, deleted, logged-out, unkn
 
 Malformed Workflow API metadata is rejected atomically at registration. A syntactically valid but unsupported version remains available only for controlled compatibility diagnostics and is never invokable.
 
-## Unified Shell Safe Mode ownership
+## Unified Shell runtime ownership
 
-A callable File 20 Safe Mode class is trusted only when the exact File 20 contract version, canonical owner, and function-ownership marker agree. An obsolete, incomplete, or colliding shell class fails closed and cannot clear File 22's emergency boundary.
+File 20 remains optional only when no File 20 runtime or contract claim is present. Once any claim exists, File 22 requires:
+
+- canonical package directory `sabri-unified-application-shell`;
+- canonical bootstrap file `sabri-unified-application-shell.php`;
+- canonical slug and coherent `SABRI_SHELL_FILE`/`SABRI_SHELL_PATH` real paths;
+- a valid File 20 runtime version;
+- exact Create contract version, owner, and function-ownership markers;
+- Reflection source ownership for `Sabri\UnifiedShell\SafeMode`;
+- Reflection source ownership for both File 20 Create contract functions.
+
+A callable class or function name is not enough. An obsolete, incomplete, colliding, or coherent foreign-source shell claim fails closed, cannot clear File 22's emergency boundary, and is never invoked by System Check.
 
 ## Create-surface privacy and cache boundary
 
@@ -113,4 +123,4 @@ PDF bytes remain with File 12, identity evidence with Membership Core/verificati
 
 ## Release gate
 
-No release proceeds with unresolved critical or high-severity privilege escalation, confused-deputy substitution, CSRF, XSS, IDOR, cache leakage, indexing leakage, open redirect, SSRF, path traversal, SQL injection, MIME spoofing, duplicate submission, draft theft, preview leakage, payload leakage, diagnostic leakage, contract collision, unsafe result envelopes, or rollback failure.
+No release proceeds with unresolved critical or high-severity privilege escalation, confused-deputy substitution, CSRF, XSS, IDOR, cache leakage, indexing leakage, open redirect, SSRF, path traversal, SQL injection, MIME spoofing, duplicate submission, draft theft, preview leakage, payload leakage, diagnostic leakage, contract collision, executable-source spoofing, unsafe result envelopes, or rollback failure.

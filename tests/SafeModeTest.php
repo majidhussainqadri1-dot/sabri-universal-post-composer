@@ -2,37 +2,35 @@
 
 declare(strict_types=1);
 
-namespace Sabri\UnifiedShell {
-	final class SafeMode {
-		public static bool $throw = false;
+use PHPUnit\Framework\TestCase;
+use Sabri\UniversalComposer\Core\Safe_Mode;
+use Sabri\UnifiedShell\SafeMode as Shell_Safe_Mode;
 
-		public static function disabled(): bool {
-			if ( self::$throw ) {
-				throw new \RuntimeException( 'Private shell failure.' );
-			}
-			return false;
-		}
+final class SafeModeTest extends TestCase {
+	protected function setUp(): void {
+		$GLOBALS['supc_test_options'] = array();
+		Shell_Safe_Mode::$throw       = false;
+		Shell_Safe_Mode::$disabled    = false;
 	}
-}
 
-namespace {
-	use PHPUnit\Framework\TestCase;
-	use Sabri\UniversalComposer\Core\Safe_Mode;
+	protected function tearDown(): void {
+		Shell_Safe_Mode::$throw    = false;
+		Shell_Safe_Mode::$disabled = false;
+	}
 
-	final class SafeModeTest extends TestCase {
-		protected function setUp(): void {
-			$GLOBALS['supc_test_options'] = array();
-			\Sabri\UnifiedShell\SafeMode::$throw = false;
-		}
+	public function test_owned_shell_can_report_normal_mode(): void {
+		$this->assertFalse( Safe_Mode::disabled() );
+	}
 
-		protected function tearDown(): void {
-			\Sabri\UnifiedShell\SafeMode::$throw = false;
-		}
+	public function test_owned_shell_safe_mode_is_honored(): void {
+		Shell_Safe_Mode::$disabled = true;
 
-		public function test_external_shell_exception_fails_closed(): void {
-			\Sabri\UnifiedShell\SafeMode::$throw = true;
+		$this->assertTrue( Safe_Mode::disabled() );
+	}
 
-			$this->assertTrue( Safe_Mode::disabled() );
-		}
+	public function test_external_shell_exception_fails_closed(): void {
+		Shell_Safe_Mode::$throw = true;
+
+		$this->assertTrue( Safe_Mode::disabled() );
 	}
 }
