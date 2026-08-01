@@ -227,6 +227,7 @@ jobs:
             tests/FourthCompleteReviewTest.php tests/FifthCompleteReviewTest.php tests/SixthCompleteReviewTest.php
             tests/SeventhCompleteReviewTest.php tests/EighthCompleteReviewTest.php tests/NinthCompleteReviewTest.php
             tests/TenthCompleteReviewTest.php tests/EleventhCompleteReviewTest.php tests/EleventhWorkflowHardeningTest.php
+            tests/TwelfthCompleteReviewTest.php
             tests/fixtures/sabri-membership-core/sabri-membership-core.php
             tests/fixtures/sabri-membership-core/includes/functions.php
             tests/fixtures/sabri-unified-application-shell/sabri-unified-application-shell.php
@@ -246,6 +247,7 @@ jobs:
             docs/FILE21-INTEGRATION.md docs/MASTER-PLAN-AMENDMENT-v2.1.md docs/SYSTEM-CHECK.md
             docs/FILE22-TENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md
             docs/FILE22-ELEVENTH-FULL-DEFECT-CENSUS-AND-CORRECTION-2026-07-31.md
+            docs/FILE22-TWELFTH-COMPLETE-REVIEW-AND-CORRECTION-2026-08-01.md
             .github/workflows/cumulative-review-evidence.yml
             .github/workflows/fifth-review-evidence.yml
             .github/workflows/sixth-review-evidence.yml
@@ -254,6 +256,7 @@ jobs:
             .github/workflows/ninth-review-evidence.yml
             .github/workflows/tenth-review-evidence.yml
             .github/workflows/eleventh-review-evidence.yml
+            .github/workflows/twelfth-review-evidence.yml
             .github/workflows/phase22d-review-evidence.yml
             .github/workflows/phase22e-review-evidence.yml
           )
@@ -272,6 +275,9 @@ jobs:
             docs/FILE22-ELEVENTH-FULL-DEFECT-CENSUS-AND-CORRECTION-2026-07-31.md
             .github/workflows/tenth-review-evidence.yml
             .github/workflows/eleventh-review-evidence.yml
+            tests/TwelfthCompleteReviewTest.php
+            docs/FILE22-TWELFTH-COMPLETE-REVIEW-AND-CORRECTION-2026-08-01.md
+            .github/workflows/twelfth-review-evidence.yml
           )
           for file in "${manifest_required[@]}"; do
             grep -Fq -- "- \`$file\`" MANIFEST.md || { echo "Manifest entry missing: $file" >&2; exit 1; }
@@ -301,4 +307,5 @@ jobs:
           grep -q 'SMC_DB_VERSION' includes/core/class-permission-resolver.php
           grep -q 'Complete account, role, status, and document matrix' docs/STAGING-ACCEPTANCE.md
           grep -q 'Eleventh full defect census' CHANGELOG.md
+          grep -q 'Twelfth complete-review corrections' CHANGELOG.md
           grep -q 'EXPECTED_SHA' .github/workflows/eleventh-review-evidence.yml

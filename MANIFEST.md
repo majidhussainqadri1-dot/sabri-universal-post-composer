@@ -49,6 +49,7 @@
 - `docs/FILE22-NINTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md`
 - `docs/FILE22-TENTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-31.md`
 - `docs/FILE22-ELEVENTH-FULL-DEFECT-CENSUS-AND-CORRECTION-2026-07-31.md`
+- `docs/FILE22-TWELFTH-COMPLETE-REVIEW-AND-CORRECTION-2026-08-01.md`
 - `docs/MASTER-PLAN-AMENDMENT-v2.1.md`
 - `docs/MIGRATION.md`
 - `docs/PHASE-22C-CREATE-SURFACE.md`
@@ -85,6 +86,7 @@ Historical phase review records remain evidence for their exact earlier source h
 - `.github/workflows/ninth-review-evidence.yml`
 - `.github/workflows/tenth-review-evidence.yml`
 - `.github/workflows/eleventh-review-evidence.yml`
+- `.github/workflows/twelfth-review-evidence.yml`
 - `.github/workflows/phase22d-review-evidence.yml`
 - `.github/workflows/phase22e-review-evidence.yml`
 - `composer.json`
@@ -121,6 +123,7 @@ Historical phase review records remain evidence for their exact earlier source h
 - `tests/ShellBridgeTest.php`
 - `tests/SixthCompleteReviewTest.php`
 - `tests/TenthCompleteReviewTest.php`
+- `tests/TwelfthCompleteReviewTest.php`
 - `tests/ThirdPostMergeHardeningTest.php`
 - `tests/SubjectSchemaTest.php`
 - `tests/WorkflowCoordinatorTest.php`

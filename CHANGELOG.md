@@ -11,6 +11,7 @@
 - Captured each Diagnostic Adapter health report once per administrator row so status and codes derive from one coherent snapshot.
 - Made the administrator repair endpoint reject requests whose HTTP method is absent as well as methods other than POST.
 - Updated the File 21 diagnostic fixture to satisfy the explicit status/codes contract and added focused URL and health-snapshot regressions.
+- Made the cumulative test environment warning-free and added a dedicated exact-head twelfth review gate that fails on PHPUnit warnings.
 
 ### Eleventh full defect census and real-package hardening
 
