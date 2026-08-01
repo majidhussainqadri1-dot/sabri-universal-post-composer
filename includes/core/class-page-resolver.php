@@ -21,6 +21,7 @@ final class Page_Resolver {
 	private const REPAIR_LOCK_TTL = 60;
 	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
 	private const APPROVED_SLUGS = array( 'create', 'create-content', 'platform-create', 'sabri-create' );
+	private const MISSING_MAPPING = '__supc_mapping_missing__';
 
 	private static ?int $resolved_page_id = null;
 
@@ -144,7 +145,8 @@ final class Page_Resolver {
 					return array( 'result' => 'invalid_candidate', 'page_id' => 0 );
 				}
 
-				if ( ! self::persist_mapping( $page_id ) ) {
+				$persistence = self::persist_mapping( $page_id );
+				if ( ! $persistence['persisted'] ) {
 					return array( 'result' => 'mapping_persistence_failed', 'page_id' => $page_id );
 				}
 
@@ -157,7 +159,10 @@ final class Page_Resolver {
 				return $created;
 			}
 
-			if ( ! self::persist_mapping( $created['page_id'] ) ) {
+			$persistence = self::persist_mapping( $created['page_id'] );
+			if ( ! $persistence['persisted'] ) {
+				$page_rolled_back = self::rollback_created_page( $created['page_id'] );
+				do_action( 'supc_created_page_mapping_rollback', $created['page_id'], $persistence['restored'], $page_rolled_back );
 				return array( 'result' => 'mapping_persistence_failed', 'page_id' => $created['page_id'] );
 			}
 
@@ -308,10 +313,7 @@ final class Page_Resolver {
 
 		$page_id = (int) $page_id;
 		if ( ! self::is_valid_managed_page( $page_id, $slug ) ) {
-			$rolled_back = false;
-			if ( function_exists( 'wp_delete_post' ) ) {
-				$rolled_back = false !== wp_delete_post( $page_id, true );
-			}
+			$rolled_back = self::rollback_created_page( $page_id );
 			do_action( 'supc_invalid_managed_page_rollback', $page_id, $rolled_back );
 			return array( 'result' => 'managed_page_validation_failed', 'page_id' => $page_id );
 		}
@@ -326,15 +328,41 @@ final class Page_Resolver {
 			&& in_array( $managed, array( 1, '1' ), true );
 	}
 
-	private static function persist_mapping( int $page_id ): bool {
+	/**
+	 * @return array{persisted:bool,restored:bool}
+	 */
+	private static function persist_mapping( int $page_id ): array {
+		$previous = get_option( self::OPTION_KEY, self::MISSING_MAPPING );
 		update_option( self::OPTION_KEY, $page_id, false );
-		if ( $page_id !== absint( get_option( self::OPTION_KEY, 0 ) ) ) {
+		if ( $page_id === absint( get_option( self::OPTION_KEY, 0 ) ) ) {
+			self::reset_cache();
+			self::$resolved_page_id = $page_id;
+			return array( 'persisted' => true, 'restored' => true );
+		}
+
+		$restored = self::restore_mapping( $previous );
+		self::reset_cache();
+		do_action( 'supc_mapping_persistence_rollback', $page_id, $restored );
+		return array( 'persisted' => false, 'restored' => $restored );
+	}
+
+	private static function restore_mapping( mixed $previous ): bool {
+		if ( self::MISSING_MAPPING === $previous ) {
+			delete_option( self::OPTION_KEY );
+			return self::MISSING_MAPPING === get_option( self::OPTION_KEY, self::MISSING_MAPPING );
+		}
+
+		update_option( self::OPTION_KEY, $previous, false );
+		return $previous === get_option( self::OPTION_KEY, self::MISSING_MAPPING );
+	}
+
+	private static function rollback_created_page( int $page_id ): bool {
+		if ( ! function_exists( 'wp_delete_post' ) ) {
 			return false;
 		}
 
-		self::reset_cache();
-		self::$resolved_page_id = $page_id;
-		return true;
+		$deleted = wp_delete_post( $page_id, true );
+		return false !== $deleted && null !== $deleted;
 	}
 
 	private static function acquire_repair_lock(): string {

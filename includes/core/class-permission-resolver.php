@@ -19,15 +19,36 @@ final class Permission_Resolver {
 	private const STATUS_CALLBACK = 'smc_user_status';
 
 	public function core_available(): bool {
-		if ( ! defined( 'SMC_VERSION' ) ) {
+		if (
+			! defined( 'SMC_VERSION' ) ||
+			! defined( 'SMC_FILE' ) ||
+			! defined( 'SMC_PATH' ) ||
+			! Version::at_least( (string) SMC_VERSION, SUPC_MIN_SMC_VERSION ) ||
+			! function_exists( self::STATUS_CALLBACK )
+		) {
 			return false;
 		}
 
-		if ( version_compare( (string) SMC_VERSION, SUPC_MIN_SMC_VERSION, '<' ) ) {
+		try {
+			$smc_file = realpath( (string) SMC_FILE );
+			$smc_path = realpath( (string) SMC_PATH );
+			if ( false === $smc_file || false === $smc_path || dirname( $smc_file ) !== $smc_path ) {
+				return false;
+			}
+
+			$reflection    = new \ReflectionFunction( self::STATUS_CALLBACK );
+			$callback_file = $reflection->getFileName();
+			$callback_file = is_string( $callback_file ) ? realpath( $callback_file ) : false;
+			if ( false === $callback_file ) {
+				return false;
+			}
+
+			$owned_prefix = rtrim( $smc_path, '/\\' ) . DIRECTORY_SEPARATOR;
+			return $callback_file === $smc_file || str_starts_with( $callback_file, $owned_prefix );
+		} catch ( \Throwable $error ) {
+			unset( $error );
 			return false;
 		}
-
-		return (bool) call_user_func( 'function_exists', self::STATUS_CALLBACK );
 	}
 
 	public function account_is_eligible( int $user_id ): bool {

@@ -25,14 +25,16 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 
 ## Dependency model
 
-File 00 is a mandatory hard dependency. Activation fails closed if the required Membership Core version or API is unavailable.
+File 00 is a mandatory hard dependency. Activation fails closed unless the required Membership Core version and API are available and the `smc_user_status()` callback originates from the real path declared by `SMC_FILE` and `SMC_PATH`. A version constant plus a same-named foreign callback is not accepted as the authorization authority.
 
 File 20 is a production integration, but File 22 remains safe when the shell is absent. File 21 and all other modules are adapter-specific dependencies. An unavailable adapter is hidden without disabling unrelated healthy adapters.
+
+Dependency versions use strict Semantic Versioning. Prerelease and build metadata may appear together; malformed or leading-zero numeric identifiers are rejected. Build metadata is retained for diagnostics but ignored when compatibility precedence is compared.
 
 ## Permission order
 
 1. File 22 Safe Mode and File 20 Safe Mode.
-2. Membership Core availability.
+2. Membership Core availability and callback provenance.
 3. Account status and suspension decision.
 4. Required central WordPress capability.
 5. Adapter-specific restriction.
