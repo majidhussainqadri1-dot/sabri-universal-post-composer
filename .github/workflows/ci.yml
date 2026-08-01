@@ -181,7 +181,7 @@ jobs:
         run: |
           set -euo pipefail
           required=(
-            README.md LICENSE.md CHANGELOG.md MANIFEST.md .distignore
+            README.md readme.txt LICENSE.md CHANGELOG.md MANIFEST.md .distignore uninstall.php
             composer.json composer.lock phpunit.xml.dist phpstan.neon.dist phpcs.xml.dist
             sabri-universal-post-composer.php
             assets/css/create-surface.css
@@ -211,6 +211,9 @@ jobs:
             tests/CoreAdapterRequirementsTest.php
             tests/SafeModeTest.php
             tests/ShellBridgeTest.php
+            tests/SecondPostMergeHardeningTest.php
+            tests/ThirdPostMergeHardeningTest.php
+            tests/FourthCompleteReviewTest.php
             tests/run-public-api-collision-test.php
             tests/run-file20-contract-collision-test.php
             tests/phpstan-wordpress-stubs.php
@@ -220,6 +223,10 @@ jobs:
             docs/FILE21-INTEGRATION.md docs/MASTER-PLAN-AMENDMENT-v2.1.md docs/SYSTEM-CHECK.md
             docs/POST-IMPLEMENTATION-REVIEW-2026-07-29.md
             docs/FILE22-CUMULATIVE-POST-CORRECTION-VERIFICATION-2026-07-30.md
+            docs/FILE22-POST-MERGE-INDEPENDENT-REVIEW-AND-CORRECTION-2026-07-30.md
+            docs/FILE22-SECOND-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md
+            docs/FILE22-THIRD-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md
+            docs/FILE22-FOURTH-COMPLETE-REPOSITORY-REVIEW-AND-CORRECTION-2026-07-30.md
             docs/PHASE-22C-CREATE-SURFACE.md
             docs/PHASE-22C-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
             docs/PHASE-22C-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
@@ -232,6 +239,8 @@ jobs:
             docs/PHASE-22E-WORKFLOW-ORCHESTRATION.md
             docs/PHASE-22E-POST-IMPLEMENTATION-REVIEW-2026-07-29.md
             docs/PHASE-22E-POST-CORRECTION-VERIFICATION-2026-07-29.md
+            docs/PHASE-22E-SECOND-REVIEW-CORRECTIONS-2026-07-29.md
+            docs/PHASE-22E-SECOND-POST-CORRECTION-VERIFICATION-2026-07-29.md
           )
           for file in "${required[@]}"; do
             test -f "$file" || { echo "Missing required file: $file" >&2; exit 1; }
@@ -244,12 +253,16 @@ jobs:
           grep -q 'social_publication' docs/FILE21-INTEGRATION.md
           grep -q 'File 23' docs/MASTER-PLAN-AMENDMENT-v2.1.md
           grep -q 'workflow_payload_unknown_field' includes/core/class-workflow-coordinator.php
+          grep -q 'workflow_registration_metadata_missing' includes/core/class-workflow-coordinator.php
           grep -q 'schema_for_user' includes/core/class-workflow-coordinator.php
           grep -q 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' includes/core/functions.php
           grep -q 'file20_create_contract' includes/core/class-plugin.php
           grep -q 'subject_schema_contract_missing' includes/integration/class-core-adapter-requirements.php
           grep -q 'subject_schema_extension' includes/admin/class-system-check-page.php
           grep -q 'noncanonical_shortcode_surface' tests/PluginPrivacyTest.php
+          grep -q 'visual_assets_without_detectable_page' tests/PluginPrivacyTest.php
+          grep -q 'test_incompatible_contract_health_does_not_invoke_schema' tests/FourthCompleteReviewTest.php
           grep -q 'test_interactive_schema_and_payload_validation_use_subject_schema' tests/SubjectSchemaTest.php
           grep -q 'Complete account, role, status, and document matrix' docs/STAGING-ACCEPTANCE.md
+          grep -q 'EXPECTED_SHA' .github/workflows/phase22d-review-evidence.yml
           test -f .github/workflows/cumulative-review-evidence.yml

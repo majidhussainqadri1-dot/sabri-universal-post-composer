@@ -2,6 +2,17 @@
 
 ## 0.1.0-dev — Unreleased
 
+### Fourth complete-repository hardening
+
+- Enqueued Create-surface CSS at the actual direct shortcode render boundary so template, widget, and programmatic renders remain styled as well as private.
+- Required interactive workflow permission denial to precede workflow compatibility disclosure and every native or schema method.
+- Made incompatible workflow health return immediately without invoking unsupported schema methods.
+- Made a declared Workflow Adapter without immutable workflow registration metadata fail closed instead of passing as not applicable.
+- Required `select` and `multiselect` schema fields to declare at least one canonical choice.
+- Removed mutable capability re-reading from the legacy adapter permission helper and made adapter authorization exceptions fail closed.
+- Pinned Phase 22D evidence checkout to the exact pull-request head and expanded the repository contract to every cumulative review asset.
+- Added the fourth complete-repository review record and focused regression coverage for direct assets, workflow health, authorization ordering, choice schemas, and immutable helper authorization.
+
 ### Third post-merge hardening
 
 - Applied the immutable central capability gate before workflow compatibility and native availability classification.

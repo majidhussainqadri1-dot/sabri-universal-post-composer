@@ -15,14 +15,14 @@ For an eligible authenticated subject, File 22 resolves an adapter in this order
 1. File 22/File 20 Safe Mode;
 2. valid subject and canonical key;
 3. Membership Core eligibility;
-4. registered adapter/workflow metadata;
-5. exact API version;
-6. central WordPress capability;
+4. registered immutable adapter/workflow metadata;
+5. central WordPress capability from the registration snapshot;
+6. compatible workflow API;
 7. native `is_available()`;
 8. adapter-specific `can_create()`;
 9. requested native operation.
 
-A native service that is offline, disabled, missing a required class, or missing its route is `unavailable`, not `permission denied`. Adapter policy may narrow permission but cannot expand a central denial. Rejected, suspended, expired-document, roleless, logged-out, or otherwise ineligible subjects do not execute native adapter methods.
+A capability denial is final and precedes disclosure of workflow compatibility or native health. A native service that is offline, disabled, missing a required class, or missing its route is `unavailable`, not `permission denied`. Adapter policy may narrow permission but cannot expand a central denial. Rejected, suspended, expired-document, roleless, logged-out, or otherwise ineligible subjects do not execute native adapter methods.
 
 ## Workflow Adapter
 
@@ -39,6 +39,8 @@ A full workflow adapter additionally supplies:
 - subject-aware canonical URL.
 
 `workflow_api_version()` must equal `SUPC_WORKFLOW_API_VERSION` (`1.0.0`). Workflow API, central capability, and native-draft support are captured at registration.
+
+A non-workflow adapter is `not_applicable` in workflow health. An object implementing `Workflow_Adapter` without its immutable workflow registration snapshot is a failure. An incompatible workflow API is reported without invoking `schema_version()`, `schema()`, `schema_for_user()`, or any other unsupported workflow method.
 
 Phase 22E exposes only guarded server-side PHP functions. It does not expose REST, AJAX, or a browser write controller.
 
@@ -60,7 +62,7 @@ Public workflow functions accept no user ID. A future service/background API mus
 
 ## Static and subject-aware schema contract
 
-`schema()` is a role-neutral, data-free static contract. Static System Check always validates this base declaration and never borrows the current administrator as a representative subject.
+`schema()` is a role-neutral, data-free static contract. Static System Check validates this base declaration only after the workflow registration snapshot and API compatibility have passed, and never borrows the current administrator as a representative subject.
 
 A release-critical role-dependent adapter may additionally expose:
 
@@ -92,9 +94,9 @@ Allowed properties:
 - `required`;
 - `privacy_class` (`public`, `private`, or `sensitive`);
 - numeric `minimum`/`maximum`;
-- bounded canonical `choices`.
+- `choices` only for `select` and `multiselect`.
 
-Unknown properties, data-bearing defaults, raw HTML, arbitrary metadata, malformed codes, invalid bounds, unsupported nesting, more than 100 choices, and oversized schemas are rejected.
+Every `select` or `multiselect` field must declare between one and one hundred canonical choices. Other field types must not declare `choices`. Unknown properties, data-bearing defaults, raw HTML, arbitrary metadata, malformed codes, invalid bounds, unsupported nesting, empty or excessive choice maps, and oversized schemas are rejected.
 
 ## Schema-bound payload enforcement
 
@@ -103,7 +105,7 @@ Before native mutation, File 22 enforces the authenticated subject's schema:
 - undeclared fields are rejected;
 - required fields are enforced for validate, preview, and submit;
 - values must match their declared scalar/array type;
-- select/multiselect values must exist in `choices`;
+- select/multiselect values must exist in the nonempty declared `choices` map;
 - numeric bounds are enforced;
 - email, HTTP(S)-only URL without credentials, real calendar date, bounded clock/timezone datetime, checkbox, and opaque-reference formats are validated;
 - objects, resources, closures, non-finite floats, excessive nesting, and encoded payloads over 1 MiB are rejected.

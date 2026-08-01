@@ -59,16 +59,16 @@ final class Workflow_Coordinator {
 	}
 
 	/**
-	 * Role-independent, privacy-safe workflow contract inspection. This always
-	 * validates the adapter's base `schema()` declaration and never borrows the
-	 * current administrator as a representative application subject.
+	 * Role-independent, privacy-safe workflow contract inspection. A non-workflow
+	 * adapter is not applicable. A declared Workflow Adapter without its immutable
+	 * registration metadata fails closed. Incompatible workflow APIs are reported
+	 * without invoking schema methods from an unsupported contract.
 	 *
 	 * @return array{status:string,codes:array<int,string>,workflow_api_version:string,supports_native_drafts:string,subject_schema_extension:string}
 	 */
 	public function contract_health( string $adapter_key ): array {
-		$adapter  = $this->registry->get( $adapter_key );
-		$contract = $this->registry->workflow_contract( $adapter_key );
-		if ( ! $adapter instanceof Workflow_Adapter || null === $contract ) {
+		$adapter = $this->registry->get( $adapter_key );
+		if ( ! $adapter instanceof Workflow_Adapter ) {
 			return array(
 				'status'                   => 'pass',
 				'codes'                    => array(),
@@ -78,13 +78,30 @@ final class Workflow_Coordinator {
 			);
 		}
 
-		$codes  = array();
-		$status = 'pass';
-		if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
-			$status  = 'fail';
-			$codes[] = 'workflow_api_mismatch';
+		$contract = $this->registry->workflow_contract( $adapter_key );
+		if ( null === $contract ) {
+			return array(
+				'status'                   => 'fail',
+				'codes'                    => array( 'workflow_registration_metadata_missing' ),
+				'workflow_api_version'     => 'missing',
+				'supports_native_drafts'   => 'missing',
+				'subject_schema_extension' => is_callable( array( $adapter, 'schema_for_user' ) ) ? 'yes' : 'no',
+			);
 		}
 
+		$subject_schema_extension = is_callable( array( $adapter, 'schema_for_user' ) ) ? 'yes' : 'no';
+		if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
+			return array(
+				'status'                   => 'fail',
+				'codes'                    => array( 'workflow_api_mismatch' ),
+				'workflow_api_version'     => $contract['workflow_api_version'],
+				'supports_native_drafts'   => $contract['supports_native_drafts'] ? 'yes' : 'no',
+				'subject_schema_extension' => $subject_schema_extension,
+			);
+		}
+
+		$codes  = array();
+		$status = 'pass';
 		try {
 			$schema = $this->schema_for_adapter( $adapter, $adapter_key );
 			if ( $schema instanceof WP_Error ) {
@@ -102,7 +119,7 @@ final class Workflow_Coordinator {
 			'codes'                    => array_values( array_unique( $codes ) ),
 			'workflow_api_version'     => $contract['workflow_api_version'],
 			'supports_native_drafts'   => $contract['supports_native_drafts'] ? 'yes' : 'no',
-			'subject_schema_extension' => is_callable( array( $adapter, 'schema_for_user' ) ) ? 'yes' : 'no',
+			'subject_schema_extension' => $subject_schema_extension,
 		);
 	}
 
@@ -320,11 +337,11 @@ final class Workflow_Coordinator {
 		if ( ! $adapter instanceof Workflow_Adapter || null === $contract ) {
 			return $this->error( 'workflow_adapter_unavailable', 'The requested workflow is unavailable.', $adapter_key );
 		}
-		if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
-			return $this->error( 'workflow_api_mismatch', 'The native workflow API version is incompatible.', $adapter_key );
-		}
 		if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
 			return $this->error( 'workflow_permission_denied', 'The account is not authorized for this workflow.', $adapter_key );
+		}
+		if ( SUPC_WORKFLOW_API_VERSION !== $contract['workflow_api_version'] ) {
+			return $this->error( 'workflow_api_mismatch', 'The native workflow API version is incompatible.', $adapter_key );
 		}
 
 		try {
@@ -667,8 +684,9 @@ final class Workflow_Coordinator {
 				return null;
 			}
 
-			if ( isset( $definition['choices'] ) ) {
-				if ( ! in_array( $type, array( 'select', 'multiselect' ), true ) || ! is_array( $definition['choices'] ) || count( $definition['choices'] ) > self::MAX_SCHEMA_CHOICES ) {
+			$is_choice_field = in_array( $type, array( 'select', 'multiselect' ), true );
+			if ( $is_choice_field ) {
+				if ( ! isset( $definition['choices'] ) || ! is_array( $definition['choices'] ) || array() === $definition['choices'] || count( $definition['choices'] ) > self::MAX_SCHEMA_CHOICES ) {
 					return null;
 				}
 				$choices = array();
@@ -679,6 +697,8 @@ final class Workflow_Coordinator {
 					$choices[ $choice_key ] = $choice_label_code;
 				}
 				$field['choices'] = $choices;
+			} elseif ( isset( $definition['choices'] ) ) {
+				return null;
 			}
 
 			$normalized[ $key ] = $field;
