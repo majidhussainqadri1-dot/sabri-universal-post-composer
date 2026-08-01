@@ -49,7 +49,10 @@ final class System_Check_Page {
 		'invalid_native_module',
 		'invalid_minimum_native_version',
 		'invalid_privacy',
+		'invalid_group',
 		'registration_exception',
+		'registration_contract_missing',
+		'registration_metadata_missing',
 		'availability_exception',
 		'state_exception',
 		'public_api_version_mismatch',
@@ -71,11 +74,14 @@ final class System_Check_Page {
 		'invalid_schema_contract',
 		'workflow_contract_exception',
 		'social_publication_not_registered',
+		'social_publication_registration_metadata_missing',
 		'social_publication_contract_mismatch',
 		'social_publication_native_version_unreported',
 		'social_publication_native_version_invalid',
 		'social_publication_native_version_too_low',
+		'social_publication_native_version_below_declared_minimum',
 		'social_publication_temporarily_unavailable',
+		'social_publication_diagnostic_exception',
 		'adapter_key_mismatch',
 		'native_module_mismatch',
 		'minimum_native_version_too_low',
@@ -262,15 +268,34 @@ final class System_Check_Page {
 		$coordinator = new Workflow_Coordinator( $this->registry, new Permission_Resolver() );
 		foreach ( $this->registry->all() as $key => $adapter ) {
 			try {
-				$status     = 'pass';
-				$codes      = array();
-				$group      = sanitize_key( $adapter->group() );
-				$privacy    = sanitize_key( $adapter->privacy_classification() );
-				$native     = sanitize_key( $adapter->native_module() );
-				$capability = sanitize_key( $adapter->required_capability() );
-				$minimum    = sanitize_text_field( $adapter->minimum_native_version() );
+				$contract = $this->registry->adapter_contract( $key );
+				if ( null === $contract ) {
+					$rows[] = array(
+						'key'                      => sanitize_key( $key ),
+						'native_module'            => '',
+						'api_version'              => '',
+						'workflow_api_version'     => '',
+						'supports_native_drafts'   => '',
+						'subject_schema_extension' => '',
+						'minimum_native'           => '',
+						'group'                    => '',
+						'privacy'                  => '',
+						'status'                   => 'fail',
+						'codes'                    => 'registration_metadata_missing',
+					);
+					continue;
+				}
 
-				if ( SUPC_ADAPTER_API_VERSION !== $adapter->api_version() ) {
+				$status      = 'pass';
+				$codes       = array();
+				$group       = sanitize_key( $contract['group'] );
+				$privacy     = sanitize_key( $contract['privacy_classification'] );
+				$native      = sanitize_key( $contract['native_module'] );
+				$capability  = sanitize_key( $contract['required_capability'] );
+				$minimum     = sanitize_text_field( $contract['minimum_native_version'] );
+				$api_version = sanitize_text_field( $contract['api_version'] );
+
+				if ( SUPC_ADAPTER_API_VERSION !== $contract['api_version'] ) {
 					$status  = $this->worse_status( $status, 'fail' );
 					$codes[] = 'incompatible_adapter_api';
 				}
@@ -282,11 +307,11 @@ final class System_Check_Page {
 					$status  = $this->worse_status( $status, 'fail' );
 					$codes[] = 'invalid_privacy';
 				}
-				if ( '' === $native || $native !== $adapter->native_module() ) {
+				if ( '' === $native || $native !== $contract['native_module'] ) {
 					$status  = $this->worse_status( $status, 'fail' );
 					$codes[] = 'invalid_native_module';
 				}
-				if ( '' === $capability || $capability !== $adapter->required_capability() ) {
+				if ( '' === $capability || $capability !== $contract['required_capability'] ) {
 					$status  = $this->worse_status( $status, 'fail' );
 					$codes[] = 'invalid_required_capability';
 				}
@@ -313,7 +338,7 @@ final class System_Check_Page {
 				$rows[] = array(
 					'key'                      => sanitize_key( $key ),
 					'native_module'            => $native,
-					'api_version'              => sanitize_text_field( $adapter->api_version() ),
+					'api_version'              => $api_version,
 					'workflow_api_version'     => sanitize_text_field( $workflow['workflow_api_version'] ),
 					'supports_native_drafts'   => sanitize_text_field( $workflow['supports_native_drafts'] ),
 					'subject_schema_extension' => sanitize_text_field( $workflow['subject_schema_extension'] ),

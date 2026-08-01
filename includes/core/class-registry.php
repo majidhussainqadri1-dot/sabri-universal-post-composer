@@ -65,7 +65,12 @@ final class Registry {
 			}
 
 			if ( isset( $this->adapters[ $key ] ) ) {
-				return $this->registration_error( 'duplicate_key', $key, 'Adapter key is already registered.' );
+				return $this->registration_error(
+					'duplicate_key',
+					$key,
+					'Adapter key is already registered.',
+					$this->duplicate_error_key( $key )
+				);
 			}
 
 			$api_version = trim( $adapter->api_version() );
@@ -128,8 +133,8 @@ final class Registry {
 			}
 
 			// A corrected re-registration must not inherit a stale diagnostic from an
-			// earlier failed attempt using the same canonical key.
-			unset( $this->errors[ $key ] );
+			// earlier failed attempt or duplicate collision using the same key.
+			unset( $this->errors[ $key ], $this->errors[ $this->duplicate_error_key( $key ) ] );
 			$this->flush_cache();
 			return true;
 		} catch ( Throwable $error ) {
@@ -148,7 +153,13 @@ final class Registry {
 			return false;
 		}
 
-		unset( $this->adapters[ $key ], $this->adapter_contracts[ $key ], $this->workflow_contracts[ $key ], $this->errors[ $key ] );
+		unset(
+			$this->adapters[ $key ],
+			$this->adapter_contracts[ $key ],
+			$this->workflow_contracts[ $key ],
+			$this->errors[ $key ],
+			$this->errors[ $this->duplicate_error_key( $key ) ]
+		);
 		$this->flush_cache();
 		return true;
 	}
@@ -188,10 +199,10 @@ final class Registry {
 	 * Return only healthy adapters the user can actually invoke.
 	 *
 	 * Central account and immutable capability checks always run before native
-	 * availability. Native availability is then resolved before adapter-specific
-	 * authorization so an offline integration is never mislabeled as a permission
-	 * denial. An incompatible Workflow Adapter remains registered for diagnostics,
-	 * but is never exposed as an invokable Create-surface adapter.
+	 * compatibility and availability. Native availability is then resolved before
+	 * adapter-specific authorization so an offline integration is never mislabeled
+	 * as a permission denial. An incompatible Workflow Adapter remains registered
+	 * for diagnostics, but is never exposed as an invokable Create-surface adapter.
 	 *
 	 * @return array<string, Adapter>
 	 */
@@ -213,11 +224,11 @@ final class Registry {
 					$this->runtime_error( $key, 'registration_exception' );
 					continue;
 				}
-				if ( $adapter instanceof Workflow_Adapter && ! $this->workflow_is_compatible( $key ) ) {
-					$this->runtime_error( $key, 'workflow_api_mismatch' );
+				if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
 					continue;
 				}
-				if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
+				if ( $adapter instanceof Workflow_Adapter && ! $this->workflow_is_compatible( $key ) ) {
+					$this->runtime_error( $key, 'workflow_api_mismatch' );
 					continue;
 				}
 				if ( ! $adapter->is_available() ) {
@@ -270,12 +281,12 @@ final class Registry {
 					$this->runtime_error( $key, 'registration_exception' );
 					continue;
 				}
+				if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
+					continue;
+				}
 				if ( $adapter instanceof Workflow_Adapter && ! $this->workflow_is_compatible( $key ) ) {
 					$has_unavailable = true;
 					$this->runtime_error( $key, 'workflow_api_mismatch' );
-					continue;
-				}
-				if ( ! $this->permissions->can_use_capability( $user_id, $contract['required_capability'] ) ) {
 					continue;
 				}
 				if ( ! $adapter->is_available() ) {
@@ -332,23 +343,15 @@ final class Registry {
 		$left_priority  = null !== $left_contract ? $left_contract['priority'] : PHP_INT_MAX;
 		$right_priority = null !== $right_contract ? $right_contract['priority'] : PHP_INT_MAX;
 		$priority       = $left_priority <=> $right_priority;
-		if ( 0 !== $priority ) {
-			return $priority;
-		}
-
-		try {
-			$left_label  = isset( $this->adapters[ $left_key ] ) ? $this->adapters[ $left_key ]->label() : $left_key;
-			$right_label = isset( $this->adapters[ $right_key ] ) ? $this->adapters[ $right_key ]->label() : $right_key;
-			$label       = strcasecmp( $left_label, $right_label );
-			return 0 !== $label ? $label : strcmp( $left_key, $right_key );
-		} catch ( Throwable $error ) {
-			unset( $error );
-			return strcmp( $left_key, $right_key );
-		}
+		return 0 !== $priority ? $priority : strcmp( $left_key, $right_key );
 	}
 
-	private function registration_error( string $code, string $key, string $message ): WP_Error {
-		$this->errors[ $key ] = array(
+	private function duplicate_error_key( string $key ): string {
+		return '[duplicate]:' . $key;
+	}
+
+	private function registration_error( string $code, string $key, string $message, ?string $storage_key = null ): WP_Error {
+		$this->errors[ $storage_key ?? $key ] = array(
 			'code'    => $code,
 			'message' => $message,
 		);

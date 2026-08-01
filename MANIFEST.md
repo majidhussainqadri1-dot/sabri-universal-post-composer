@@ -36,6 +36,7 @@
 - `docs/FILE22-CUMULATIVE-POST-CORRECTION-VERIFICATION-2026-07-30.md`
 - `docs/FILE22-POST-MERGE-INDEPENDENT-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/FILE22-SECOND-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md`
+- `docs/FILE22-THIRD-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/MASTER-PLAN-AMENDMENT-v2.1.md`
 - `docs/MIGRATION.md`
 - `docs/PHASE-22C-CREATE-SURFACE.md`
@@ -59,7 +60,7 @@
 - `docs/STAGING-ACCEPTANCE.md`
 - `docs/SYSTEM-CHECK.md`
 
-Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and both 30 July 2026 post-merge independent reviews supersede outdated status wording; they do not replace controlled staging or production acceptance.
+Historical phase review records remain immutable evidence for their exact earlier source heads. The cumulative verification and all three 30 July 2026 post-merge independent reviews supersede outdated status wording; they do not replace controlled staging or production acceptance.
 
 ## Development and QA files
 
@@ -84,6 +85,7 @@ Historical phase review records remain immutable evidence for their exact earlie
 - `tests/RegistryTest.php`
 - `tests/SafeModeTest.php`
 - `tests/SecondPostMergeHardeningTest.php`
+- `tests/ThirdPostMergeHardeningTest.php`
 - `tests/SubjectSchemaTest.php`
 - `tests/WorkflowCoordinatorTest.php`
 - `tests/ShellBridgeTest.php`
