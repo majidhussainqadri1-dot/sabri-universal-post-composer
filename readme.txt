@@ -4,44 +4,54 @@ Tags: composer, publishing, workflow, homeopathy, platform
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
+Stable tag: 0.2.0
 License: Proprietary
 
 Universal, role-aware creation gateway for the Sabri Social Homeopathy Platform.
 
 == Description ==
 
-File 22 provides an adapter-driven creation facade and guarded server-side workflow orchestrator. Permanent content, moderation, secure storage, durable idempotency, consent evidence, identity evidence, clinical records, and canonical URLs remain owned by the relevant native platform modules.
+File 22 unifies authorized content-creation workflows without taking ownership from native modules. Permanent content, durable native drafts, moderation, secure media, patient consent, identity evidence, clinical records, publication history, and canonical URLs remain with their canonical owners.
 
-Sabri Membership Core 1.2.2 or later, database schema 1.2.0 or later, and public contract 1.1.1 or later are mandatory. Development follows a staging-first, security-first, and rollback-safe workflow.
+Version 0.2.0 adds a private schema-driven browser Composer, native-owner autosave, validation, same-origin preview, idempotent submission, status retrieval, metadata-only session orchestration, optimistic concurrency, adapter-version drift protection, and deterministic exact-head packaging.
 
-Version 0.1.1 corrects the complete Create authorization chain. It consumes File 00's explicit institutional state, validates plugin/database/contract versions independently, and adds one privacy-safe current-user diagnostic that evaluates every independent blocker in the same request: Membership state, native capability, File 21 runtime, duplicate copies, persisted settings, Safe Mode/Emergency Disable, adapter registration, native availability, and native Create policy.
+File 22 never persists draft bodies, patient consent, identity evidence, or media bytes in its session table. The browser client does not use localStorage, sessionStorage, or IndexedDB for draft content. Private surfaces are authenticated, nonce-protected, owner-scoped, no-store, noindex, bounded, and reauthorized on each operation.
 
-Phase 22E provides internal PHP functions for versioned schema discovery, native draft creation or resumption, validation, same-origin preview, idempotent submission, status, and canonical URL retrieval. It does not expose a public REST, AJAX, or browser form endpoint and does not persist File 22-owned workflow payloads.
+Mandatory platform dependencies for this candidate:
+
+* Sabri Membership Core plugin 1.2.3 or later;
+* File 00 database schema 1.2.0 or later;
+* File 00 public contract 1.1.2 or later;
+* File 20 Create contract compatibility anchor 1.0.1;
+* File 21 integrated-staging package identity 1.0.3.2 or later, with stable runtime/API 1.0.3.
 
 == Current Status ==
 
-Corrective staging candidate 0.1.1. Production approval has not been declared.
+Coded, packaged, and automated-QA-green candidate 0.2.0 on Draft PR #23. It is not staging-accepted, live-deployed, operational, or approved as a production release.
 
 == Installation ==
 
-Install on controlled staging first with File 00 version 1.2.2 and File 21 package version 1.0.3.1. Verify Tools > Composer Health. The `current_user_authorization` row must report every active blocker together and must be PASS before production promotion.
+Install only on controlled staging with the exact reviewed package and SHA-256 evidence. Verify File 00, File 20, and File 21 contracts; Tools > Composer Health; real Founder/Administrator/doctor/suspended/visitor workflows; browser and WCAG 2.2 AA acceptance; LiteSpeed/theme/plugin compatibility; backup restoration; and rollback before any production promotion.
 
 == Changelog ==
 
+= 0.2.0 =
+* Added private REST namespace `sabri-composer/v1`.
+* Added schema-driven accessible browser workflows.
+* Added native-owner draft creation, bounded autosave, validation, preview, submit, and status operations.
+* Added metadata-only `wp_supc_sessions` storage with compare-and-swap lock versions.
+* Persisted idempotency identity before native submission.
+* Added per-session operation leases and adapter-version drift rejection.
+* Added no-cache/noindex, nonce, ownership, request-size, and rate-limit protections.
+* Prohibited browser persistent draft storage.
+* Added responsive, reduced-motion, forced-colors, and RTL-compatible workflow presentation.
+* Raised File 00 minimums to plugin 1.2.3, database 1.2.0, and contract 1.1.2.
+* Added File 21 package-identity staging gate 1.0.3.2 while preserving stable runtime/API 1.0.3.
+* Completed two separate review/correction rounds and exact-head deterministic packaging.
+
 = 0.1.1 =
-* Consumed the explicit File 00 institutional membership-state contract.
-* Separated minimum File 00 plugin, database-schema, and contract versions.
-* Preserved disciplinary and erasure hard blocks while allowing Founder/Administrator institutional authority over non-disciplinary legacy application rows.
-* Added a privacy-safe `current_user_authorization` forensic row.
-* Audited all independent blockers in one request instead of stopping at the first denial.
-* Added File 21 runtime, duplicate-copy, capability, settings, Safe Mode, Emergency Disable, adapter-registration, availability, and native-policy diagnostics.
+* Corrected the complete Create authorization chain and independent File 00 version tracks.
+* Added a privacy-safe current-user authorization diagnostic covering all independent blockers.
 
 = 0.1.0-dev =
-* Added central Membership Core permission enforcement.
-* Added safe Create page resolution and noindex/no-cache protection.
-* Added versioned base, workflow, and diagnostic adapter contracts.
-* Added fail-soft adapter isolation, canonical key validation, deterministic ordering, and request caching.
-* Added Safe Mode integration and a File 20 shell contract.
-* Added accessible Universal Create gateway and administrator health controls.
-* Added guarded native workflow schema, draft, validation, preview, idempotent submission, status, and canonical URL operations.
-* Added PHPUnit, PHPStan, WordPress coding standards, and repository-contract checks.
+* Added central permission enforcement, page resolution, Safe Mode, adapter contracts, Universal Create gateway, administrator health controls, and guarded native workflow coordination.
