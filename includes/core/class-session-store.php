@@ -21,16 +21,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Session_Store {
-	private const TABLE_SUFFIX        = 'supc_sessions';
-	private const SCHEMA_OPTION       = 'supc_session_schema_version';
-	private const SCHEMA_VERSION      = '1.0.0';
-	private const ACTIVE_TTL         = 2592000; // 30 days.
-	private const COMPLETED_TTL      = 604800;  // 7 days.
-	private const MAX_ADAPTER_BYTES  = 64;
-	private const MAX_VERSION_BYTES  = 32;
-	private const MAX_REFERENCE_BYTES = 255;
-	private const SESSION_PATTERN    = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D';
-	private const STATES             = array( 'new', 'draft', 'valid', 'submitted', 'scheduled', 'published', 'rejected', 'failed' );
+	private const TABLE_SUFFIX         = 'supc_sessions';
+	private const SCHEMA_OPTION        = 'supc_session_schema_version';
+	private const SCHEMA_VERSION       = '1.0.0';
+	private const ACTIVE_TTL           = 2592000; // 30 days.
+	private const COMPLETED_TTL        = 604800;  // 7 days.
+	private const MAX_ADAPTER_BYTES    = 64;
+	private const MAX_VERSION_BYTES    = 32;
+	private const MAX_REFERENCE_BYTES  = 255;
+	private const SESSION_PATTERN      = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D';
+	private const STATES               = array( 'new', 'draft', 'valid', 'submitted', 'scheduled', 'published', 'rejected', 'failed' );
 
 	public static function install(): bool {
 		global $wpdb;
@@ -140,13 +140,15 @@ final class Session_Store {
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_row' ) || ! method_exists( $wpdb, 'prepare' ) ) {
 			return $this->error( 'session_store_unavailable' );
 		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Table identifier is derived only from the trusted WordPress prefix and a constant suffix.
-		$query = $wpdb->prepare(
-			'SELECT session_uuid,user_id,adapter_key,adapter_version,native_reference,state,lock_version,idempotency_key,last_error,created_at,updated_at,expires_at FROM ' . self::table_name() . ' WHERE session_uuid = %s AND user_id = %d LIMIT 1',
-			$uuid,
-			$user_id
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT session_uuid,user_id,adapter_key,adapter_version,native_reference,state,lock_version,idempotency_key,last_error,created_at,updated_at,expires_at FROM %i WHERE session_uuid = %s AND user_id = %d LIMIT 1',
+				self::table_name(),
+				$uuid,
+				$user_id
+			),
+			ARRAY_A
 		);
-		$row = $wpdb->get_row( $query, ARRAY_A );
 		if ( ! is_array( $row ) ) {
 			return $this->error( 'session_not_found' );
 		}
@@ -188,10 +190,10 @@ final class Session_Store {
 		}
 		$now     = time();
 		$ttl     = in_array( $state, array( 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true ) ? self::COMPLETED_TTL : self::ACTIVE_TTL;
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Table identifier is derived only from the trusted WordPress prefix and a constant suffix.
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				'UPDATE ' . self::table_name() . ' SET state = %s, native_reference = %s, idempotency_key = %s, last_error = %s, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d',
+				'UPDATE %i SET state = %s, native_reference = %s, idempotency_key = %s, last_error = %s, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d',
+				self::table_name(),
 				$state,
 				$native_reference,
 				$idempotency_key,
@@ -226,10 +228,10 @@ final class Session_Store {
 		if ( is_string( $current['idempotency_key'] ) && '' !== $current['idempotency_key'] ) {
 			return hash_equals( $current['idempotency_key'], $key ) ? $current : $this->error( 'idempotency_key_conflict' );
 		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Table identifier is derived only from the trusted WordPress prefix and a constant suffix.
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				'UPDATE ' . self::table_name() . ' SET idempotency_key = %s, updated_at = %s WHERE session_uuid = %s AND user_id = %d AND (idempotency_key IS NULL OR idempotency_key = \'\')',
+				'UPDATE %i SET idempotency_key = %s, updated_at = %s WHERE session_uuid = %s AND user_id = %d AND (idempotency_key IS NULL OR idempotency_key = \'\')',
+				self::table_name(),
 				$key,
 				gmdate( 'Y-m-d H:i:s' ),
 				$uuid,
@@ -258,8 +260,7 @@ final class Session_Store {
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) || ! method_exists( $wpdb, 'prepare' ) ) {
 			return 0;
 		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Table identifier is derived only from the trusted WordPress prefix and a constant suffix.
-		$deleted = $wpdb->query( $wpdb->prepare( 'DELETE FROM ' . self::table_name() . ' WHERE expires_at < %s LIMIT 500', gmdate( 'Y-m-d H:i:s' ) ) );
+		$deleted = $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE expires_at < %s LIMIT 500', self::table_name(), gmdate( 'Y-m-d H:i:s' ) ) );
 		return is_int( $deleted ) && $deleted > 0 ? $deleted : 0;
 	}
 
