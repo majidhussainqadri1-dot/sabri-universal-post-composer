@@ -14,6 +14,8 @@ use Sabri\UniversalComposer\Core\Contract_Boundary;
 use Sabri\UniversalComposer\Core\Page_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
 use Sabri\UniversalComposer\Core\Workflow_Coordinator;
+use Sabri\UniversalComposer\Core\Workflow_Validator;
+use Throwable;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -77,7 +79,13 @@ final class Workflow_Surface {
 		$heading_id = wp_unique_id( 'supc-workflow-heading-' );
 		$status_id  = wp_unique_id( 'supc-workflow-status-' );
 		$error_id   = wp_unique_id( 'supc-workflow-errors-' );
-		$native_url = $adapter->start_url( $user_id );
+		$native_url = '';
+		try {
+			$native_url = ( new Workflow_Validator() )->internal_url( $adapter->start_url( $user_id ) );
+		} catch ( Throwable $error ) {
+			unset( $error );
+			$native_url = '';
+		}
 		$html       = '<section class="supc-workflow" data-supc-workflow data-adapter="' . esc_attr( $key ) . '" aria-labelledby="' . esc_attr( $heading_id ) . '">';
 		$html      .= '<header class="supc-workflow__header"><p class="supc-create__eyebrow">' . esc_html__( 'Universal Post Composer', 'sabri-universal-post-composer' ) . '</p>';
 		$html      .= '<h2 id="' . esc_attr( $heading_id ) . '">' . esc_html( $adapter->label() ) . '</h2><p>' . esc_html( $adapter->description() ) . '</p>';
@@ -107,14 +115,17 @@ final class Workflow_Surface {
 
 	/** @param array<string,mixed> $definition */
 	private function field( string $key, array $definition ): string {
-		$id          = wp_unique_id( 'supc-field-' );
-		$type        = (string) $definition['type'];
-		$required    = ! empty( $definition['required'] );
-		$privacy     = (string) $definition['privacy_class'];
-		$label       = $this->text( (string) $definition['label_code'] );
-		$description = isset( $definition['description_code'] ) ? $this->text( (string) $definition['description_code'] ) : '';
-		$attrs       = ' id="' . esc_attr( $id ) . '" name="' . esc_attr( $key ) . '" data-supc-field data-field-type="' . esc_attr( $type ) . '" data-privacy="' . esc_attr( $privacy ) . '"' . ( $required ? ' required aria-required="true"' : '' );
-		$html        = '<div class="supc-workflow__field" data-privacy="' . esc_attr( $privacy ) . '">';
+		$id             = wp_unique_id( 'supc-field-' );
+		$type           = (string) $definition['type'];
+		$required       = ! empty( $definition['required'] );
+		$privacy        = (string) $definition['privacy_class'];
+		$label          = $this->text( (string) $definition['label_code'] );
+		$description    = isset( $definition['description_code'] ) ? $this->text( (string) $definition['description_code'] ) : '';
+		$description_id = '' !== $description ? $id . '-description' : '';
+		$privacy_id     = 'sensitive' === $privacy ? $id . '-privacy' : '';
+		$described_by   = trim( $description_id . ' ' . $privacy_id );
+		$attrs          = ' id="' . esc_attr( $id ) . '" name="' . esc_attr( $key ) . '" data-supc-field data-field-type="' . esc_attr( $type ) . '" data-privacy="' . esc_attr( $privacy ) . '"' . ( $required ? ' required aria-required="true"' : '' ) . ( '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : '' );
+		$html           = '<div class="supc-workflow__field" data-privacy="' . esc_attr( $privacy ) . '">';
 		if ( 'checkbox' !== $type ) {
 			$html .= '<label for="' . esc_attr( $id ) . '">' . esc_html( $label ) . ( $required ? ' <span aria-hidden="true">*</span>' : '' ) . '</label>';
 		}
@@ -141,10 +152,10 @@ final class Workflow_Surface {
 			$html .= '>';
 		}
 		if ( '' !== $description ) {
-			$html .= '<p class="description">' . esc_html( $description ) . '</p>';
+			$html .= '<p id="' . esc_attr( $description_id ) . '" class="description">' . esc_html( $description ) . '</p>';
 		}
 		if ( 'sensitive' === $privacy ) {
-			$html .= '<p class="supc-workflow__privacy">' . esc_html__( 'Sensitive: this value is sent only to the authorized native owner and is not retained in File 22 session storage.', 'sabri-universal-post-composer' ) . '</p>';
+			$html .= '<p id="' . esc_attr( $privacy_id ) . '" class="supc-workflow__privacy">' . esc_html__( 'Sensitive: this value is sent only to the authorized native owner and is not retained in File 22 session storage.', 'sabri-universal-post-composer' ) . '</p>';
 		}
 		return $html . '</div>';
 	}
