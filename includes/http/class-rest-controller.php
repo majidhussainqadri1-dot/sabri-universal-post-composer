@@ -29,6 +29,7 @@ final class Rest_Controller {
 	private const MAX_REQUEST_BYTES = 1048576;
 	private const RATE_LIMIT = 90;
 	private const RATE_WINDOW = 60;
+	private const SESSION_LOCK_TTL = 600;
 
 	public function __construct(
 		private Registry $registry,
@@ -124,6 +125,12 @@ final class Rest_Controller {
 		$session = $this->owned_session( $request );
 		if ( $session instanceof WP_Error ) {
 			return $session;
+		}
+		// Session ownership is not a durable authorization grant. Revalidate the
+		// current File 00 and native adapter policy before exposing any mapping.
+		$authorization = $this->coordinator->schema( get_current_user_id(), (string) $session['adapter_key'] );
+		if ( $authorization instanceof WP_Error ) {
+			return $this->normalize_error( $authorization );
 		}
 		$status = null;
 		if ( is_string( $session['native_reference'] ) && '' !== $session['native_reference'] ) {
@@ -292,7 +299,7 @@ final class Rest_Controller {
 		}
 		$key   = 'supc_lock_' . hash( 'sha256', $uuid );
 		$token = wp_generate_uuid4();
-		$value = array( 'token' => $token, 'expires_at' => time() + 45 );
+		$value = array( 'token' => $token, 'expires_at' => time() + self::SESSION_LOCK_TTL );
 		if ( add_option( $key, $value, '', false ) ) {
 			return $token;
 		}
@@ -348,17 +355,38 @@ final class Rest_Controller {
 	}
 
 	private function normalize_error( WP_Error $error, array $extra_details = array() ): WP_Error {
-		$raw_code = is_callable( array( $error, 'get_error_code' ) ) ? (string) $error->get_error_code() : '';
-		$code     = sanitize_key( $raw_code );
-		$status   = match ( $code ) {
-			'supc_permission_denied', 'supc_membership_unavailable', 'supc_adapter_permission_denied' => 403,
-			'supc_conflict', 'supc_session_conflict' => 409,
-			'supc_rate_limited' => 429,
-			'supc_temporarily_unavailable', 'supc_workflow_adapter_unavailable', 'supc_session_store_unavailable' => 503,
-			default => 400,
-		};
+		$raw_code    = is_callable( array( $error, 'get_error_code' ) ) ? (string) $error->get_error_code() : '';
+		$code        = sanitize_key( $raw_code );
 		$raw_details = is_callable( array( $error, 'get_error_data' ) ) ? $error->get_error_data( $raw_code ) : null;
 		$details     = is_array( $raw_details ) ? $raw_details : array();
+		$native_code = 'supc_native_workflow_error' === $code && isset( $details['native_code'] ) && is_string( $details['native_code'] )
+			? sanitize_key( $details['native_code'] )
+			: '';
+		$effective   = '' !== $native_code ? 'supc_' . $native_code : $code;
+		$status      = match ( $effective ) {
+			'supc_permission_denied',
+			'supc_membership_unavailable',
+			'supc_adapter_permission_denied',
+			'supc_workflow_permission_denied' => 403,
+			'supc_not_found', 'supc_session_not_found' => 404,
+			'supc_expired', 'supc_session_expired' => 410,
+			'supc_validation_failed',
+			'supc_workflow_payload_required_field_missing',
+			'supc_workflow_payload_field_invalid' => 422,
+			'supc_conflict',
+			'supc_session_conflict',
+			'supc_idempotency_key_conflict',
+			'supc_adapter_version_changed',
+			'supc_native_reference_mismatch' => 409,
+			'supc_rate_limited' => 429,
+			'supc_temporarily_unavailable',
+			'supc_workflow_disabled',
+			'supc_workflow_adapter_unavailable',
+			'supc_native_workflow_unavailable',
+			'supc_session_store_unavailable',
+			'supc_workflow_adapter_exception' => 503,
+			default => 400,
+		};
 		return $this->error( str_replace( 'supc_', '', $code ), $status, array_merge( $details, $extra_details ) );
 	}
 
