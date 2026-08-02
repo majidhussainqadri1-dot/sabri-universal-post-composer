@@ -48,6 +48,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\UniversalComposer\Core\Workflow_Validator',
 		'Sabri\UniversalComposer\Core\Workflow_Coordinator',
 		'Sabri\UniversalComposer\Core\Session_Store',
+		'Sabri\UniversalComposer\Core\Browser_Runtime',
 		'Sabri\UniversalComposer\Core\Plugin',
 		'Sabri\UniversalComposer\Presentation\Create_Surface',
 		'Sabri\UniversalComposer\Presentation\Workflow_Surface',
@@ -113,6 +114,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/core/class-workflow-validator.php';
 	require_once SUPC_PATH . 'includes/core/class-workflow-coordinator.php';
 	require_once SUPC_PATH . 'includes/core/class-session-store.php';
+	require_once SUPC_PATH . 'includes/core/class-browser-runtime.php';
 	require_once SUPC_PATH . 'includes/presentation/class-create-surface.php';
 	require_once SUPC_PATH . 'includes/presentation/class-workflow-surface.php';
 	require_once SUPC_PATH . 'includes/http/class-rest-controller.php';
@@ -179,5 +181,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 			\Sabri\UniversalComposer\Core\Plugin::instance()->boot();
 		},
 		20
+	);
+	add_action(
+		'plugins_loaded',
+		static function (): void {
+			( new \Sabri\UniversalComposer\Core\Browser_Runtime() )->boot();
+		},
+		25
 	);
 } )();
