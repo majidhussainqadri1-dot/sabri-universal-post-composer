@@ -61,27 +61,23 @@ A separate fresh review tested negative and degraded paths rather than repeating
 
 Regression evidence was added for these corrections and the complete exact-head CI suite was rerun.
 
-## Automated evidence at reviewed head
+## Automated evidence
 
-Reviewed head: `f91d599ae4b24fbed8f41eeb79237260c4b2660b`
+For every new source head, the exact-head workflow performs and records:
 
-- File 22 Core Composer 0.2.0 workflow: PASS;
-- File 22 CI: PASS;
-- PHPUnit cumulative suite: PASS;
-- PHPStan: PASS;
-- WordPress Coding Standards: PASS;
-- PHP 8.1, 8.2, and 8.3 syntax: PASS;
-- repository and dependency-lock contracts: PASS;
-- cumulative historical review workflows: PASS;
-- embedded `MANIFEST.sha256`: PASS;
-- external archive SHA-256: PASS;
-- ZIP CRC/integrity: PASS.
+- source-head equality verification;
+- cumulative PHPUnit suite;
+- PHPStan;
+- WordPress Coding Standards;
+- PHP 8.1, 8.2, and 8.3 syntax;
+- repository and dependency-lock contracts;
+- JavaScript syntax;
+- deterministic ZIP creation;
+- embedded `MANIFEST.sha256` verification;
+- external archive SHA-256 verification;
+- ZIP CRC/integrity verification.
 
-The reviewed candidate archive produced at this head had SHA-256:
-
-`2fff13b698561365978b04c68c0bbd64a438eabfb672871d96dd6cee323f3f97`
-
-Any later documentation commit changes the exact source head and therefore requires a new deterministic package and checksum before handoff.
+The authoritative source commit, archive checksum, embedded manifest, and test report are the files emitted together by the successful `File 22 Core Composer 0.2.0` GitHub Actions run. They must always be treated as one indivisible provenance set. This source document intentionally does not hard-code its own package checksum, because modifying an included source document necessarily changes the deterministic archive.
 
 ## Mandatory remaining acceptance gates
 
@@ -98,4 +94,4 @@ This candidate must not be called production-complete until all of the following
 
 ## Release decision
 
-Known defects found in the two source-review rounds above were corrected and automated QA is green at the cited head. This proves a controlled code/package candidate only. It does not prove staging acceptance, live deployment, operational readiness, or absolute defect-free status.
+Known defects found in the two source-review rounds above were corrected and automated QA is green on the reviewed branch heads. This proves a controlled code/package candidate only. It does not prove staging acceptance, live deployment, operational readiness, or absolute defect-free status.
