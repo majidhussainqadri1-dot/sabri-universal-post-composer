@@ -82,12 +82,11 @@ final class Rest_Controller {
 			if ( ! $adapter instanceof Workflow_Adapter || null === $contract || empty( $contract['supports_native_drafts'] ) ) {
 				continue;
 			}
-			$base = $this->registry->adapter_contract( $key );
 			$items[] = array(
-				'key' => $key,
-				'label' => $adapter->label(),
-				'schema_version' => $adapter->schema_version(),
-				'privacy_classification' => (string) ( $base['privacy_classification'] ?? 'private' ),
+				'key'                    => $key,
+				'label'                  => $adapter->label(),
+				'schema_version'         => $adapter->schema_version(),
+				'privacy_classification' => (string) ( $this->registry->adapter_contract( $key )['privacy_classification'] ?? 'private' ),
 			);
 		}
 		return $this->response( array( 'adapters' => $items ) );
@@ -194,9 +193,9 @@ final class Rest_Controller {
 			if ( ! is_string( $context['session']['native_reference'] ) || '' === $context['session']['native_reference'] ) {
 				return $this->error( 'draft_required_before_preview', 409 );
 			}
-			$payload = $context['payload'];
+			$payload                     = $context['payload'];
 			$payload['native_reference'] = $context['session']['native_reference'];
-			$result = $this->coordinator->preview( get_current_user_id(), (string) $context['session']['adapter_key'], $payload );
+			$result                      = $this->coordinator->preview( get_current_user_id(), (string) $context['session']['adapter_key'], $payload );
 			return $result instanceof WP_Error ? $this->normalize_error( $result ) : $this->response( $result );
 		} finally {
 			$this->release_session_lock( strtolower( (string) $request['session'] ), $token );
@@ -227,13 +226,13 @@ final class Rest_Controller {
 			if ( $session instanceof WP_Error ) {
 				return $this->normalize_error( $session );
 			}
-			$payload = $context['payload'];
+			$payload                     = $context['payload'];
 			$payload['native_reference'] = $session['native_reference'];
-			$result = $this->coordinator->submit( get_current_user_id(), (string) $session['adapter_key'], $key, $payload );
+			$result                      = $this->coordinator->submit( get_current_user_id(), (string) $session['adapter_key'], $key, $payload );
 			if ( $result instanceof WP_Error ) {
 				return $this->normalize_error( $result, array( 'session' => $this->public_session( $session ) ) );
 			}
-			$state = in_array( (string) ( $result['status'] ?? '' ), array( 'scheduled', 'published', 'rejected' ), true ) ? (string) $result['status'] : 'submitted';
+			$state   = in_array( (string) ( $result['status'] ?? '' ), array( 'scheduled', 'published', 'rejected' ), true ) ? (string) $result['status'] : 'submitted';
 			$updated = $this->sessions->update(
 				$uuid,
 				get_current_user_id(),
@@ -262,6 +261,10 @@ final class Rest_Controller {
 		$lock    = $body['lock_version'] ?? null;
 		if ( ! is_array( $payload ) || ! is_int( $lock ) || $lock !== (int) $session['lock_version'] ) {
 			return $this->error( 'session_conflict', 409, array( 'session' => $this->public_session( $session ) ) );
+		}
+		$adapter = $this->registry->get( (string) $session['adapter_key'] );
+		if ( ! $adapter instanceof Workflow_Adapter || ! hash_equals( (string) $session['adapter_version'], $adapter->schema_version() ) ) {
+			return $this->error( 'adapter_version_changed', 409, array( 'session' => $this->public_session( $session ) ) );
 		}
 		return array( 'session' => $session, 'payload' => $payload );
 	}
@@ -325,14 +328,14 @@ final class Rest_Controller {
 	/** @param array<string,mixed> $session @return array<string,mixed> */
 	private function public_session( array $session ): array {
 		return array(
-			'session_uuid' => (string) $session['session_uuid'],
-			'adapter_key' => (string) $session['adapter_key'],
-			'adapter_version' => (string) $session['adapter_version'],
+			'session_uuid'    => (string) $session['session_uuid'],
+			'adapter_key'      => (string) $session['adapter_key'],
+			'adapter_version'  => (string) $session['adapter_version'],
 			'native_reference' => $session['native_reference'],
-			'state' => (string) $session['state'],
-			'lock_version' => (int) $session['lock_version'],
-			'updated_at' => (string) $session['updated_at'],
-			'expires_at' => (string) $session['expires_at'],
+			'state'            => (string) $session['state'],
+			'lock_version'     => (int) $session['lock_version'],
+			'updated_at'       => (string) $session['updated_at'],
+			'expires_at'       => (string) $session['expires_at'],
 		);
 	}
 
@@ -345,16 +348,17 @@ final class Rest_Controller {
 	}
 
 	private function normalize_error( WP_Error $error, array $extra_details = array() ): WP_Error {
-		$raw_code = is_callable( array( $error, 'get_error_code' ) ) ? (string) $error->get_error_code() : (string) ( $error->code ?? '' );
+		$raw_code = is_callable( array( $error, 'get_error_code' ) ) ? (string) $error->get_error_code() : '';
 		$code     = sanitize_key( $raw_code );
-		$status = match ( $code ) {
+		$status   = match ( $code ) {
 			'supc_permission_denied', 'supc_membership_unavailable', 'supc_adapter_permission_denied' => 403,
 			'supc_conflict', 'supc_session_conflict' => 409,
 			'supc_rate_limited' => 429,
 			'supc_temporarily_unavailable', 'supc_workflow_adapter_unavailable', 'supc_session_store_unavailable' => 503,
 			default => 400,
 		};
-		$details = is_array( $error->data ) ? $error->data : array();
+		$raw_details = is_callable( array( $error, 'get_error_data' ) ) ? $error->get_error_data( $raw_code ) : null;
+		$details     = is_array( $raw_details ) ? $raw_details : array();
 		return $this->error( str_replace( 'supc_', '', $code ), $status, array_merge( $details, $extra_details ) );
 	}
 
