@@ -150,7 +150,7 @@ final class CoreComposerRuntimeTest extends TestCase {
 
 		$draft = $coordinator->create_draft( 1, 'runtime_workflow', 'native:1', $payload );
 		$this->assertInstanceOf( WP_Error::class, $draft );
-		$this->assertSame( 'supc_native_reference_mismatch', $draft->get_error_code() );
+		$this->assertSame( 'supc_native_reference_mismatch', $draft->code );
 
 		$submit = $coordinator->submit(
 			1,
@@ -159,11 +159,11 @@ final class CoreComposerRuntimeTest extends TestCase {
 			$payload + array( 'native_reference' => 'native:1' )
 		);
 		$this->assertInstanceOf( WP_Error::class, $submit );
-		$this->assertSame( 'supc_native_reference_mismatch', $submit->get_error_code() );
+		$this->assertSame( 'supc_native_reference_mismatch', $submit->code );
 
 		$status = $coordinator->status( 1, 'runtime_workflow', 'native:1' );
 		$this->assertInstanceOf( WP_Error::class, $status );
-		$this->assertSame( 'supc_native_reference_mismatch', $status->get_error_code() );
+		$this->assertSame( 'supc_native_reference_mismatch', $status->code );
 	}
 
 	public function test_review_r3_guards_resume_authorization_and_accessibility_boundaries(): void {
