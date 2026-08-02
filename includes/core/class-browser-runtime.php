@@ -26,11 +26,11 @@ final class Browser_Runtime {
 	private bool $booted = false;
 
 	public function __construct() {
-		$plugin                 = Plugin::instance();
-		$this->registry         = $plugin->registry();
-		$this->coordinator      = $plugin->workflow_coordinator();
-		$this->workflow_surface = new Workflow_Surface( $this->registry, $this->coordinator );
-		$this->rest_controller  = new Rest_Controller( $this->registry, $this->coordinator, new Session_Store() );
+		$plugin                  = Plugin::instance();
+		$this->registry          = $plugin->registry();
+		$this->coordinator       = $plugin->workflow_coordinator();
+		$this->workflow_surface  = new Workflow_Surface( $this->registry, $this->coordinator );
+		$this->rest_controller   = new Rest_Controller( $this->registry, $this->coordinator, new Session_Store() );
 	}
 
 	public function boot(): void {
@@ -38,7 +38,7 @@ final class Browser_Runtime {
 			return;
 		}
 		$this->booted = true;
-		Session_Store::maybe_install();
+		add_action( 'admin_init', array( Session_Store::class, 'maybe_install' ) );
 		add_shortcode( 'sabri_universal_composer', array( $this, 'render_shortcode' ) );
 		$this->rest_controller->register();
 		add_action( 'supc_cleanup_expired_sessions', array( Session_Store::class, 'cleanup_expired' ) );
@@ -47,8 +47,13 @@ final class Browser_Runtime {
 
 	public function render_shortcode(): string {
 		// Reuse the established private/no-cache boundary and base assets.
+		// If output has already begun, the required private response headers cannot
+		// be guaranteed; fail closed through the established core notice.
 		$fallback = Plugin::instance()->render_shortcode();
-		$user_id  = get_current_user_id();
+		if ( headers_sent() ) {
+			return $fallback;
+		}
+		$user_id = get_current_user_id();
 		if ( $user_id <= 0 || Safe_Mode::disabled() ) {
 			return $fallback;
 		}
@@ -88,8 +93,8 @@ final class Browser_Runtime {
 		$html      .= '<p>' . esc_html__( 'Authorized workflow adapters open inside File 22. Every draft and final publication remains owned by its native module.', 'sabri-universal-post-composer' ) . '</p></header><div class="supc-create__groups">';
 		foreach ( $groups as $group_key => $group ) {
 			$group_id = wp_unique_id( 'supc-browser-group-' );
-			$html .= '<section class="supc-create-group" data-supc-group="' . esc_attr( $group_key ) . '" aria-labelledby="' . esc_attr( $group_id ) . '">';
-			$html .= '<div class="supc-create-group__heading"><h3 id="' . esc_attr( $group_id ) . '">' . esc_html( $group['label'] ) . '</h3><p>' . esc_html( $group['description'] ) . '</p></div><ul class="supc-create-grid" role="list">';
+			$html    .= '<section class="supc-create-group" data-supc-group="' . esc_attr( $group_key ) . '" aria-labelledby="' . esc_attr( $group_id ) . '">';
+			$html    .= '<div class="supc-create-group__heading"><h3 id="' . esc_attr( $group_id ) . '">' . esc_html( $group['label'] ) . '</h3><p>' . esc_html( $group['description'] ) . '</p></div><ul class="supc-create-grid" role="list">';
 			foreach ( $group['cards'] as $card ) {
 				$html .= '<li class="supc-create-card" data-supc-type="' . esc_attr( $card['key'] ) . '"><a class="supc-create-card__link" href="' . esc_url( $card['url'] ) . '">';
 				$html .= '<span class="supc-create-card__icon dashicons ' . esc_attr( $card['icon_class'] ) . '" aria-hidden="true"></span><span class="supc-create-card__body">';
@@ -109,7 +114,7 @@ final class Browser_Runtime {
 			'supc-workflow-composer',
 			'SUPCWorkflow',
 			array(
-				'restRoot' => esc_url_raw( rest_url( Rest_Controller::NAMESPACE ) ),
+				'restRoot' => untrailingslashit( esc_url_raw( rest_url( Rest_Controller::NAMESPACE ) ) ),
 				'nonce'    => wp_create_nonce( 'wp_rest' ),
 				'strings'  => array(
 					'errorHeading'        => __( 'Please correct the following problems.', 'sabri-universal-post-composer' ),
@@ -122,7 +127,8 @@ final class Browser_Runtime {
 					'notSaved'            => __( 'Changes were not saved.', 'sabri-universal-post-composer' ),
 					'unsaved'             => __( 'Changes are not saved yet.', 'sabri-universal-post-composer' ),
 					'previewing'          => __( 'Preparing preview…', 'sabri-universal-post-composer' ),
-					'previewReady'        => __( 'Preview opened in a new tab.', 'sabri-universal-post-composer' ),
+					'previewReady'        => __( 'Preview is ready.', 'sabri-universal-post-composer' ),
+					'openPreview'         => __( 'Open preview', 'sabri-universal-post-composer' ),
 					'previewFailed'       => __( 'Preview could not be prepared.', 'sabri-universal-post-composer' ),
 					'fixFields'           => __( 'Complete the required fields before submitting.', 'sabri-universal-post-composer' ),
 					'validating'          => __( 'Validating content…', 'sabri-universal-post-composer' ),
@@ -133,10 +139,11 @@ final class Browser_Runtime {
 					'viewPublication'     => __( 'View publication', 'sabri-universal-post-composer' ),
 				),
 				'errors'   => array(
-					'supc_session_conflict'  => __( 'This draft changed in another tab. Reload the current session before continuing.', 'sabri-universal-post-composer' ),
-					'supc_permission_denied' => __( 'Your account is no longer authorized for this workflow.', 'sabri-universal-post-composer' ),
-					'supc_rate_limited'      => __( 'Too many requests were made. Wait briefly and try again.', 'sabri-universal-post-composer' ),
-					'supc_validation_failed' => __( 'The native owner rejected one or more field values.', 'sabri-universal-post-composer' ),
+					'supc_session_conflict'         => __( 'This draft changed in another tab. Reload the current session before continuing.', 'sabri-universal-post-composer' ),
+					'supc_permission_denied'        => __( 'Your account is no longer authorized for this workflow.', 'sabri-universal-post-composer' ),
+					'supc_rate_limited'             => __( 'Too many requests were made. Wait briefly and try again.', 'sabri-universal-post-composer' ),
+					'supc_validation_failed'        => __( 'The native owner rejected one or more field values.', 'sabri-universal-post-composer' ),
+					'supc_adapter_version_changed'  => __( 'The native workflow changed after this session began. Start a new draft session before continuing.', 'sabri-universal-post-composer' ),
 				),
 			)
 		);
