@@ -108,4 +108,25 @@ final class CoreComposerRuntimeTest extends TestCase {
 		$this->assertStringContainsString( 'wp_verify_nonce( $nonce, \'wp_rest\' )', $source );
 		$this->assertStringContainsString( 'no-store, no-cache', $source );
 	}
+
+	public function test_fresh_adversarial_review_guards_browser_and_error_boundaries(): void {
+		$browser = file_get_contents( dirname( __DIR__ ) . '/assets/js/workflow-composer.js' );
+		$runtime = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-browser-runtime.php' );
+		$rest    = file_get_contents( dirname( __DIR__ ) . '/includes/http/class-rest-controller.php' );
+
+		$this->assertIsString( $browser );
+		$this->assertIsString( $runtime );
+		$this->assertIsString( $rest );
+		$this->assertStringContainsString( 'window.setInterval', $browser );
+		$this->assertStringContainsString( '25000', $browser );
+		$this->assertStringContainsString( "window.open('about:blank'", $browser );
+		$this->assertStringContainsString( "replace(/\\/+$/, '')", $browser );
+		$this->assertStringContainsString( 'if ( headers_sent() )', $runtime );
+		$this->assertStringContainsString(
+			"add_action( 'admin_init', array( Session_Store::class, 'maybe_install' ) )",
+			$runtime
+		);
+		$this->assertStringContainsString( 'get_error_data', $rest );
+		$this->assertStringContainsString( 'adapter_version_changed', $rest );
+	}
 }
