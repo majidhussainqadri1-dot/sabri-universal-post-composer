@@ -165,7 +165,7 @@ final class Workflow_Coordinator {
 			return $this->error( 'workflow_adapter_unavailable', $adapter_key );
 		}
 		$native_reference = $payload['native_reference'] ?? null;
-		if ( ! is_string( $native_reference ) || ! $this->validator->valid_reference( $native_reference ) ) {
+		if ( null !== $native_reference && ( ! is_string( $native_reference ) || ! $this->validator->valid_reference( $native_reference ) ) ) {
 			return $this->error( 'invalid_native_reference', $adapter_key );
 		}
 		$user_payload = $payload;
@@ -174,8 +174,10 @@ final class Workflow_Coordinator {
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
-		$native_payload                     = $user_payload;
-		$native_payload['native_reference'] = $native_reference;
+		$native_payload = $user_payload;
+		if ( is_string( $native_reference ) ) {
+			$native_payload['native_reference'] = $native_reference;
+		}
 		try {
 			$result = $adapter->preview( $user_id, $native_payload );
 			return $result instanceof WP_Error
@@ -203,7 +205,7 @@ final class Workflow_Coordinator {
 			return $this->error( 'workflow_adapter_unavailable', $adapter_key );
 		}
 		$native_reference = $payload['native_reference'] ?? null;
-		if ( ! is_string( $native_reference ) || ! $this->validator->valid_reference( $native_reference ) ) {
+		if ( null !== $native_reference && ( ! is_string( $native_reference ) || ! $this->validator->valid_reference( $native_reference ) ) ) {
 			return $this->error( 'invalid_native_reference', $adapter_key );
 		}
 		$user_payload = $payload;
@@ -212,15 +214,17 @@ final class Workflow_Coordinator {
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
-		$native_payload                     = $user_payload;
-		$native_payload['native_reference'] = $native_reference;
+		$native_payload = $user_payload;
+		if ( is_string( $native_reference ) ) {
+			$native_payload['native_reference'] = $native_reference;
+		}
 		try {
 			$result = $adapter->submit( $user_id, $idempotency_key, $native_payload );
 			if ( $result instanceof WP_Error ) {
 				return $this->native_error( $adapter_key, 'submit', $result );
 			}
 			$validated = $this->validator->status_result( $result, $adapter_key );
-			return $validated instanceof WP_Error
+			return $validated instanceof WP_Error || null === $native_reference
 				? $validated
 				: $this->require_native_reference( $validated, $native_reference, $adapter_key );
 		} catch ( Throwable $error ) {
