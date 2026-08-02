@@ -16,6 +16,7 @@
 	let dirty = false;
 	let timer = null;
 	let periodicTimer = null;
+	let resumePromise = null;
 
 	const announce = (message) => {
 		status.textContent = message;
@@ -81,6 +82,9 @@
 	};
 
 	const ensureSession = async () => {
+		if (resumePromise) {
+			await resumePromise;
+		}
 		if (session) {
 			return session;
 		}
@@ -104,6 +108,9 @@
 				announce(config.strings.sessionRecovered.replace('%s', session.updated_at));
 			}
 		} catch (error) {
+			const url = new URL(window.location.href);
+			url.searchParams.delete('session');
+			window.history.replaceState({}, '', url.toString());
 			announce(config.strings.sessionNotRecovered);
 		}
 	};
@@ -140,7 +147,7 @@
 	};
 
 	const save = async (silent) => {
-		if (!dirty) {
+		if (!dirty && session && session.native_reference) {
 			return true;
 		}
 		if (!silent) {
@@ -248,5 +255,7 @@
 		}
 	});
 
-	resumeSession();
+	resumePromise = resumeSession().finally(() => {
+		resumePromise = null;
+	});
 }());
