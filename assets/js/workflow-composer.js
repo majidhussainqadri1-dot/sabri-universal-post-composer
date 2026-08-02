@@ -10,9 +10,12 @@
 	const status = root.querySelector('[data-supc-status]');
 	const errors = root.querySelector('.supc-workflow__errors');
 	const config = window.SUPCWorkflow;
+	const restRoot = String(config.restRoot || '').replace(/\/+$/, '');
 	let session = null;
 	let busy = false;
+	let dirty = false;
 	let timer = null;
+	let periodicTimer = null;
 
 	const announce = (message) => {
 		status.textContent = message;
@@ -55,7 +58,7 @@
 	};
 
 	const request = async (path, method, body) => {
-		const response = await fetch(config.restRoot + path, {
+		const response = await fetch(restRoot + path, {
 			method: method,
 			credentials: 'same-origin',
 			cache: 'no-store',
@@ -137,11 +140,15 @@
 	};
 
 	const save = async (silent) => {
+		if (!dirty) {
+			return true;
+		}
 		if (!silent) {
 			announce(config.strings.saving);
 		}
 		try {
 			await run('autosave');
+			dirty = false;
 			announce(config.strings.saved);
 			return true;
 		} catch (error) {
@@ -151,22 +158,49 @@
 	};
 
 	form.addEventListener('input', () => {
+		dirty = true;
 		window.clearTimeout(timer);
 		announce(config.strings.unsaved);
-		timer = window.setTimeout(() => save(true), 20000);
+		timer = window.setTimeout(() => save(true), 2000);
 	});
+
+	periodicTimer = window.setInterval(() => {
+		if (dirty && !busy && document.visibilityState !== 'hidden') {
+			save(true);
+		}
+	}, 25000);
 
 	form.querySelector('[data-supc-action="save"]').addEventListener('click', () => save(false));
 	form.querySelector('[data-supc-action="preview"]').addEventListener('click', async () => {
+		const previewWindow = window.open('about:blank', '_blank');
+		if (previewWindow) {
+			previewWindow.opener = null;
+		}
 		if (!(await save(false))) {
+			if (previewWindow) {
+				previewWindow.close();
+			}
 			return;
 		}
 		announce(config.strings.previewing);
 		try {
 			const result = await run('preview');
 			announce(config.strings.previewReady);
-			window.open(result.preview_url, '_blank', 'noopener,noreferrer');
+			if (previewWindow) {
+				previewWindow.location.replace(result.preview_url);
+			} else {
+				const link = document.createElement('a');
+				link.href = result.preview_url;
+				link.target = '_blank';
+				link.rel = 'noopener noreferrer';
+				link.textContent = config.strings.openPreview;
+				link.className = 'button';
+				form.querySelector('.supc-workflow__actions').appendChild(link);
+			}
 		} catch (error) {
+			if (previewWindow) {
+				previewWindow.close();
+			}
 			announce(config.strings.previewFailed);
 		}
 	});
@@ -190,8 +224,10 @@
 			}
 			announce(config.strings.submitting);
 			const result = await run('submit');
+			dirty = false;
 			announce(config.strings.submitted);
 			window.clearTimeout(timer);
+			window.clearInterval(periodicTimer);
 			form.querySelectorAll('button').forEach((button) => { button.disabled = true; });
 			if (result.native && result.native.canonical_url) {
 				const link = document.createElement('a');
@@ -206,7 +242,7 @@
 	});
 
 	window.addEventListener('beforeunload', (event) => {
-		if (status.textContent === config.strings.unsaved) {
+		if (dirty || busy) {
 			event.preventDefault();
 			event.returnValue = '';
 		}
