@@ -85,7 +85,8 @@ final class Session_Store {
 			return false;
 		}
 		$table = self::table_name();
-		return $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+		$like  = method_exists( $wpdb, 'esc_like' ) ? $wpdb->esc_like( $table ) : addcslashes( $table, '_%\\' );
+		return $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) );
 	}
 
 	/** @return array<string,mixed>|WP_Error */
