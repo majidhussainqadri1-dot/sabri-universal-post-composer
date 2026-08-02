@@ -75,9 +75,9 @@ final class CompleteAuthorizationForensicTest extends TestCase {
 
 		$this->assertIsString( $main );
 		$this->assertIsString( $resolver );
-		$this->assertStringContainsString( "SUPC_MIN_SMC_VERSION', '1.2.2", $main );
+		$this->assertStringContainsString( "SUPC_MIN_SMC_VERSION', '1.2.3", $main );
 		$this->assertStringContainsString( "SUPC_MIN_SMC_DB_VERSION', '1.2.0", $main );
-		$this->assertStringContainsString( "SUPC_MIN_SMC_CONTRACT_VERSION', '1.1.1", $main );
+		$this->assertStringContainsString( "SUPC_MIN_SMC_CONTRACT_VERSION', '1.1.2", $main );
 		$this->assertStringContainsString( 'SMC_DB_VERSION, (string) SUPC_MIN_SMC_DB_VERSION', $resolver );
 		$this->assertStringContainsString( 'SMC_CONTRACT_VERSION, (string) SUPC_MIN_SMC_CONTRACT_VERSION', $resolver );
 	}
