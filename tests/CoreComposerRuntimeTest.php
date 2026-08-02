@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 use PHPUnit\Framework\TestCase;
 use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
+use Sabri\UniversalComposer\Core\Browser_Runtime;
 use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Registry;
 use Sabri\UniversalComposer\Core\Workflow_Coordinator;
-use Sabri\UniversalComposer\Presentation\Create_Surface;
 use Sabri\UniversalComposer\Presentation\Workflow_Surface;
 
 final class Runtime_Workflow_Adapter implements Workflow_Adapter {
@@ -61,7 +61,10 @@ final class CoreComposerRuntimeTest extends TestCase {
 	}
 
 	public function test_workflow_adapter_card_stays_inside_file22_create_surface(): void {
-		$groups = ( new Create_Surface( $this->registry ) )->collect_groups( 1 );
+		$runtime = new Browser_Runtime();
+		$plugin_registry = \Sabri\UniversalComposer\Core\Plugin::instance()->registry();
+		$this->assertTrue( $plugin_registry->register( new Runtime_Workflow_Adapter() ) );
+		$groups = $runtime->gateway_groups( 1 );
 		$url = $groups['publishing']['cards'][0]['url'];
 		$this->assertStringContainsString( 'type=runtime_workflow', $url );
 		$this->assertStringNotContainsString( '/native-create/', $url );
