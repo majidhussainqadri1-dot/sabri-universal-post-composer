@@ -11,6 +11,8 @@ use Sabri\UniversalComposer\Core\Workflow_Coordinator;
 use Sabri\UniversalComposer\Presentation\Workflow_Surface;
 
 final class Runtime_Workflow_Adapter implements Workflow_Adapter {
+	public static bool $substitute_reference = false;
+
 	public function api_version(): string { return '1.0.0'; }
 	public function workflow_api_version(): string { return '1.0.0'; }
 	public function schema_version(): string { return '1.0.0'; }
@@ -37,11 +39,27 @@ final class Runtime_Workflow_Adapter implements Workflow_Adapter {
 			),
 		);
 	}
-	public function create_draft( int $user_id, ?string $native_reference, array $payload ) { return array( 'native_reference' => $native_reference ?: 'native:1', 'status' => 'draft' ); }
+	public function create_draft( int $user_id, ?string $native_reference, array $payload ) {
+		return array(
+			'native_reference' => self::$substitute_reference ? 'native:other' : ( $native_reference ?: 'native:1' ),
+			'status' => 'draft',
+		);
+	}
 	public function validate( int $user_id, array $payload ) { return array( 'valid' => true, 'errors' => array(), 'warnings' => array() ); }
 	public function preview( int $user_id, array $payload ) { return array( 'preview_url' => 'https://example.test/preview/1/', 'expires_at' => time() + 300 ); }
-	public function submit( int $user_id, string $idempotency_key, array $payload ) { return array( 'native_reference' => 'native:1', 'status' => 'published', 'canonical_url' => 'https://example.test/item/1/' ); }
-	public function status( int $user_id, string $native_reference ) { return array( 'native_reference' => $native_reference, 'status' => 'draft' ); }
+	public function submit( int $user_id, string $idempotency_key, array $payload ) {
+		return array(
+			'native_reference' => self::$substitute_reference ? 'native:other' : 'native:1',
+			'status' => 'published',
+			'canonical_url' => 'https://example.test/item/1/',
+		);
+	}
+	public function status( int $user_id, string $native_reference ) {
+		return array(
+			'native_reference' => self::$substitute_reference ? 'native:other' : $native_reference,
+			'status' => 'draft',
+		);
+	}
 	public function canonical_url( int $user_id, string $native_reference ): string { return 'https://example.test/item/1/'; }
 }
 
@@ -50,6 +68,7 @@ final class CoreComposerRuntimeTest extends TestCase {
 
 	protected function setUp(): void {
 		$_GET = array();
+		Runtime_Workflow_Adapter::$substitute_reference = false;
 		$GLOBALS['supc_test_current_user'] = 1;
 		$GLOBALS['supc_test_logged_in'] = true;
 		$GLOBALS['supc_test_statuses'] = array( 1 => 'approved' );
@@ -107,6 +126,61 @@ final class CoreComposerRuntimeTest extends TestCase {
 		$this->assertLessThan( $dispatch, $persist );
 		$this->assertStringContainsString( 'wp_verify_nonce( $nonce, \'wp_rest\' )', $source );
 		$this->assertStringContainsString( 'no-store, no-cache', $source );
+	}
+
+	public function test_internal_native_reference_does_not_need_to_be_declared_as_a_user_field(): void {
+		$coordinator = new Workflow_Coordinator( $this->registry, new Permission_Resolver() );
+		$payload = array( 'title' => 'A title', 'content' => 'A body' );
+		$preview = $coordinator->preview( 1, 'runtime_workflow', $payload + array( 'native_reference' => 'native:1' ) );
+		$this->assertIsArray( $preview );
+		$submit = $coordinator->submit(
+			1,
+			'runtime_workflow',
+			'123e4567-e89b-42d3-a456-426614174000:123e4567-e89b-42d3-a456-426614174001',
+			$payload + array( 'native_reference' => 'native:1' )
+		);
+		$this->assertIsArray( $submit );
+		$this->assertSame( 'native:1', $submit['native_reference'] );
+	}
+
+	public function test_native_adapter_cannot_substitute_another_object_reference(): void {
+		$coordinator = new Workflow_Coordinator( $this->registry, new Permission_Resolver() );
+		$payload = array( 'title' => 'A title', 'content' => 'A body' );
+		Runtime_Workflow_Adapter::$substitute_reference = true;
+
+		$draft = $coordinator->create_draft( 1, 'runtime_workflow', 'native:1', $payload );
+		$this->assertInstanceOf( WP_Error::class, $draft );
+		$this->assertSame( 'supc_native_reference_mismatch', $draft->get_error_code() );
+
+		$submit = $coordinator->submit(
+			1,
+			'runtime_workflow',
+			'123e4567-e89b-42d3-a456-426614174000:123e4567-e89b-42d3-a456-426614174001',
+			$payload + array( 'native_reference' => 'native:1' )
+		);
+		$this->assertInstanceOf( WP_Error::class, $submit );
+		$this->assertSame( 'supc_native_reference_mismatch', $submit->get_error_code() );
+
+		$status = $coordinator->status( 1, 'runtime_workflow', 'native:1' );
+		$this->assertInstanceOf( WP_Error::class, $status );
+		$this->assertSame( 'supc_native_reference_mismatch', $status->get_error_code() );
+	}
+
+	public function test_review_r3_guards_resume_authorization_and_accessibility_boundaries(): void {
+		$browser = file_get_contents( dirname( __DIR__ ) . '/assets/js/workflow-composer.js' );
+		$rest    = file_get_contents( dirname( __DIR__ ) . '/includes/http/class-rest-controller.php' );
+		$surface = file_get_contents( dirname( __DIR__ ) . '/includes/presentation/class-workflow-surface.php' );
+
+		$this->assertIsString( $browser );
+		$this->assertIsString( $rest );
+		$this->assertIsString( $surface );
+		$this->assertStringContainsString( 'await resumePromise', $browser );
+		$this->assertStringContainsString( '!dirty && session && session.native_reference', $browser );
+		$this->assertStringContainsString( '$this->coordinator->schema', $rest );
+		$this->assertStringContainsString( 'SESSION_LOCK_TTL = 600', $rest );
+		$this->assertStringContainsString( "'supc_workflow_permission_denied' => 403", $rest );
+		$this->assertStringContainsString( 'Workflow_Validator() )->internal_url', $surface );
+		$this->assertStringContainsString( 'aria-describedby', $surface );
 	}
 
 	public function test_fresh_adversarial_review_guards_browser_and_error_boundaries(): void {
