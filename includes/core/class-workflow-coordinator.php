@@ -112,9 +112,13 @@ final class Workflow_Coordinator {
 		}
 		try {
 			$result = $adapter->create_draft( $user_id, $native_reference, $payload );
-			return $result instanceof WP_Error
-				? $this->native_error( $adapter_key, 'create_draft', $result )
-				: $this->validator->draft_result( $result, $adapter_key );
+			if ( $result instanceof WP_Error ) {
+				return $this->native_error( $adapter_key, 'create_draft', $result );
+			}
+			$validated = $this->validator->draft_result( $result, $adapter_key );
+			return $validated instanceof WP_Error || null === $native_reference
+				? $validated
+				: $this->require_native_reference( $validated, $native_reference, $adapter_key );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'create_draft', $error );
 		}
@@ -194,11 +198,19 @@ final class Workflow_Coordinator {
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
+		$native_reference = $payload['native_reference'] ?? null;
+		if ( ! is_string( $native_reference ) || ! $this->validator->valid_reference( $native_reference ) ) {
+			return $this->error( 'invalid_native_reference', $adapter_key );
+		}
 		try {
 			$result = $adapter->submit( $user_id, $idempotency_key, $payload );
-			return $result instanceof WP_Error
-				? $this->native_error( $adapter_key, 'submit', $result )
-				: $this->validator->status_result( $result, $adapter_key );
+			if ( $result instanceof WP_Error ) {
+				return $this->native_error( $adapter_key, 'submit', $result );
+			}
+			$validated = $this->validator->status_result( $result, $adapter_key );
+			return $validated instanceof WP_Error
+				? $validated
+				: $this->require_native_reference( $validated, $native_reference, $adapter_key );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'submit', $error );
 		}
@@ -215,9 +227,13 @@ final class Workflow_Coordinator {
 		}
 		try {
 			$result = $adapter->status( $user_id, $native_reference );
-			return $result instanceof WP_Error
-				? $this->native_error( $adapter_key, 'status', $result )
-				: $this->validator->status_result( $result, $adapter_key );
+			if ( $result instanceof WP_Error ) {
+				return $this->native_error( $adapter_key, 'status', $result );
+			}
+			$validated = $this->validator->status_result( $result, $adapter_key );
+			return $validated instanceof WP_Error
+				? $validated
+				: $this->require_native_reference( $validated, $native_reference, $adapter_key );
 		} catch ( Throwable $error ) {
 			return $this->exception( $adapter_key, 'status', $error );
 		}
@@ -293,6 +309,22 @@ final class Workflow_Coordinator {
 		return ! Safe_Mode::disabled()
 			&& $this->permissions->account_is_eligible( $user_id )
 			&& $this->permissions->can_use_capability( $user_id, $capability );
+	}
+
+	/**
+	 * Bind every native response to the object already owned by the session.
+	 * A buggy or compromised adapter must not silently substitute another object.
+	 *
+	 * @param array<string,mixed> $result Validated native result.
+	 * @return array<string,mixed>|WP_Error
+	 */
+	private function require_native_reference( array $result, string $expected, string $adapter_key ): array|WP_Error {
+		$actual = $result['native_reference'] ?? null;
+		if ( ! is_string( $actual ) || ! hash_equals( $expected, $actual ) ) {
+			do_action( 'supc_workflow_reference_mismatch', Contract_Boundary::public_identifier( $adapter_key ) );
+			return $this->error( 'native_reference_mismatch', $adapter_key );
+		}
+		return $result;
 	}
 
 	private function native_error( string $adapter_key, string $operation, WP_Error $error ): WP_Error {
