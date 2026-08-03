@@ -15,6 +15,8 @@ function wp_generate_uuid4(): string {
 require dirname( __DIR__ ) . '/includes/contracts/interface-adapter.php';
 require dirname( __DIR__ ) . '/includes/contracts/interface-workflow-adapter.php';
 require dirname( __DIR__ ) . '/includes/core/class-version.php';
+require dirname( __DIR__ ) . '/includes/core/class-contract-boundary.php';
+require dirname( __DIR__ ) . '/includes/core/class-policy-engine.php';
 require dirname( __DIR__ ) . '/includes/core/class-permission-resolver.php';
 require dirname( __DIR__ ) . '/includes/core/class-registry.php';
 require dirname( __DIR__ ) . '/includes/core/class-workflow-validator.php';
