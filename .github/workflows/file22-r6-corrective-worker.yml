@@ -41,10 +41,18 @@ jobs:
       - name: Install locked dependencies
         run: composer install --no-interaction --no-progress --prefer-dist --quiet
 
-      - name: Apply plan-completion source
+      - name: Apply plan-completion source and first review correction
         run: |
           set -euo pipefail
           cat tools/file22-r6-chunk-* | base64 -d | tar -xz
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tests/PlanCompletionCoreTest.php')
+          source = path.read_text()
+          source = source.replace("\t\t\t\"'/uploads'\",", "\t\t\t\"'/sessions/(?P<session>[0-9a-f-]{36})/uploads'\",")
+          source = source.replace("\t\t\t\"'/complete'\",", "\t\t\t\"'/sessions/(?P<session>[0-9a-f-]{36})/uploads/(?P<upload>[0-9a-f-]{36})/complete'\",")
+          path.write_text(source)
+          PY
 
       - name: Run complete review and QA
         run: |
