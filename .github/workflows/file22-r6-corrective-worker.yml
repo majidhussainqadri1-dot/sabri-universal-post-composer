@@ -1,12 +1,16 @@
 name: File 22 Plan-Complete R6 Corrective Worker
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - feat/file22-plan-complete-core-1.0.0-2026-08-03
     paths:
       - 'tools/file22-r6-chunk-*'
       - '.github/workflows/file22-r6-corrective-worker.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -58,7 +62,7 @@ jobs:
           rm -rf .phpunit.cache
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm .github/workflows/file22-r6-corrective-worker.yml tools/file22-r6-chunk-*
+          git rm .github/workflows/file22-r6-corrective-worker.yml tools/file22-r6-chunk-* tools/file22-r6-ready
           git add -A
           git commit -m 'File 22 1.0.0-rc.1: complete central-plan Core source R6'
           git push origin HEAD:feat/file22-plan-complete-core-1.0.0-2026-08-03
