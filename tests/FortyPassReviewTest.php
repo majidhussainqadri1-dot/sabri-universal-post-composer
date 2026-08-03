@@ -10,7 +10,7 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 
 final class FortyPassReviewTest extends TestCase {
-	private const EXPECTED_PASSES = 28;
+	private const EXPECTED_PASSES = 29;
 
 	public function test_review_ledger_contains_every_completed_pass_once(): void {
 		$ledger = file_get_contents( dirname( __DIR__ ) . '/docs/FILE22-FORTY-PASS-REVIEW-R7-2026-08-03.md' );
