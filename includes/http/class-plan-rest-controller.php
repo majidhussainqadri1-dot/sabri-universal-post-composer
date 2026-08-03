@@ -291,6 +291,12 @@ final class Plan_Rest_Controller {
 		}
 		$purpose  = sanitize_key( (string) ( $body['purpose'] ?? '' ) );
 		$metadata = isset( $body['metadata'] ) && is_array( $body['metadata'] ) ? $body['metadata'] : array();
+		if ( ! Contract_Boundary::code( $purpose ) ) {
+			return $this->error( 'invalid_upload_purpose', 400 );
+		}
+		if ( count( $metadata ) > 32 || strlen( (string) wp_json_encode( $metadata ) ) > 16384 ) {
+			return $this->error( 'upload_metadata_too_large', 413 );
+		}
 		$result   = $this->coordinator->begin_upload( get_current_user_id(), (string) $session['adapter_key'], $purpose, $metadata );
 		if ( $result instanceof WP_Error ) {
 			return $this->normalize_error( $result );

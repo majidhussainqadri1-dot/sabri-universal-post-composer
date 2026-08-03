@@ -7,3 +7,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 1 | Malformed optional JSON and request-size boundary | Malformed optional JSON now fails closed and is size-bounded. |
 | 2 | Canonical idempotency-key validation | Revision idempotency keys now use one canonical bounded validator. |
 | 3 | Untrusted native revision status mapping | Native revision statuses now pass through an explicit state map. |
+| 4 | Unbounded upload intent metadata | Upload purpose and metadata are bounded before native dispatch. |
