@@ -23,6 +23,9 @@ if ( ! defined( 'SUPC_WORKFLOW_API_VERSION' ) ) {
 if ( ! defined( 'SUPC_SUBJECT_SCHEMA_API_VERSION' ) ) {
 	define( 'SUPC_SUBJECT_SCHEMA_API_VERSION', '1.0.0' );
 }
+if ( ! defined( 'SUPC_REST_API_VERSION' ) ) {
+	define( 'SUPC_REST_API_VERSION', '1.1.0' );
+}
 
 ( static function (): void {
 	$shell_path = __DIR__ . '/fixtures/sabri-unified-application-shell';
@@ -62,5 +65,12 @@ if ( ! function_exists( 'wp_json_encode' ) ) {
 require_once SUPC_PATH . 'includes/contracts/interface-workflow-adapter.php';
 require_once SUPC_PATH . 'includes/core/class-workflow-validator.php';
 require_once SUPC_PATH . 'includes/core/class-workflow-coordinator.php';
+require_once SUPC_PATH . 'includes/core/class-session-store.php';
+require_once SUPC_PATH . 'includes/core/class-submission-store.php';
+require_once SUPC_PATH . 'includes/core/class-reconciliation-service.php';
+require_once SUPC_PATH . 'includes/presentation/class-workflow-surface.php';
+require_once SUPC_PATH . 'includes/http/class-rest-controller.php';
+require_once SUPC_PATH . 'includes/http/class-reconciliation-rest-controller.php';
 require_once SUPC_PATH . 'includes/core/class-plugin.php';
+require_once SUPC_PATH . 'includes/core/class-browser-runtime.php';
 require_once SUPC_PATH . 'includes/core/functions.php';

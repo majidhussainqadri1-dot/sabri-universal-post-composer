@@ -1,102 +1,97 @@
-# Sabri Universal Post Composer
+# Sabri Universal Post Composer — File 22
 
-File 22 for the Sabri Social Homeopathy Platform.
+Sabri Universal Post Composer is the role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform. It unifies authorized creation workflows while preserving every native module as the canonical owner of its content, media, consent, moderation, publication state, durable draft, and canonical URL.
 
-Sabri Universal Post Composer is a role-aware, adapter-driven creation facade and workflow orchestrator for WordPress. It does not replace native publishing, media, learning, encyclopedia, PDF, marketplace, moderation, consent, identity, or clinical-data owners.
+## Governing law
 
-## Governing principles
+- One creation gateway; multiple authorized native content systems.
+- One canonical native record; multiple projections.
+- File 00 remains the membership, verification, suspension, and capability authority.
+- File 20 remains the global shell and Create-control owner; Create contract compatibility anchor: `1.0.1`.
+- File 21 remains the social/news publishing owner. Integrated staging requires package identity `1.0.3.2` or later while the stable runtime/API remains `1.0.3`.
+- File 23 remains the private publishing operations dashboard.
+- File 24 remains the cross-platform security/privacy assurance center without replacing native security.
+- File 25 remains the public profile, timeline, and visual-experience owner.
+- Missing or incompatible adapters fail independently; File 22 does not create substitute backends.
 
-- One creation gateway, multiple authorized native content systems.
-- One canonical native record, multiple projections.
-- Sabri Membership Core remains the identity, verification, suspension, and capability authority.
-- Native modules retain ownership of permanent content, moderation, secure media, and canonical URLs.
-- Unavailable or broken adapters fail independently and do not disable healthy adapters.
-- Staging-first development; direct experimental changes on the live website are prohibited.
-- Security, privacy, medical safety, accessibility, migration, and rollback are required from the beginning.
-- Every substantial implementation is followed by a separate mandatory review before the next phase.
+## Version 0.3.0 reconciliation candidate
 
-## Ownership boundary
+This branch extends the private browser Composer with durable submission identity, partial-failure recovery, and bounded reconciliation:
 
-File 22 owns the universal content-type selector, adapter registry, shared creation experience, temporary orchestration boundaries, page resolution, and integration health. Native modules own permanent records, review decisions, secure storage, canonical URLs, durable idempotency reconciliation, and module-specific lifecycle rules.
-
-Authorization-critical and structural adapter metadata—API version, required capability, native owner, minimum native version, privacy class, group, and priority—is captured atomically at registration. A native adapter cannot weaken its central capability, change its exact owner, relabel sensitive work as public, move itself into a different group, or reorder itself after acceptance by returning different metadata later in the same request.
-
-## Current development stack
-
-- **Phase 22A:** governance, contracts, central permission enforcement, page routing, Safe Mode, and automated contract tests.
-- **Phase 22B:** release-critical File 21 `social_publication` adapter acceptance, ownership diagnostics, and fail-soft gateway rules.
-- **Phase 22C:** accessible, responsive Universal Create gateway surface that routes authorized users to native workflows without duplicating content.
-- **Phase 22D:** capability-protected administrator health dashboard, privacy-safe adapter diagnostics, and bounded Create-page mapping repair with dry-run support.
-- **Phase 22E:** guarded server-side native workflow orchestration for schema, native drafts, validation, preview, idempotent submission, status, and canonical URL retrieval.
-
-Phases 22A–22E were integrated into canonical `main` through merged PR #6. That merge establishes a reviewed source baseline only; it does not constitute staging acceptance, package approval, live deployment, or production completion.
+- schema-driven accessible forms;
+- private REST namespace `sabri-composer/v1`;
+- native-owner draft creation and bounded autosave;
+- validation, same-origin private preview, idempotent submission, and status retrieval;
+- metadata-only `wp_supc_sessions` orchestration storage;
+- durable metadata-only `wp_supc_submissions` identity map and `wp_supc_outbox` reconciliation queue;
+- order-stable payload fingerprints that bind an idempotency key to one exact payload without storing the payload;
+- request-time and scheduled native-status reconciliation after timeout, network loss, or partial local failure;
+- five bounded retry attempts with 1 minute, 5 minute, 30 minute, 2 hour, and 12 hour backoff before dead-letter;
+- compare-and-swap lock versions and ten-minute per-session operation leases;
+- authority revalidation immediately before every native write and final submit dispatch;
+- ordinary session retention of 180 days and sensitive-session retention of 30 days;
+- adapter-version drift detection;
+- no File 22 storage of draft bodies, patient consent, identity evidence, or media bytes;
+- no browser `localStorage`, `sessionStorage`, or `IndexedDB` draft persistence;
+- no-cache/noindex, nonce, ownership, request-size, and rate-limit boundaries;
+- responsive, keyboard-aware, reduced-motion, forced-colors, and RTL-compatible presentation;
+- deterministic exact-head packaging with embedded and external SHA-256 manifests.
 
 ## Technical baseline
 
 - WordPress 6.5 or later
-- PHP 8.1–8.3 supported test matrix
-- Sabri Membership Core 1.0.1 or later is mandatory
+- PHP 8.1–8.3
+- Sabri Membership Core plugin `1.2.3` or later
+- File 00 database schema `1.2.0` or later
+- File 00 contract `1.1.2` or later
 - Production HTTPS required
-- American English interface baseline
+- American English interface baseline with Urdu/Arabic/RTL readiness
 - No external runtime CDN or remote fonts
-- Core Create navigation works without JavaScript
 
-## Public integration
+## Public PHP integration
 
-Native modules may register an adapter at any time after File 22 loads:
+Native modules register an adapter after File 22 loads:
 
 ```php
 $result = supc_register_adapter( $adapter );
 ```
 
-Adapters must implement `Sabri\UniversalComposer\Contracts\Adapter`. Full native draft orchestration additionally implements `Workflow_Adapter`.
+Base adapters implement:
 
-Every adapter must declare a nonempty canonical central capability, canonical native-module slug, semantic minimum native version, controlled group and priority, and one of the controlled privacy classes. Registration rejects malformed metadata before the adapter can reach the Create surface or workflow coordinator. Registration is atomic: if any required metadata method throws, no partial adapter or workflow contract remains registered.
+```php
+Sabri\UniversalComposer\Contracts\Adapter
+```
 
-## Create surface
+Full browser/native-draft orchestration additionally implements:
 
-The resolved Create page groups only authorized, compatible, and available adapters into controlled Publishing, Knowledge and Learning, Media, Commerce, and Other sections.
+```php
+Sabri\UniversalComposer\Contracts\Workflow_Adapter
+```
 
-Every route must be either a relative internal path or an absolute same-origin HTTPS URL. External hosts, HTTP downgrade routes, credentials, mismatched ports, protocol-relative URLs, control characters, and backslashes are rejected.
+Every adapter declares immutable versioned authority, native ownership, capability, privacy, group, priority, schema, availability, draft, validation, preview, submit, status, and canonical-URL contracts. Unknown, malformed, colliding, incompatible, or unauthorized adapters fail closed and remain out of the invokable Create surface.
 
-Unknown privacy classifications are not relabeled. The invalid adapter is omitted, a privacy-safe diagnostic is reported, and healthy adapters remain available. Privacy and group labels use the immutable registration snapshot rather than mutable runtime metadata.
+## Data and privacy boundary
 
-An eligible account with no registered native adapter is reported as a service-integration outage, not falsely as an account-permission denial. A Workflow Adapter with a missing or incompatible workflow API contract remains diagnostic-only and is not exposed as invokable content creation.
+File 22 stores only bounded orchestration metadata: session and attempt UUIDs, user ID, adapter identity/version, opaque native reference, workflow/reconciliation state, lock version, payload and response hashes, idempotency key, retry counters, error codes, and timestamps. It does not duplicate permanent content, secure files, patient consent, identity evidence, clinical data, reviewer notes, or native publication history.
 
-The user-facing law is:
+Private Create and REST surfaces are authenticated, nonce-protected, no-store, noindex, owner-scoped, bounded, and reauthorized on each operation. If required private response headers can no longer be guaranteed, the browser workflow fails closed.
 
-> One gateway, one native record.
+## Review and QA
 
-## Native workflow orchestration
+Each coding batch follows:
 
-Phase 22E adds guarded server-side PHP functions for native modules implementing `Workflow_Adapter`:
+1. implementation review;
+2. correction and regression tests;
+3. separate fresh/adversarial review;
+4. second correction and complete retest;
+5. exact-head deterministic package creation.
 
-- schema discovery;
-- create or resume native draft;
-- validation;
-- same-origin preview;
-- idempotent submission;
-- native status;
-- canonical URL retrieval.
+The current reconciliation candidate is governed by:
 
-The coordinator rechecks Safe Mode, Membership Core eligibility, central capability, adapter authorization, native availability, payload safety, native-reference format, idempotency-key format, result envelopes, and same-origin HTTPS URLs on every operation. Schema URL fields accept only HTTP(S) URLs without embedded credentials; date and datetime fields must be real calendar and clock values with valid timezone offsets.
+`docs/FILE22-0.3.0-RECONCILIATION-REVIEW-R4-2026-08-03.md`
 
-Phase 22E does not expose a REST, AJAX, or browser form controller and does not persist File 22-owned draft payloads. Native modules remain responsible for secure storage, durable idempotency, publication, and canonical records.
+## Truthful status
 
-## Administrator health
+Version `0.3.0` is a coded reconciliation candidate on Draft PR #23; exact-head packaging and automated QA govern promotion. It is not yet staging-accepted, live-deployed, or operational. Required remaining gates include exact File 21 `1.0.3.2` integration, Hostinger staging, real-role workflows, browser/device and WCAG 2.2 AA acceptance, active theme and LiteSpeed/cache tests, backup restoration, rollback rehearsal, Founder acceptance, approved live smoke testing, and post-deployment monitoring.
 
-Authorized administrators can open `Tools → Composer Health` to view normalized System Check rows and privacy-safe adapter metadata. Static Adapter Health is role-independent; current Create-surface invocation diagnostics are explicitly limited to the signed-in administrator and do not replace the staging role matrix.
-
-Create-page inspection is read-only and memoized per request. It distinguishes `ready`, `repairable`, `ambiguous`, and `missing` states. Multiple shortcode pages require explicit administrator selection rather than silent first-match mapping.
-
-The bounded repair operation verifies option persistence, uses a short-lived mutation lock, performs at most one managed-page insertion attempt, and accepts a new page only after exact page type, slug, publication, shortcode, permalink, and File 22 ownership checks. It never edits or deletes unrelated pages or native-module records.
-
-## Development workflow
-
-Audit → branch → coding → short automated checks → separate post-implementation review → correction → fresh checks → controlled staging → Founder verification → pull-request review → merge.
-
-## Status
-
-Development version `0.1.0-dev`. Source phases are merged on `main`, while subsequent independent correction work remains on Draft review branches. No production package, controlled staging acceptance, live deployment, or completion claim has been issued. The second post-merge review dated 30 July 2026 closes remaining mutable privacy/group/priority/version metadata, incompatible workflow visibility, stale re-registration diagnostics, and release-readiness snapshot defects.
-
-See the `docs/` directory for architecture, privacy, security, accessibility, migration, rollback, compatibility, error codes, staging acceptance, phase contracts, review records, and the formal File 22/File 23 amendment.
+The detailed earlier corrective history remains in `CHANGELOG.md` and the existing `docs/` review records.
