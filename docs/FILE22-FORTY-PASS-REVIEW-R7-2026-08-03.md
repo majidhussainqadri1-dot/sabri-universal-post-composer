@@ -40,3 +40,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 34 | File 23 projection boundary | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 35 | File 24 assurance boundary | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 36 | File 25 timeline boundary | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 37 | File 19 notification boundary | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
