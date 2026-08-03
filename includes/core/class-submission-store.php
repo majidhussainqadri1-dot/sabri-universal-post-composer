@@ -251,15 +251,25 @@ final class Submission_Store {
 		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
 			? $wpdb->query(
 				$wpdb->prepare(
-					'UPDATE %i SET state = %s, attempts = attempts + 1, last_error = NULL, updated_at = %s, completed_at = NULL WHERE attempt_uuid = %s',
+					"UPDATE %i SET state = 'dispatched', attempts = attempts + 1, last_error = NULL, updated_at = %s, completed_at = NULL WHERE attempt_uuid = %s AND state IN ('prepared','retryable')",
 					self::submission_table_name(),
-					'dispatched',
 					gmdate( 'Y-m-d H:i:s' ),
 					strtolower( $attempt_uuid )
 				)
 			)
 			: false;
-		return 1 === $updated ? $this->get_by_attempt( $attempt_uuid ) : $this->error( 'submission_dispatch_record_failed' );
+		if ( 1 === $updated ) {
+			return $this->get_by_attempt( $attempt_uuid );
+		}
+		$current = $this->get_by_attempt( $attempt_uuid );
+		if ( ! $current instanceof WP_Error ) {
+			return $this->error(
+				in_array( (string) $current['state'], array( 'resolved', 'failed', 'dead_letter' ), true )
+					? 'submission_already_final'
+					: 'reconciliation_pending'
+			);
+		}
+		return $this->error( 'submission_dispatch_record_failed' );
 	}
 
 	public function mark_uncertain( string $attempt_uuid, string $error_code, bool $enqueue = true ): bool {
