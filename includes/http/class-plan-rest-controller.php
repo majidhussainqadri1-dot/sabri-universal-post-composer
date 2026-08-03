@@ -186,7 +186,10 @@ final class Plan_Rest_Controller {
 			return $session;
 		}
 		$body = $this->body_optional( $request );
-		$lock = is_array( $body ) && isset( $body['lock_version'] ) && is_int( $body['lock_version'] ) ? $body['lock_version'] : (int) $session['lock_version'];
+		if ( $body instanceof WP_Error ) {
+			return $body;
+		}
+		$lock = isset( $body['lock_version'] ) && is_int( $body['lock_version'] ) ? $body['lock_version'] : (int) $session['lock_version'];
 		if ( $lock !== (int) $session['lock_version'] ) {
 			return $this->error( 'session_conflict', 409, array( 'session' => $this->public_session( $session ) ) );
 		}
@@ -396,14 +399,17 @@ final class Plan_Rest_Controller {
 		return is_array( $body ) ? $body : $this->error( 'invalid_json_body', 400 );
 	}
 
-	/** @return array<string,mixed> */
-	private function body_optional( WP_REST_Request $request ): array {
+	/** @return array<string,mixed>|WP_Error */
+	private function body_optional( WP_REST_Request $request ): array|WP_Error {
 		$raw = (string) $request->get_body();
+		if ( strlen( $raw ) > self::MAX_REQUEST_BYTES ) {
+			return $this->error( 'request_too_large', 413 );
+		}
 		if ( '' === trim( $raw ) ) {
 			return array();
 		}
 		$body = $request->get_json_params();
-		return is_array( $body ) ? $body : array();
+		return is_array( $body ) ? $body : $this->error( 'invalid_json_body', 400 );
 	}
 
 	private function acquire_session_lock( string $uuid ): string {
