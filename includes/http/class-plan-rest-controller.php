@@ -253,7 +253,22 @@ final class Plan_Rest_Controller {
 			return $this->normalize_error( $result, array( 'session' => $this->public_session( $held ) ) );
 		}
 		$native_status = sanitize_key( (string) ( $result['status'] ?? 'pending_review' ) );
-		$state         = 'pending_review' === $native_status ? 'submitted' : $native_status;
+		$state_map = array(
+			'draft' => 'draft',
+			'pending_review' => 'submitted',
+			'submitted' => 'submitted',
+			'under_review' => 'under_review',
+			'changes_requested' => 'changes_requested',
+			'approved' => 'approved',
+			'published' => 'published',
+			'scheduled' => 'scheduled',
+			'rejected' => 'rejected',
+			'withdrawn' => 'withdrawn',
+		);
+		if ( ! isset( $state_map[ $native_status ] ) ) {
+			return $this->error( 'invalid_native_revision_status', 502 );
+		}
+		$state = $state_map[ $native_status ];
 		$updated = $this->sessions->update( (string) $session['session_uuid'], get_current_user_id(), (int) $session['lock_version'], $state, $session['native_reference'], $key );
 		if ( $updated instanceof WP_Error ) {
 			return $this->normalize_error( $updated );
