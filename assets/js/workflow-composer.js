@@ -17,6 +17,7 @@
 	let timer = null;
 	let periodicTimer = null;
 	let resumePromise = null;
+	let reconciling = false;
 
 	const announce = (message) => {
 		status.textContent = message;
@@ -106,8 +107,20 @@
 			if (restored.session.adapter_key === root.dataset.adapter) {
 				session = restored.session;
 				announce(config.strings.sessionRecovered.replace('%s', session.updated_at));
+				if (session.reconciliation_required) {
+					window.setTimeout(() => attemptReconciliation(true), 1000);
+				}
 			}
 		} catch (error) {
+			const details = error.data && error.data.details ? error.data.details : {};
+			if (details.session && details.session.adapter_key === root.dataset.adapter) {
+				session = details.session;
+				announce(details.reconciliation_required ? config.strings.reconciliationPending : config.strings.sessionNotRecovered);
+				if (details.reconciliation_required) {
+					window.setTimeout(() => attemptReconciliation(true), 1000);
+				}
+				return;
+			}
 			const url = new URL(window.location.href);
 			url.searchParams.delete('session');
 			window.history.replaceState({}, '', url.toString());
@@ -161,6 +174,46 @@
 		} catch (error) {
 			announce(config.strings.notSaved);
 			return false;
+		}
+	};
+
+	const finishSubmission = (result, message) => {
+		dirty = false;
+		announce(message || config.strings.submitted);
+		window.clearTimeout(timer);
+		window.clearInterval(periodicTimer);
+		form.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+		const native = result && result.native ? result.native : null;
+		if (native && native.canonical_url) {
+			const link = document.createElement('a');
+			link.href = native.canonical_url;
+			link.textContent = config.strings.viewPublication;
+			link.className = 'button';
+			form.querySelector('.supc-workflow__actions').appendChild(link);
+		}
+	};
+
+	const attemptReconciliation = async (silent) => {
+		if (reconciling || !session) {
+			return null;
+		}
+		reconciling = true;
+		if (!silent) {
+			announce(config.strings.reconciling);
+		}
+		try {
+			const result = await run('reconcile');
+			if (result.resolved) {
+				finishSubmission(result, config.strings.reconciliationResolved);
+				return result;
+			}
+			announce(config.strings.reconciliationRetryable);
+			return result;
+		} catch (error) {
+			announce(config.strings.reconciliationPending);
+			return null;
+		} finally {
+			reconciling = false;
 		}
 	};
 
@@ -231,20 +284,23 @@
 			}
 			announce(config.strings.submitting);
 			const result = await run('submit');
-			dirty = false;
-			announce(config.strings.submitted);
-			window.clearTimeout(timer);
-			window.clearInterval(periodicTimer);
-			form.querySelectorAll('button').forEach((button) => { button.disabled = true; });
-			if (result.native && result.native.canonical_url) {
-				const link = document.createElement('a');
-				link.href = result.native.canonical_url;
-				link.textContent = config.strings.viewPublication;
-				link.className = 'button';
-				form.querySelector('.supc-workflow__actions').appendChild(link);
-			}
+			finishSubmission(result);
 		} catch (error) {
 			announce(config.strings.submitFailed);
+			const details = error.data && error.data.details ? error.data.details : {};
+			const uncertain = Boolean(
+				session && session.native_reference && (
+					session.reconciliation_required ||
+					details.reconciliation_required ||
+					!error.code ||
+					error.code === 'supc_request_failed' ||
+					error.code === 'supc_session_finalize_failed' ||
+					error.code === 'supc_submission_ack_record_failed'
+				)
+			);
+			if (uncertain) {
+				window.setTimeout(() => attemptReconciliation(false), 1000);
+			}
 		}
 	});
 
