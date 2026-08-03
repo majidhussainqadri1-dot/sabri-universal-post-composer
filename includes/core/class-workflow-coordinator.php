@@ -110,6 +110,11 @@ final class Workflow_Coordinator {
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
 		}
+		// Mutable File 00 authority is checked again at the last safe point before
+		// a native write. A suspension during validation must not reach the owner.
+		if ( ! $this->central_authority_allows( $user_id, $contract['required_capability'] ) ) {
+			return $this->error( 'workflow_permission_denied', $adapter_key );
+		}
 		try {
 			$result = $adapter->create_draft( $user_id, $native_reference, $payload );
 			if ( $result instanceof WP_Error ) {
@@ -213,6 +218,11 @@ final class Workflow_Coordinator {
 		$payload_error = $this->validator->payload( $adapter, $contract, $user_payload, $user_id, $adapter_key, true );
 		if ( $payload_error instanceof WP_Error ) {
 			return $payload_error;
+		}
+		// Re-check the central authority immediately before the irreversible native
+		// submit dispatch; the earlier resolution is not treated as a durable grant.
+		if ( ! $this->central_authority_allows( $user_id, $contract['required_capability'] ) ) {
+			return $this->error( 'workflow_permission_denied', $adapter_key );
 		}
 		$native_payload = $user_payload;
 		if ( is_string( $native_reference ) ) {
