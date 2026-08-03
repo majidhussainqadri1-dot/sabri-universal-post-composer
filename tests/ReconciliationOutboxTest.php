@@ -150,4 +150,16 @@ final class ReconciliationOutboxTest extends TestCase {
 			strpos( $service, '$this->submissions->mark_reconciled' )
 		);
 	}
+
+	public function test_review_round_eight_terminal_metadata_has_bounded_cleanup_without_deleting_active_work(): void {
+		$store = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
+		$runtime = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-browser-runtime.php' );
+		$this->assertIsString( $store );
+		$this->assertIsString( $runtime );
+		$this->assertStringContainsString( 'COMPLETED_OUTBOX_TTL      = 2592000', $store );
+		$this->assertStringContainsString( 'TERMINAL_RECORD_TTL       = 15552000', $store );
+		$this->assertStringContainsString( 'public static function cleanup_expired', $store );
+		$this->assertStringContainsString( "status IN ('queued','retry','processing','dead_letter')", $store );
+		$this->assertStringContainsString( "array( Submission_Store::class, 'cleanup_expired' ), 5", $runtime );
+	}
 }

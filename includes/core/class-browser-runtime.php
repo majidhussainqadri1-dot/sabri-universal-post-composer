@@ -61,7 +61,8 @@ final class Browser_Runtime {
 		add_shortcode( 'sabri_universal_composer', array( $this, 'render_shortcode' ) );
 		$this->rest_controller->register();
 		$this->reconciliation_rest_controller->register();
-		add_action( 'supc_cleanup_expired_sessions', array( Session_Store::class, 'cleanup_expired' ) );
+		add_action( 'supc_cleanup_expired_sessions', array( Submission_Store::class, 'cleanup_expired' ), 5 );
+		add_action( 'supc_cleanup_expired_sessions', array( Session_Store::class, 'cleanup_expired' ), 10 );
 		add_action( 'supc_process_reconciliation_queue', array( $this->reconciliation, 'process_due' ) );
 		add_filter( 'supc_system_check_report', array( $this, 'append_system_check' ), 20 );
 	}
