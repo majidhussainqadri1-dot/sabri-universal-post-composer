@@ -1,0 +1,293 @@
+name: Apply File 21 package identity correction
+
+on:
+  push:
+    branches:
+      - feat/file22-plan-complete-core-1.0.0-2026-08-03
+
+permissions:
+  contents: write
+
+jobs:
+  correct-review-package-identity:
+    if: github.event.head_commit.message == 'chore: apply File 21 package identity correction'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feat/file22-plan-complete-core-1.0.0-2026-08-03
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Apply bounded package-identity correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one replacement anchor, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          version_path = 'includes/core/class-version.php'
+          replace_once(
+              version_path,
+              "\tprivate const MAX_LENGTH = 255;\n\tprivate const PATTERN    = '/^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$/D';\n",
+              "\tprivate const MAX_LENGTH      = 255;\n\tprivate const PATTERN         = '/^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\\+([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?$/D';\n\tprivate const PACKAGE_PATTERN = '/^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:\\.(0|[1-9][0-9]*))?$/D';\n"
+          )
+
+          replace_once(
+              version_path,
+              "\tpublic static function at_least( string $actual, string $minimum ): bool {\n\t\ttry {\n\t\t\treturn self::compare( $actual, $minimum ) >= 0;\n\t\t} catch ( \\InvalidArgumentException $error ) {\n\t\t\tunset( $error );\n\t\t\treturn false;\n\t\t}\n\t}\n\n",
+              "\tpublic static function at_least( string $actual, string $minimum ): bool {\n\t\ttry {\n\t\t\treturn self::compare( $actual, $minimum ) >= 0;\n\t\t} catch ( \\InvalidArgumentException $error ) {\n\t\t\tunset( $error );\n\t\t\treturn false;\n\t\t}\n\t}\n\n\t/**\n\t * Validate the numeric three- or four-part package identities used by the\n\t * WordPress distribution layer. Runtime/API versions remain strict SemVer.\n\t */\n\tpublic static function valid_wordpress_package( string $version ): bool {\n\t\treturn null !== self::parse_wordpress_package( $version );\n\t}\n\n\t/**\n\t * Compare WordPress package identities after normalizing a missing fourth\n\t * component to zero. This comparison is intentionally separate from SemVer.\n\t *\n\t * @return int Negative when left is lower, zero when equal, positive when higher.\n\t */\n\tpublic static function compare_wordpress_package( string $left, string $right ): int {\n\t\t$left_version  = self::parse_wordpress_package( $left );\n\t\t$right_version = self::parse_wordpress_package( $right );\n\t\tif ( null === $left_version || null === $right_version ) {\n\t\t\tthrow new \\InvalidArgumentException( 'WordPress package comparison requires valid numeric package versions.' );\n\t\t}\n\n\t\tforeach ( array_keys( $left_version ) as $identifier ) {\n\t\t\t$comparison = self::compare_numeric_identifier( $left_version[ $identifier ], $right_version[ $identifier ] );\n\t\t\tif ( 0 !== $comparison ) {\n\t\t\t\treturn $comparison;\n\t\t\t}\n\t\t}\n\t\treturn 0;\n\t}\n\n\tpublic static function wordpress_package_at_least( string $actual, string $minimum ): bool {\n\t\ttry {\n\t\t\treturn self::compare_wordpress_package( $actual, $minimum ) >= 0;\n\t\t} catch ( \\InvalidArgumentException $error ) {\n\t\t\tunset( $error );\n\t\t\treturn false;\n\t\t}\n\t}\n\n"
+          )
+
+          replace_once(
+              version_path,
+              "\tprivate static function compare_numeric_identifier( string $left, string $right ): int {\n",
+              "\t/** @return array{major:string,minor:string,patch:string,package:string}|null */\n\tprivate static function parse_wordpress_package( string $version ): ?array {\n\t\tif ( '' === $version || $version !== trim( $version ) || strlen( $version ) > self::MAX_LENGTH ) {\n\t\t\treturn null;\n\t\t}\n\t\tif ( 1 !== preg_match( self::PACKAGE_PATTERN, $version, $matches ) ) {\n\t\t\treturn null;\n\t\t}\n\t\treturn array(\n\t\t\t'major'   => $matches[1],\n\t\t\t'minor'   => $matches[2],\n\t\t\t'patch'   => $matches[3],\n\t\t\t'package' => isset( $matches[4] ) && '' !== $matches[4] ? $matches[4] : '0',\n\t\t);\n\t}\n\n\tprivate static function compare_numeric_identifier( string $left, string $right ): int {\n"
+          )
+
+          browser_path = 'includes/core/class-browser-runtime.php'
+          browser = Path(browser_path).read_text()
+          start = browser.index("\t\t$package = $this->file21_package_version();")
+          end_marker = "\t\treturn $versions[0];\n\t}\n"
+          end = browser.index(end_marker, start) + len(end_marker)
+          replacement = """\t\t$package_identity = $this->file21_package_identity();
+\t\t$status           = match ( $package_identity['state'] ) {
+\t\t\t'current' => 'pass',
+\t\t\t'missing' => 'warning',
+\t\t\tdefault   => 'fail',
+\t\t};
+\t\t$code             = match ( $package_identity['state'] ) {
+\t\t\t'missing' => 'file21_package_identity_missing',
+\t\t\t'invalid' => 'file21_package_identity_invalid',
+\t\t\t'too_low' => 'file21_package_identity_too_low',
+\t\t\tdefault   => '',
+\t\t};
+\t\t$rows[]           = array(
+\t\t\t'key'    => 'file21_package_identity',
+\t\t\t'status' => $status,
+\t\t\t'count'  => 'pass' === $status ? 0 : 1,
+\t\t\t'codes'  => 'pass' === $status ? array() : array( $code ),
+\t\t);
+\t\treturn $rows;
+\t}
+
+\t/** @return array{state:string,version:?string,source:?string} */
+\tprivate function file21_package_identity(): array {
+\t\tif ( defined( 'SABRI_HNF_PACKAGE_VERSION' ) ) {
+\t\t\t$value = constant( 'SABRI_HNF_PACKAGE_VERSION' );
+\t\t\tif ( ! is_string( $value ) || ! Version::valid_wordpress_package( $value ) ) {
+\t\t\t\treturn array( 'state' => 'invalid', 'version' => null, 'source' => 'constant' );
+\t\t\t}
+\t\t\treturn array(
+\t\t\t\t'state'   => Version::wordpress_package_at_least( $value, '1.0.3.2' ) ? 'current' : 'too_low',
+\t\t\t\t'version' => $value,
+\t\t\t\t'source'  => 'constant',
+\t\t\t);
+\t\t}
+
+\t\tif ( ! function_exists( 'get_plugins' ) && defined( 'ABSPATH' ) ) {
+\t\t\t$plugin_api = ABSPATH . 'wp-admin/includes/plugin.php';
+\t\t\tif ( is_readable( $plugin_api ) ) {
+\t\t\t\trequire_once $plugin_api;
+\t\t\t}
+\t\t}
+\t\tif ( ! function_exists( 'get_plugins' ) ) {
+\t\t\treturn array( 'state' => 'missing', 'version' => null, 'source' => null );
+\t\t}
+
+\t\t$matched         = false;
+\t\t$invalid_version = false;
+\t\t$versions        = array();
+\t\tforeach ( get_plugins() as $basename => $headers ) {
+\t\t\t$name   = isset( $headers['Name'] ) ? (string) $headers['Name'] : '';
+\t\t\t$domain = isset( $headers['TextDomain'] ) ? (string) $headers['TextDomain'] : '';
+\t\t\tif ( 'sabri-complete-home-news-feed' !== $domain && 'Sabri Complete Home and News Feed' !== $name && ! str_ends_with( (string) $basename, '/sabri-complete-home-news-feed.php' ) ) {
+\t\t\t\tcontinue;
+\t\t\t}
+\t\t\t$matched = true;
+\t\t\t$version = isset( $headers['Version'] ) ? (string) $headers['Version'] : '';
+\t\t\tif ( '' === $version ) {
+\t\t\t\tcontinue;
+\t\t\t}
+\t\t\tif ( ! Version::valid_wordpress_package( $version ) ) {
+\t\t\t\t$invalid_version = true;
+\t\t\t\tcontinue;
+\t\t\t}
+\t\t\t$versions[] = $version;
+\t\t}
+
+\t\tif ( array() === $versions ) {
+\t\t\treturn array(
+\t\t\t\t'state'   => $invalid_version ? 'invalid' : 'missing',
+\t\t\t\t'version' => null,
+\t\t\t\t'source'  => $matched ? 'plugin_header' : null,
+\t\t\t);
+\t\t}
+\t\tusort( $versions, static fn ( string $left, string $right ): int => Version::compare_wordpress_package( $right, $left ) );
+\t\t$version = $versions[0];
+\t\treturn array(
+\t\t\t'state'   => Version::wordpress_package_at_least( $version, '1.0.3.2' ) ? 'current' : 'too_low',
+\t\t\t'version' => $version,
+\t\t\t'source'  => 'plugin_header',
+\t\t);
+\t}
+"""
+          Path(browser_path).write_text(browser[:start] + replacement + browser[end:])
+
+          replace_once(
+              'includes/admin/class-system-check-page.php',
+              "\t\t'file21_package_identity_unknown', 'file21_package_identity_too_low', 'audit_store_missing',\n",
+              "\t\t'file21_package_identity_missing', 'file21_package_identity_invalid', 'file21_package_identity_too_low', 'audit_store_missing',\n"
+          )
+
+          replace_once(
+              '.github/workflows/file22-reconciliation-0.3.0.yml',
+              "          grep -F \"version_compare( \\$package, '1.0.3.2', '>=' )\" includes/core/class-browser-runtime.php\n",
+              "          grep -F \"SABRI_HNF_PACKAGE_VERSION\" includes/core/class-browser-runtime.php\n          grep -F \"wordpress_package_at_least( \\$value, '1.0.3.2' )\" includes/core/class-browser-runtime.php\n"
+          )
+
+          tests_path = Path('tests/PlanCompletionCoreTest.php')
+          tests = tests_path.read_text()
+          marker = "\n}\n"
+          if not tests.endswith(marker):
+              raise SystemExit('PlanCompletionCoreTest.php: final class marker missing')
+          added_tests = r'''
+	public function test_file21_runtime_semver_and_package_identity_are_separate_version_tracks(): void {
+		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::valid( '1.0.3' ) );
+		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid( '1.0.3.2' ) );
+		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.3.2' ) );
+		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.3.2', '1.0.3.2' ) );
+		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.4', '1.0.3.2' ) );
+		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.3.1', '1.0.3.2' ) );
+		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.03.2' ) );
+		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.3.2.1' ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_file21_package_constant_1_0_3_2_produces_current_identity_and_pass_mapping(): void {
+		define( 'SABRI_HNF_PACKAGE_VERSION', '1.0.3.2' );
+		$reflection = new \ReflectionClass( \Sabri\UniversalComposer\Core\Browser_Runtime::class );
+		$runtime    = $reflection->newInstanceWithoutConstructor();
+		$method     = $reflection->getMethod( 'file21_package_identity' );
+		$identity   = $method->invoke( $runtime );
+		$this->assertSame( array( 'state' => 'current', 'version' => '1.0.3.2', 'source' => 'constant' ), $identity );
+
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-browser-runtime.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( "'current' => 'pass'", $source );
+		$this->assertStringContainsString( 'file21_package_identity_missing', $source );
+		$this->assertStringContainsString( 'file21_package_identity_invalid', $source );
+		$this->assertStringContainsString( 'file21_package_identity_too_low', $source );
+		$this->assertStringNotContainsString( 'file21_package_identity_unknown', $source );
+	}
+'''
+          tests_path.write_text(tests[:-len(marker)] + "\n" + added_tests + marker)
+
+          errors_path = Path('docs/ERROR-CODES.md')
+          errors = errors_path.read_text()
+          anchor = "A route-only File 21 adapter must produce a release failure.\n\n"
+          if errors.count(anchor) != 1:
+              raise SystemExit('ERROR-CODES.md: File 21 anchor missing or duplicated')
+          package_docs = """A route-only File 21 adapter must produce a release failure.
+
+### File 21 package-identity diagnostics
+
+- `file21_package_identity_missing`: neither `SABRI_HNF_PACKAGE_VERSION` nor a matching plugin-header package version is available;
+- `file21_package_identity_invalid`: the canonical package constant or matching nonempty header is not a strict numeric three- or four-part WordPress package identity;
+- `file21_package_identity_too_low`: a valid package identity is lower than `1.0.3.2`.
+
+File 21 runtime/API `SABRI_HNF_VERSION` remains a separate strict Semantic Versioning track with minimum `1.0.3`; package identity is never inferred from that runtime value.
+
+"""
+          errors_path.write_text(errors.replace(anchor, package_docs, 1))
+
+          replace_once(
+              'CHANGELOG.md',
+              "## 1.0.0-rc.1 — Plan-complete Core contract 1.0.0 R6 candidate\n\n",
+              "## 1.0.0-rc.1 — Plan-complete Core contract 1.0.0 R6 candidate\n\n- Corrected File 21 package-identity diagnostics: canonical `SABRI_HNF_PACKAGE_VERSION`, distinct runtime/API and package tracks, strict three/four-part WordPress package comparison, and separate missing/invalid/too-low codes.\n"
+          )
+
+          Path('docs/FILE21-PACKAGE-IDENTITY-CORRECTION-R8-2026-08-03.md').write_text('''# File 21 Package Identity Diagnostic Correction — R8
+
+## Defect
+
+File 22 used the strict three-part Semantic Versioning validator for File 21 package identity. Consequently the valid WordPress package identity `1.0.3.2` was discarded and Composer Health emitted `file21_package_identity_unknown` although File 21 runtime/API `1.0.3` and its native adapter were healthy.
+
+## Correction
+
+- File 21 runtime/API remains strict SemVer and is checked independently at `1.0.3+`.
+- Package detection reads canonical `SABRI_HNF_PACKAGE_VERSION` first, then uses a bounded matching plugin-header fallback only when the constant is absent.
+- Package identities accept strict numeric three- or four-part WordPress versions and compare them without integer overflow.
+- `missing`, `invalid`, and `too_low` are separate diagnostic states and codes.
+- Exact package `1.0.3.2` maps to `file21_package_identity — PASS`.
+
+## Review cycle 1
+
+The full source, static-analysis, coding-standard, syntax, and PHPUnit gates are rerun after the correction. The review specifically checks that strict SemVer was not weakened and that package identity cannot silently fall back from an invalid canonical constant.
+
+## Review cycle 2 — fresh adversarial
+
+The correction is rechecked against equal, lower, higher, malformed, leading-zero, oversized-component-count, missing-constant, and header-fallback paths. A second full regression run follows. Known unresolved defects from this correction must be zero before the branch is committed.
+
+## Release boundary
+
+This correction establishes Coded, Packaged, and Automated-QA evidence only after the exact-head workflows complete. Hostinger staging, live deployment, and operational acceptance remain separate gates.
+''')
+
+          # Temporary self-applying workflow must not remain in the corrected source.
+          Path('.github/workflows/apply-file21-package-identity-fix.yml').unlink()
+          PY
+
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Review cycle 1 — full correction verification
+        run: |
+          set -euo pipefail
+          composer lint
+          composer test
+          composer phpstan
+          composer phpcs
+          git diff --check
+
+      - name: Review cycle 2 — fresh adversarial verification
+        run: |
+          set -euo pipefail
+          php -r "define('ABSPATH', __DIR__ . '/'); require 'includes/core/class-version.php'; use Sabri\\UniversalComposer\\Core\\Version; assert(Version::valid_wordpress_package('1.0.3.2')); assert(Version::wordpress_package_at_least('1.0.3.2','1.0.3.2')); assert(!Version::wordpress_package_at_least('1.0.3.1','1.0.3.2')); assert(Version::wordpress_package_at_least('1.0.4','1.0.3.2')); assert(!Version::valid_wordpress_package('1.0.03.2')); assert(!Version::valid_wordpress_package('1.0.3.2.1')); assert(!Version::valid('1.0.3.2'));"
+          grep -F "SABRI_HNF_PACKAGE_VERSION" includes/core/class-browser-runtime.php
+          grep -F "file21_package_identity_missing" includes/core/class-browser-runtime.php
+          grep -F "file21_package_identity_invalid" includes/core/class-browser-runtime.php
+          grep -F "file21_package_identity_too_low" includes/core/class-browser-runtime.php
+          ! grep -F "file21_package_identity_unknown" includes/core/class-browser-runtime.php
+          composer test
+          composer phpstan
+          composer phpcs
+          git diff --check
+
+      - name: Commit corrected source to the Draft PR branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: recognize File 21 four-part package identity'
+          git push origin HEAD:feat/file22-plan-complete-core-1.0.0-2026-08-03
