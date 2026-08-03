@@ -55,6 +55,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\UniversalComposer\Presentation\Create_Surface',
 		'Sabri\UniversalComposer\Presentation\Workflow_Surface',
 		'Sabri\UniversalComposer\Http\Rest_Controller',
+		'Sabri\UniversalComposer\Http\Reconciliation_Rest_Controller',
 		'Sabri\UniversalComposer\Integration\Shell_Bridge',
 		'Sabri\UniversalComposer\Integration\Core_Adapter_Requirements',
 		'Sabri\UniversalComposer\Admin\System_Check_Page',
@@ -122,6 +123,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/presentation/class-create-surface.php';
 	require_once SUPC_PATH . 'includes/presentation/class-workflow-surface.php';
 	require_once SUPC_PATH . 'includes/http/class-rest-controller.php';
+	require_once SUPC_PATH . 'includes/http/class-reconciliation-rest-controller.php';
 	require_once SUPC_PATH . 'includes/integration/class-shell-bridge.php';
 	require_once SUPC_PATH . 'includes/integration/class-core-adapter-requirements.php';
 	require_once SUPC_PATH . 'includes/admin/class-system-check-page.php';
