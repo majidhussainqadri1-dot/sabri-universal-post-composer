@@ -31,3 +31,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 25 | Monotonic native status mapping | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 26 | Bounded terminal retention | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 27 | Safe Mode trust boundary | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 28 | Membership fail-closed behavior | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
