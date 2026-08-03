@@ -277,17 +277,39 @@ final class Submission_Store {
 		if ( $submission instanceof WP_Error || ! Contract_Boundary::code( $error_code ) ) {
 			return false;
 		}
+		if ( in_array( (string) $submission['state'], array( 'resolved', 'failed', 'dead_letter' ), true ) ) {
+			return false;
+		}
 		global $wpdb;
-		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'update' )
-			? $wpdb->update(
-				self::submission_table_name(),
-				array( 'state' => 'reconcile', 'last_error' => $error_code, 'updated_at' => gmdate( 'Y-m-d H:i:s' ) ),
-				array( 'attempt_uuid' => strtolower( $attempt_uuid ) ),
-				array( '%s', '%s', '%s' ),
-				array( '%s' )
+		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+			? $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET state = 'reconcile', last_error = %s, updated_at = %s WHERE attempt_uuid = %s AND state IN ('prepared','dispatched','retryable','reconcile')",
+					self::submission_table_name(),
+					$error_code,
+					gmdate( 'Y-m-d H:i:s' ),
+					strtolower( $attempt_uuid )
+				)
 			)
 			: false;
-		return false !== $updated && ( ! $enqueue || $this->enqueue_reconciliation( $submission, $error_code ) );
+		if ( 1 !== $updated ) {
+			$current = $this->get_by_attempt( $attempt_uuid );
+			if (
+				$current instanceof WP_Error ||
+				'reconcile' !== (string) $current['state'] ||
+				! is_string( $current['last_error'] ) ||
+				! hash_equals( $current['last_error'], $error_code )
+			) {
+				return false;
+			}
+			$submission = $current;
+		} else {
+			$current = $this->get_by_attempt( $attempt_uuid );
+			if ( ! $current instanceof WP_Error ) {
+				$submission = $current;
+			}
+		}
+		return ! $enqueue || $this->enqueue_reconciliation( $submission, $error_code );
 	}
 
 	public function mark_reconciled( string $attempt_uuid, string $native_status, string $response_hash ): bool {

@@ -97,4 +97,11 @@ final class ReconciliationOutboxTest extends TestCase {
 		$this->assertStringContainsString( "'submission_already_final'", $source );
 		$this->assertStringContainsString( "'reconciliation_pending'", $source );
 	}
+
+	public function test_review_round_two_terminal_attempts_cannot_be_downgraded_to_reconcile(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( "array( 'resolved', 'failed', 'dead_letter' )", $source );
+		$this->assertStringContainsString( "AND state IN ('prepared','dispatched','retryable','reconcile')", $source );
+	}
 }
