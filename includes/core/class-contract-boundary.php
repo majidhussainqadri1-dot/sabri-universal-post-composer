@@ -61,6 +61,10 @@ final class Contract_Boundary {
 		return self::canonical( $value, '/^[a-z][a-z0-9_]{0,63}$/D', 64 );
 	}
 
+	public static function idempotency_key( string $value ): bool {
+		return self::canonical( $value, '/^[A-Za-z0-9][A-Za-z0-9._:-]{15,127}$/D', 128 );
+	}
+
 	public static function version( string $value ): bool {
 		return self::bounded_text( $value, 1, 255 ) && $value === trim( $value ) && Version::valid( $value );
 	}

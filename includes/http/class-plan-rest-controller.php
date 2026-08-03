@@ -239,9 +239,12 @@ final class Plan_Rest_Controller {
 		if ( $body instanceof WP_Error ) {
 			return $body;
 		}
-		$key = isset( $body['idempotency_key'] ) && is_string( $body['idempotency_key'] ) ? $body['idempotency_key'] : $this->coordinator->generate_idempotency_key();
+		$key = isset( $body['idempotency_key'] ) && is_string( $body['idempotency_key'] ) ? trim( $body['idempotency_key'] ) : $this->coordinator->generate_idempotency_key();
 		if ( '' === $key ) {
 			return $this->error( 'idempotency_key_failed', 503 );
+		}
+		if ( ! Contract_Boundary::idempotency_key( $key ) ) {
+			return $this->error( 'invalid_idempotency_key', 400 );
 		}
 		$result = $this->coordinator->submit_revision( get_current_user_id(), (string) $session['adapter_key'], $session['native_reference'], $key, $context['payload'] );
 		if ( $result instanceof WP_Error ) {
