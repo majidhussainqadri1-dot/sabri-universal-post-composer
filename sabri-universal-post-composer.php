@@ -178,6 +178,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		static function (): void {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 			\Sabri\UniversalComposer\Core\Migration_Manager::capture_snapshot();
+			\Sabri\UniversalComposer\Core\Migration_Manager::set_writes_enabled( false );
 
 			$failure = static function ( string $message ): void {
 				deactivate_plugins( plugin_basename( SUPC_FILE ) );
