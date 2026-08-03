@@ -550,17 +550,10 @@ final class Submission_Store {
 			if ( 'dead_letter' === (string) $existing['status'] ) {
 				return false;
 			}
-			global $wpdb;
-			$updated = is_object( $wpdb ) && method_exists( $wpdb, 'update' )
-				? $wpdb->update(
-					self::outbox_table_name(),
-					array( 'status' => 'queued', 'next_attempt_at' => gmdate( 'Y-m-d H:i:s' ), 'last_error_code' => $error_code, 'updated_at' => gmdate( 'Y-m-d H:i:s' ) ),
-					array( 'event_uuid' => (string) $existing['event_uuid'] ),
-					array( '%s', '%s', '%s', '%s' ),
-					array( '%s' )
-				)
-				: false;
-			return false !== $updated;
+			// Do not steal an active processing lease or erase a governed retry
+			// deadline. Existing queued/retry/processing work already guarantees
+			// eventual reconciliation.
+			return in_array( (string) $existing['status'], array( 'queued', 'retry', 'processing' ), true );
 		}
 		if ( 'supc_outbox_not_found' !== $this->error_code( $existing ) || ! function_exists( 'wp_generate_uuid4' ) ) {
 			return false;

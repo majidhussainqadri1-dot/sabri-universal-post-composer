@@ -121,4 +121,11 @@ final class ReconciliationOutboxTest extends TestCase {
 		$this->assertStringContainsString( 'PROCESSING_LEASE_SECONDS = 600', $source );
 		$this->assertStringContainsString( "status = 'processing' AND updated_at <= %s", $source );
 	}
+
+	public function test_review_round_five_reenqueue_does_not_steal_processing_or_reset_backoff(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( 'Do not steal an active processing lease', $source );
+		$this->assertStringContainsString( "array( 'queued', 'retry', 'processing' )", $source );
+	}
 }
