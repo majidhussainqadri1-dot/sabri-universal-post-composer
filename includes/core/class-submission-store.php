@@ -449,27 +449,38 @@ final class Submission_Store {
 		if ( $outbox instanceof WP_Error ) {
 			return 'missing';
 		}
-		$attempts = (int) $outbox['attempts'] + 1;
+		if ( 'completed' === (string) $outbox['status'] ) {
+			return 'completed';
+		}
+		if ( 'dead_letter' === (string) $outbox['status'] ) {
+			return 'dead_letter';
+		}
+		if ( 'processing' !== (string) $outbox['status'] ) {
+			return 'stale';
+		}
+		$previous = (int) $outbox['attempts'];
+		$attempts = $previous + 1;
 		$dead     = $attempts >= self::MAX_ATTEMPTS;
 		$index    = min( $attempts - 1, count( self::BACKOFF_SECONDS ) - 1 );
 		global $wpdb;
-		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'update' )
-			? $wpdb->update(
-				self::outbox_table_name(),
-				array(
-					'status'          => $dead ? 'dead_letter' : 'retry',
-					'attempts'        => $attempts,
-					'next_attempt_at' => gmdate( 'Y-m-d H:i:s', time() + self::BACKOFF_SECONDS[ $index ] ),
-					'last_error_code' => $error_code,
-					'updated_at'      => gmdate( 'Y-m-d H:i:s' ),
-				),
-				array( 'event_uuid' => strtolower( $event_uuid ) ),
-				array( '%s', '%d', '%s', '%s', '%s' ),
-				array( '%s' )
+		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+			? $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET status = %s, attempts = %d, next_attempt_at = %s, last_error_code = %s, updated_at = %s WHERE event_uuid = %s AND status = 'processing' AND attempts = %d",
+					self::outbox_table_name(),
+					$dead ? 'dead_letter' : 'retry',
+					$attempts,
+					gmdate( 'Y-m-d H:i:s', time() + self::BACKOFF_SECONDS[ $index ] ),
+					$error_code,
+					gmdate( 'Y-m-d H:i:s' ),
+					strtolower( $event_uuid ),
+					$previous
+				)
 			)
 			: false;
-		if ( false === $updated ) {
-			return 'failed';
+		if ( 1 !== $updated ) {
+			$current = $this->get_outbox( $event_uuid );
+			return $current instanceof WP_Error ? 'failed' : (string) $current['status'];
 		}
 		if ( $dead ) {
 			$this->mark_submission_dead_letter( (string) $outbox['attempt_uuid'], $error_code );

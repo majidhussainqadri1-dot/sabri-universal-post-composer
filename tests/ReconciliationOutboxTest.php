@@ -128,4 +128,12 @@ final class ReconciliationOutboxTest extends TestCase {
 		$this->assertStringContainsString( 'Do not steal an active processing lease', $source );
 		$this->assertStringContainsString( "array( 'queued', 'retry', 'processing' )", $source );
 	}
+
+	public function test_review_round_six_retry_mutation_requires_the_exact_processing_state_and_attempt_counter(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( "status = 'processing' AND attempts = %d", $source );
+		$this->assertStringContainsString( "return 'stale';", $source );
+		$this->assertStringContainsString( "return 'completed';", $source );
+	}
 }
