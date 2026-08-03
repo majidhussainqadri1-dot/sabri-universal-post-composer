@@ -55,7 +55,8 @@ The following headings are retained verbatim because the corresponding exact-hea
 
 ### Seventh complete-repository hardening
 
-- Historical Membership callback provenance, transactional page repair, global-scope isolation, and exact-head evidence remains preserved in Git history and `docs/`.
+- Required the Membership Core status callback to originate from the declared canonical File 00 runtime before File 22 accepts it as an authorization authority.
+- Historical transactional page repair, global-scope isolation, and exact-head evidence remains preserved in Git history and `docs/`.
 
 ### Sixth complete-repository hardening
 
@@ -63,7 +64,8 @@ The following headings are retained verbatim because the corresponding exact-hea
 
 ### Fifth complete-repository hardening
 
-- Historical constant/API collision, route/privacy, repair-lock, and exact-head evidence remains preserved in Git history and `docs/`.
+- Failed closed before source loading when any File 22 core constant is preclaimed, preventing a foreign runtime from controlling bootstrap identity.
+- Historical API-collision, route/privacy, repair-lock, and exact-head evidence remains preserved in Git history and `docs/`.
 
 ### Fourth complete-repository hardening
 
