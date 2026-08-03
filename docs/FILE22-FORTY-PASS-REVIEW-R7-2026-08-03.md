@@ -15,3 +15,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 9 | Untraceable projection events | Projection facts now carry bounded identity, contract version and event UUID. |
 | 10 | Activation-time partial writes | Writes are disabled before activation gates and enabled only after all gates pass. |
 | 11 | Concurrent draft deletion | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 12 | Draft discard failure audit | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
