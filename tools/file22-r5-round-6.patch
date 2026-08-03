@@ -1,0 +1,74 @@
+diff -ruN a/includes/core/class-submission-store.php b/includes/core/class-submission-store.php
+--- a/includes/core/class-submission-store.php	2026-08-03 10:13:09.365988070 +0000
++++ b/includes/core/class-submission-store.php	2026-08-03 10:13:09.365988070 +0000
+@@ -449,27 +449,38 @@
+ 		if ( $outbox instanceof WP_Error ) {
+ 			return 'missing';
+ 		}
+-		$attempts = (int) $outbox['attempts'] + 1;
++		if ( 'completed' === (string) $outbox['status'] ) {
++			return 'completed';
++		}
++		if ( 'dead_letter' === (string) $outbox['status'] ) {
++			return 'dead_letter';
++		}
++		if ( 'processing' !== (string) $outbox['status'] ) {
++			return 'stale';
++		}
++		$previous = (int) $outbox['attempts'];
++		$attempts = $previous + 1;
+ 		$dead     = $attempts >= self::MAX_ATTEMPTS;
+ 		$index    = min( $attempts - 1, count( self::BACKOFF_SECONDS ) - 1 );
+ 		global $wpdb;
+-		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'update' )
+-			? $wpdb->update(
+-				self::outbox_table_name(),
+-				array(
+-					'status'          => $dead ? 'dead_letter' : 'retry',
+-					'attempts'        => $attempts,
+-					'next_attempt_at' => gmdate( 'Y-m-d H:i:s', time() + self::BACKOFF_SECONDS[ $index ] ),
+-					'last_error_code' => $error_code,
+-					'updated_at'      => gmdate( 'Y-m-d H:i:s' ),
+-				),
+-				array( 'event_uuid' => strtolower( $event_uuid ) ),
+-				array( '%s', '%d', '%s', '%s', '%s' ),
+-				array( '%s' )
++		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
++			? $wpdb->query(
++				$wpdb->prepare(
++					"UPDATE %i SET status = %s, attempts = %d, next_attempt_at = %s, last_error_code = %s, updated_at = %s WHERE event_uuid = %s AND status = 'processing' AND attempts = %d",
++					self::outbox_table_name(),
++					$dead ? 'dead_letter' : 'retry',
++					$attempts,
++					gmdate( 'Y-m-d H:i:s', time() + self::BACKOFF_SECONDS[ $index ] ),
++					$error_code,
++					gmdate( 'Y-m-d H:i:s' ),
++					strtolower( $event_uuid ),
++					$previous
++				)
+ 			)
+ 			: false;
+-		if ( false === $updated ) {
+-			return 'failed';
++		if ( 1 !== $updated ) {
++			$current = $this->get_outbox( $event_uuid );
++			return $current instanceof WP_Error ? 'failed' : (string) $current['status'];
+ 		}
+ 		if ( $dead ) {
+ 			$this->mark_submission_dead_letter( (string) $outbox['attempt_uuid'], $error_code );
+diff -ruN a/tests/ReconciliationOutboxTest.php b/tests/ReconciliationOutboxTest.php
+--- a/tests/ReconciliationOutboxTest.php	2026-08-03 10:16:00.765994200 +0000
++++ b/tests/ReconciliationOutboxTest.php	2026-08-03 10:16:00.765994200 +0000
+@@ -128,4 +128,12 @@
+ 		$this->assertStringContainsString( 'Do not steal an active processing lease', $source );
+ 		$this->assertStringContainsString( "array( 'queued', 'retry', 'processing' )", $source );
+ 	}
++
++	public function test_review_round_six_retry_mutation_requires_the_exact_processing_state_and_attempt_counter(): void {
++		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
++		$this->assertIsString( $source );
++		$this->assertStringContainsString( "status = 'processing' AND attempts = %d", $source );
++		$this->assertStringContainsString( "return 'stale';", $source );
++		$this->assertStringContainsString( "return 'completed';", $source );
++	}
+ }
