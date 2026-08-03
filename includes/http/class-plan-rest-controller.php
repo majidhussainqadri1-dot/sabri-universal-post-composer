@@ -463,13 +463,25 @@ final class Plan_Rest_Controller {
 	}
 
 	private function within_rate_limit( int $user_id ): bool {
-		$bucket = 'supc_rest_' . md5( $user_id . '|' . floor( time() / self::RATE_WINDOW ) );
-		$count  = (int) get_transient( $bucket );
-		if ( $count >= self::RATE_LIMIT ) {
+		$window = (string) floor( time() / self::RATE_WINDOW );
+		$bucket = 'supc_rest_' . hash( 'sha256', $user_id . '|' . $window );
+		$lock   = 'supc_rate_lock_' . hash( 'sha256', $bucket );
+		$token  = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : '';
+		if ( '' === $token || ! add_option( $lock, array( 'token' => $token, 'expires_at' => time() + 5 ), '', false ) ) {
 			return false;
 		}
-		set_transient( $bucket, $count + 1, self::RATE_WINDOW + 5 );
-		return true;
+		try {
+			$count = (int) get_transient( $bucket );
+			if ( $count >= self::RATE_LIMIT ) {
+				return false;
+			}
+			return (bool) set_transient( $bucket, $count + 1, self::RATE_WINDOW + 5 );
+		} finally {
+			$existing = get_option( $lock, null );
+			if ( is_array( $existing ) && isset( $existing['token'] ) && is_string( $existing['token'] ) && hash_equals( $existing['token'], $token ) ) {
+				delete_option( $lock );
+			}
+		}
 	}
 
 	/** @param array<string,mixed> $session */
