@@ -26,3 +26,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 20 | Terminal-state immutability | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 21 | Reconciliation outbox durability | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 22 | Processing lease recovery | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 23 | Retry mutation compare-and-swap | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
