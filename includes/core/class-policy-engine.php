@@ -95,7 +95,7 @@ final class Policy_Engine {
 		 */
 		$filtered = apply_filters( 'supc_common_policy_codes', $codes, $user_id, $adapter_key, $type, $phase, $payload );
 		if ( is_array( $filtered ) ) {
-			foreach ( $filtered as $code ) {
+			foreach ( array_slice( $filtered, 0, 100 ) as $code ) {
 				if ( is_string( $code ) && Contract_Boundary::code( $code ) ) {
 					$codes[] = $code;
 				}
