@@ -104,4 +104,14 @@ final class ReconciliationOutboxTest extends TestCase {
 		$this->assertStringContainsString( "array( 'resolved', 'failed', 'dead_letter' )", $source );
 		$this->assertStringContainsString( "AND state IN ('prepared','dispatched','retryable','reconcile')", $source );
 	}
+
+	public function test_review_round_three_reconciliation_is_state_bound_idempotent_and_outbox_completion_is_separate(): void {
+		$store = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
+		$service = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-reconciliation-service.php' );
+		$this->assertIsString( $store );
+		$this->assertIsString( $service );
+		$this->assertStringContainsString( "AND state IN ('dispatched','reconcile','retryable')", $store );
+		$this->assertStringContainsString( 'public function complete_reconciliation', $store );
+		$this->assertStringContainsString( '$this->submissions->complete_reconciliation', $service );
+	}
 }

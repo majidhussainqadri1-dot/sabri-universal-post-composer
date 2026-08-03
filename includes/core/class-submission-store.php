@@ -316,29 +316,84 @@ final class Submission_Store {
 		if ( ! in_array( $native_status, array( 'draft', 'pending_review', 'scheduled', 'published', 'rejected', 'failed' ), true ) || 1 !== preg_match( self::HASH_PATTERN, $response_hash ) ) {
 			return false;
 		}
-		$retryable = 'draft' === $native_status;
-		global $wpdb;
-		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'update' )
-			? $wpdb->update(
-				self::submission_table_name(),
-				array(
-					'state'                => $retryable ? 'retryable' : 'resolved',
-					'native_status'        => $native_status,
-					'native_response_hash' => $response_hash,
-					'last_error'           => null,
-					'updated_at'           => gmdate( 'Y-m-d H:i:s' ),
-					'completed_at'         => $retryable ? null : gmdate( 'Y-m-d H:i:s' ),
-				),
-				array( 'attempt_uuid' => strtolower( $attempt_uuid ) ),
-				array( '%s', '%s', '%s', '%s', '%s', '%s' ),
-				array( '%s' )
-			)
-			: false;
-		if ( false === $updated ) {
+		$current = $this->get_by_attempt( $attempt_uuid );
+		if ( $current instanceof WP_Error ) {
 			return false;
 		}
-		$this->complete_outbox_for_attempt( $attempt_uuid );
-		return true;
+		$retryable = 'draft' === $native_status;
+		$target    = $retryable ? 'retryable' : 'resolved';
+		if ( in_array( (string) $current['state'], array( 'retryable', 'resolved' ), true ) ) {
+			return $target === (string) $current['state']
+				&& is_string( $current['native_status'] )
+				&& hash_equals( $current['native_status'], $native_status )
+				&& is_string( $current['native_response_hash'] )
+				&& hash_equals( $current['native_response_hash'], $response_hash );
+		}
+		if ( in_array( (string) $current['state'], array( 'failed', 'dead_letter' ), true ) ) {
+			return false;
+		}
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) || ! method_exists( $wpdb, 'prepare' ) ) {
+			return false;
+		}
+		$now = gmdate( 'Y-m-d H:i:s' );
+		if ( $retryable ) {
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET state = %s, native_status = %s, native_response_hash = %s, last_error = NULL, updated_at = %s, completed_at = NULL WHERE attempt_uuid = %s AND state IN ('dispatched','reconcile','retryable')",
+					self::submission_table_name(),
+					$target,
+					$native_status,
+					$response_hash,
+					$now,
+					strtolower( $attempt_uuid )
+				)
+			);
+		} else {
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET state = %s, native_status = %s, native_response_hash = %s, last_error = NULL, updated_at = %s, completed_at = %s WHERE attempt_uuid = %s AND state IN ('dispatched','reconcile','retryable')",
+					self::submission_table_name(),
+					$target,
+					$native_status,
+					$response_hash,
+					$now,
+					$now,
+					strtolower( $attempt_uuid )
+				)
+			);
+		}
+		return 1 === $updated;
+	}
+
+	public function complete_reconciliation( string $attempt_uuid ): bool {
+		$submission = $this->get_by_attempt( $attempt_uuid );
+		if ( $submission instanceof WP_Error || ! in_array( (string) $submission['state'], array( 'retryable', 'resolved' ), true ) ) {
+			return false;
+		}
+		$outbox = $this->get_outbox_for_attempt( $attempt_uuid );
+		if ( $outbox instanceof WP_Error ) {
+			return 'supc_outbox_not_found' === $this->error_code( $outbox );
+		}
+		if ( 'completed' === (string) $outbox['status'] ) {
+			return true;
+		}
+		if ( 'dead_letter' === (string) $outbox['status'] ) {
+			return false;
+		}
+		global $wpdb;
+		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+			? $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET status = 'completed', updated_at = %s, processed_at = %s WHERE attempt_uuid = %s AND status IN ('queued','retry','processing')",
+					self::outbox_table_name(),
+					gmdate( 'Y-m-d H:i:s' ),
+					gmdate( 'Y-m-d H:i:s' ),
+					strtolower( $attempt_uuid )
+				)
+			)
+			: false;
+		return 1 === $updated;
 	}
 
 	/** @return array<int,array<string,mixed>> */
@@ -535,19 +590,6 @@ final class Submission_Store {
 		}
 		$existing = $this->get_outbox_for_attempt( (string) $submission['attempt_uuid'] );
 		return ! $existing instanceof WP_Error;
-	}
-
-	private function complete_outbox_for_attempt( string $attempt_uuid ): void {
-		global $wpdb;
-		if ( is_object( $wpdb ) && method_exists( $wpdb, 'update' ) ) {
-			$wpdb->update(
-				self::outbox_table_name(),
-				array( 'status' => 'completed', 'updated_at' => gmdate( 'Y-m-d H:i:s' ), 'processed_at' => gmdate( 'Y-m-d H:i:s' ) ),
-				array( 'attempt_uuid' => strtolower( $attempt_uuid ) ),
-				array( '%s', '%s', '%s' ),
-				array( '%s' )
-			);
-		}
 	}
 
 	private function mark_submission_dead_letter( string $attempt_uuid, string $error_code ): void {

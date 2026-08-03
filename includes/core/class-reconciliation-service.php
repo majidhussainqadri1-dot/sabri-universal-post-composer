@@ -77,6 +77,10 @@ final class Reconciliation_Service {
 			$this->retry_event( $event_uuid, 'submission_reconcile_record_failed' );
 			return $this->error( 'submission_reconcile_record_failed' );
 		}
+		if ( ! $this->submissions->complete_reconciliation( (string) $submission['attempt_uuid'] ) ) {
+			$this->retry_event( $event_uuid, 'outbox_completion_failed' );
+			return $this->error( 'outbox_completion_failed' );
+		}
 		return array(
 			'session'  => $updated,
 			'native'   => $status,
