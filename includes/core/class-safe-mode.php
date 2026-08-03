@@ -17,7 +17,16 @@ final class Safe_Mode {
 	private const SHELL_SAFE_MODE_CLASS = '\\Sabri\\UnifiedShell\\SafeMode';
 
 	public static function disabled(): bool {
-		return ! Migration_Manager::writes_enabled() || self::hard_disabled() || self::shell_disabled();
+		if ( self::hard_disabled() || self::shell_disabled() ) {
+			return true;
+		}
+		if ( ! class_exists( Migration_Manager::class, false ) ) {
+			// In the complete plugin runtime a missing migration authority is a
+			// bootstrap failure and must block writes. Isolated collision tests
+			// intentionally load only the trust boundary and remain evaluable.
+			return defined( 'SUPC_FILE' );
+		}
+		return ! Migration_Manager::writes_enabled();
 	}
 
 	/**
