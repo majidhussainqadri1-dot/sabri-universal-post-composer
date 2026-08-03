@@ -43,3 +43,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 37 | File 19 notification boundary | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 38 | Search and SEO derivative boundary | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 39 | Migration and rollback ownership | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 40 | Complete static-analysis and exact-head gate | WordPress dynamic-symbol findings were separated from File 22 logic findings through a documented PHPStan baseline; final exact-head QA remains independently evidenced by the terminal QA workflow. |
