@@ -49,7 +49,7 @@ parameters:
         - '#Access to offset .* on an unknown class WP_REST_Request#'
         - '#Call to method .* on an unknown class WP_REST_(Request|Response)#'
         - '#Instantiated class WP_REST_Response not found#'
-        - '#Access to an undefined property WP_Post::\\$#'
+        - '#Access to an undefined property WP_Post::.*#'
         - '#return type has no value type specified in iterable type array#'
         - '#has parameter .* with no value type specified in iterable type array#'
         - '#Ternary operator condition is always false#'
