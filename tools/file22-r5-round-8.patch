@@ -1,0 +1,93 @@
+diff -ruN a/includes/core/class-browser-runtime.php b/includes/core/class-browser-runtime.php
+--- a/includes/core/class-browser-runtime.php	2026-08-03 10:13:09.369988071 +0000
++++ b/includes/core/class-browser-runtime.php	2026-08-03 10:13:09.365988070 +0000
+@@ -61,7 +61,8 @@
+ 		add_shortcode( 'sabri_universal_composer', array( $this, 'render_shortcode' ) );
+ 		$this->rest_controller->register();
+ 		$this->reconciliation_rest_controller->register();
+-		add_action( 'supc_cleanup_expired_sessions', array( Session_Store::class, 'cleanup_expired' ) );
++		add_action( 'supc_cleanup_expired_sessions', array( Submission_Store::class, 'cleanup_expired' ), 5 );
++		add_action( 'supc_cleanup_expired_sessions', array( Session_Store::class, 'cleanup_expired' ), 10 );
+ 		add_action( 'supc_process_reconciliation_queue', array( $this->reconciliation, 'process_due' ) );
+ 		add_filter( 'supc_system_check_report', array( $this, 'append_system_check' ), 20 );
+ 	}
+diff -ruN a/includes/core/class-submission-store.php b/includes/core/class-submission-store.php
+--- a/includes/core/class-submission-store.php	2026-08-03 10:13:09.365988070 +0000
++++ b/includes/core/class-submission-store.php	2026-08-03 10:13:09.365988070 +0000
+@@ -26,6 +26,8 @@
+ 	private const SCHEMA_VERSION          = '1.0.0';
+ 	private const MAX_ATTEMPTS            = 5;
+ 	private const PROCESSING_LEASE_SECONDS = 600;
++	private const COMPLETED_OUTBOX_TTL      = 2592000;  // 30 days.
++	private const TERMINAL_RECORD_TTL       = 15552000; // 180 days.
+ 	private const BACKOFF_SECONDS         = array( 60, 300, 1800, 7200, 43200 );
+ 	private const ATTEMPT_STATES          = array( 'prepared', 'dispatched', 'retryable', 'reconcile', 'resolved', 'failed', 'dead_letter' );
+ 	private const OUTBOX_STATES           = array( 'queued', 'processing', 'retry', 'completed', 'dead_letter' );
+@@ -520,6 +522,47 @@
+ 		return $count;
+ 	}
+ 
++	public static function cleanup_expired(): int {
++		global $wpdb;
++		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) || ! method_exists( $wpdb, 'prepare' ) || ! self::tables_exist() ) {
++			return 0;
++		}
++		$deleted = 0;
++		$completed_cutoff = gmdate( 'Y-m-d H:i:s', time() - self::COMPLETED_OUTBOX_TTL );
++		$terminal_cutoff  = gmdate( 'Y-m-d H:i:s', time() - self::TERMINAL_RECORD_TTL );
++
++		$outbox_completed = $wpdb->query(
++			$wpdb->prepare(
++				"DELETE FROM %i WHERE status = 'completed' AND processed_at IS NOT NULL AND processed_at < %s LIMIT 500",
++				self::outbox_table_name(),
++				$completed_cutoff
++			)
++		);
++		$deleted += is_int( $outbox_completed ) && $outbox_completed > 0 ? $outbox_completed : 0;
++
++		$outbox_dead = $wpdb->query(
++			$wpdb->prepare(
++				"DELETE FROM %i WHERE status = 'dead_letter' AND updated_at < %s LIMIT 500",
++				self::outbox_table_name(),
++				$terminal_cutoff
++			)
++		);
++		$deleted += is_int( $outbox_dead ) && $outbox_dead > 0 ? $outbox_dead : 0;
++
++		$submissions = $wpdb->query(
++			$wpdb->prepare(
++				"DELETE FROM %i WHERE ((state IN ('resolved','failed') AND completed_at IS NOT NULL AND completed_at < %s) OR (state IN ('prepared','retryable','dead_letter') AND updated_at < %s)) AND attempt_uuid NOT IN (SELECT attempt_uuid FROM %i WHERE status IN ('queued','retry','processing','dead_letter')) LIMIT 500",
++				self::submission_table_name(),
++				$terminal_cutoff,
++				$terminal_cutoff,
++				self::outbox_table_name()
++			)
++		);
++		$deleted += is_int( $submissions ) && $submissions > 0 ? $submissions : 0;
++
++		return $deleted;
++	}
++
+ 	/** @return array{queued:int,retry:int,processing:int,dead_letter:int} */
+ 	public function queue_counts(): array {
+ 		$counts = array( 'queued' => 0, 'retry' => 0, 'processing' => 0, 'dead_letter' => 0 );
+diff -ruN a/tests/ReconciliationOutboxTest.php b/tests/ReconciliationOutboxTest.php
+--- a/tests/ReconciliationOutboxTest.php	2026-08-03 10:16:00.765994200 +0000
++++ b/tests/ReconciliationOutboxTest.php	2026-08-03 10:16:00.765994200 +0000
+@@ -150,4 +150,16 @@
+ 			strpos( $service, '$this->submissions->mark_reconciled' )
+ 		);
+ 	}
++
++	public function test_review_round_eight_terminal_metadata_has_bounded_cleanup_without_deleting_active_work(): void {
++		$store = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
++		$runtime = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-browser-runtime.php' );
++		$this->assertIsString( $store );
++		$this->assertIsString( $runtime );
++		$this->assertStringContainsString( 'COMPLETED_OUTBOX_TTL      = 2592000', $store );
++		$this->assertStringContainsString( 'TERMINAL_RECORD_TTL       = 15552000', $store );
++		$this->assertStringContainsString( 'public static function cleanup_expired', $store );
++		$this->assertStringContainsString( "status IN ('queued','retry','processing','dead_letter')", $store );
++		$this->assertStringContainsString( "array( Submission_Store::class, 'cleanup_expired' ), 5", $runtime );
++	}
+ }
