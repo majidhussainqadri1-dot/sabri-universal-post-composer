@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Universal Post Composer
  * Plugin URI:  https://www.sabrihomeopathy.com/
  * Description: Role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform.
- * Version:     0.2.0
+ * Version:     0.3.0
  * Author:      Dr. Allamah Majid Hussain Sabri Muhaddith Mursheed
  * Text Domain: sabri-universal-post-composer
  * Requires at least: 6.5
@@ -48,6 +48,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\UniversalComposer\Core\Workflow_Validator',
 		'Sabri\UniversalComposer\Core\Workflow_Coordinator',
 		'Sabri\UniversalComposer\Core\Session_Store',
+		'Sabri\UniversalComposer\Core\Submission_Store',
+		'Sabri\UniversalComposer\Core\Reconciliation_Service',
 		'Sabri\UniversalComposer\Core\Browser_Runtime',
 		'Sabri\UniversalComposer\Core\Plugin',
 		'Sabri\UniversalComposer\Presentation\Create_Surface',
@@ -88,15 +90,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 		return;
 	}
 
-	define( 'SUPC_VERSION', '0.2.0' );
-	define( 'SUPC_SCHEMA_VERSION', '0.2.0' );
+	define( 'SUPC_VERSION', '0.3.0' );
+	define( 'SUPC_SCHEMA_VERSION', '0.3.0' );
 	define( 'SUPC_ADAPTER_API_VERSION', '1.0.0' );
 	define( 'SUPC_WORKFLOW_API_VERSION', '1.0.0' );
 	define( 'SUPC_SUBJECT_SCHEMA_API_VERSION', '1.0.0' );
 	define( 'SUPC_MIN_SMC_VERSION', '1.2.3' );
 	define( 'SUPC_MIN_SMC_DB_VERSION', '1.2.0' );
 	define( 'SUPC_MIN_SMC_CONTRACT_VERSION', '1.1.2' );
-	define( 'SUPC_REST_API_VERSION', '1.0.0' );
+	define( 'SUPC_REST_API_VERSION', '1.1.0' );
 	define( 'SUPC_FILE', __FILE__ );
 	define( 'SUPC_PATH', plugin_dir_path( __FILE__ ) );
 	define( 'SUPC_URL', plugin_dir_url( __FILE__ ) );
@@ -114,6 +116,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/core/class-workflow-validator.php';
 	require_once SUPC_PATH . 'includes/core/class-workflow-coordinator.php';
 	require_once SUPC_PATH . 'includes/core/class-session-store.php';
+	require_once SUPC_PATH . 'includes/core/class-submission-store.php';
+	require_once SUPC_PATH . 'includes/core/class-reconciliation-service.php';
 	require_once SUPC_PATH . 'includes/core/class-browser-runtime.php';
 	require_once SUPC_PATH . 'includes/presentation/class-create-surface.php';
 	require_once SUPC_PATH . 'includes/presentation/class-workflow-surface.php';
@@ -123,6 +127,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/admin/class-system-check-page.php';
 	require_once SUPC_PATH . 'includes/core/class-plugin.php';
 	require_once SUPC_PATH . 'includes/core/functions.php';
+
+	add_filter(
+		'cron_schedules',
+		static function ( array $schedules ): array {
+			$schedules['supc_five_minutes'] = array(
+				'interval' => 300,
+				'display'  => __( 'Every five minutes — File 22 reconciliation', 'sabri-universal-post-composer' ),
+			);
+			return $schedules;
+		}
+	);
 
 	register_activation_hook(
 		__FILE__,
@@ -155,9 +170,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 			if ( ! \Sabri\UniversalComposer\Core\Session_Store::install() ) {
 				$failure( __( 'The File 22 orchestration session table could not be installed safely.', 'sabri-universal-post-composer' ) );
 			}
+			if ( ! \Sabri\UniversalComposer\Core\Submission_Store::install() ) {
+				$failure( __( 'The File 22 submission map and reconciliation outbox could not be installed safely.', 'sabri-universal-post-composer' ) );
+			}
 			\Sabri\UniversalComposer\Core\Page_Resolver::activate();
 			if ( ! wp_next_scheduled( 'supc_cleanup_expired_sessions' ) ) {
 				wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', 'supc_cleanup_expired_sessions' );
+			}
+			if ( ! wp_next_scheduled( 'supc_process_reconciliation_queue' ) ) {
+				wp_schedule_event( time() + 300, 'supc_five_minutes', 'supc_process_reconciliation_queue' );
 			}
 			update_option( 'supc_version', SUPC_VERSION, false );
 			update_option( 'supc_schema_version', SUPC_SCHEMA_VERSION, false );
@@ -168,9 +189,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		__FILE__,
 		static function (): void {
 			delete_transient( 'supc_adapter_health' );
-			$timestamp = wp_next_scheduled( 'supc_cleanup_expired_sessions' );
-			if ( false !== $timestamp ) {
-				wp_unschedule_event( $timestamp, 'supc_cleanup_expired_sessions' );
+			if ( function_exists( 'wp_clear_scheduled_hook' ) ) {
+				wp_clear_scheduled_hook( 'supc_cleanup_expired_sessions' );
+				wp_clear_scheduled_hook( 'supc_process_reconciliation_queue' );
 			}
 		}
 	);
