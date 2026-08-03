@@ -45,6 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           cat tools/file22-r6-chunk-* | base64 -d | tar -xz
+          rm -f .github/workflows/file22-plan-complete-core.yml
           python3 - <<'PY'
           from pathlib import Path
           path = Path('tests/PlanCompletionCoreTest.php')
