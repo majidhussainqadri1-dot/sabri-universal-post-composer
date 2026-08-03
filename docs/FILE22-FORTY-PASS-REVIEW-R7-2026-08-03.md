@@ -35,3 +35,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 29 | Native draft recovery ownership | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 30 | Native draft discard ownership | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 31 | Metadata-only audit ledger | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 32 | Metadata-only upload-token store | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
