@@ -136,4 +136,18 @@ final class ReconciliationOutboxTest extends TestCase {
 		$this->assertStringContainsString( "return 'stale';", $source );
 		$this->assertStringContainsString( "return 'completed';", $source );
 	}
+
+	public function test_review_round_seven_cross_store_identity_and_native_status_progression_are_enforced(): void {
+		$session = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-session-store.php' );
+		$service = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-reconciliation-service.php' );
+		$this->assertIsString( $session );
+		$this->assertIsString( $service );
+		$this->assertStringContainsString( 'private function transition_allows', $session );
+		$this->assertStringContainsString( "'native_status_regression'", $session );
+		$this->assertStringContainsString( 'hash_equals( (string) $session[\'adapter_key\'], (string) $submission[\'adapter_key\'] )', $service );
+		$this->assertLessThan(
+			strpos( $service, '$this->sessions->apply_reconciliation' ),
+			strpos( $service, '$this->submissions->mark_reconciled' )
+		);
+	}
 }

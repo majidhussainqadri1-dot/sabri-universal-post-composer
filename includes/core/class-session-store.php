@@ -379,6 +379,12 @@ final class Session_Store {
 		) {
 			return $this->error( 'submission_identity_conflict' );
 		}
+		if ( ! $this->transition_allows( (string) $current['state'], $state ) ) {
+			return $this->error( 'native_status_regression' );
+		}
+		if ( $state === (string) $current['state'] && empty( $current['reconciliation_required'] ) ) {
+			return $current;
+		}
 		global $wpdb;
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) || ! method_exists( $wpdb, 'prepare' ) ) {
 			return $this->error( 'session_store_unavailable' );
@@ -447,6 +453,19 @@ final class Session_Store {
 
 	private function ttl_for_sensitivity( string $sensitivity_class ): int {
 		return 'sensitive' === $sensitivity_class ? self::SENSITIVE_TTL : self::ORDINARY_TTL;
+	}
+
+	private function transition_allows( string $current, string $target ): bool {
+		return match ( $current ) {
+			'published' => 'published' === $target,
+			'scheduled' => in_array( $target, array( 'scheduled', 'published', 'rejected', 'failed' ), true ),
+			'submitted' => in_array( $target, array( 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true ),
+			'rejected'  => 'rejected' === $target,
+			'failed'    => 'failed' === $target,
+			'draft'     => in_array( $target, array( 'draft', 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true ),
+			'new', 'valid', 'submitting', 'reconcile' => true,
+			default => false,
+		};
 	}
 
 	private function session_state_for_native( string $native_status ): string {

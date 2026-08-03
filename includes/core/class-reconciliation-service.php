@@ -41,6 +41,14 @@ final class Reconciliation_Service {
 			$this->retry_event( $event_uuid, 'native_reference_missing' );
 			return $error;
 		}
+		if (
+			! hash_equals( (string) $session['adapter_key'], (string) $submission['adapter_key'] ) ||
+			! is_string( $session['native_reference'] ) ||
+			! hash_equals( $session['native_reference'], $native_reference )
+		) {
+			$this->retry_event( $event_uuid, 'submission_identity_conflict' );
+			return $this->error( 'submission_identity_conflict' );
+		}
 		$status = $this->coordinator->status(
 			$user_id,
 			(string) $submission['adapter_key'],
@@ -58,6 +66,10 @@ final class Reconciliation_Service {
 			$this->retry_event( $event_uuid, 'reconciliation_hash_failed' );
 			return $this->error( 'reconciliation_hash_failed' );
 		}
+		if ( ! $this->submissions->mark_reconciled( (string) $submission['attempt_uuid'], (string) $status['status'], $hash ) ) {
+			$this->retry_event( $event_uuid, 'submission_reconcile_record_failed' );
+			return $this->error( 'submission_reconcile_record_failed' );
+		}
 		$updated = $this->sessions->apply_reconciliation(
 			$session_uuid,
 			$user_id,
@@ -69,13 +81,8 @@ final class Reconciliation_Service {
 		);
 		if ( $updated instanceof WP_Error ) {
 			$code = $this->safe_error_code( $updated );
-			$this->submissions->mark_uncertain( (string) $submission['attempt_uuid'], $code, '' === $event_uuid );
 			$this->retry_event( $event_uuid, $code );
 			return $updated;
-		}
-		if ( ! $this->submissions->mark_reconciled( (string) $submission['attempt_uuid'], (string) $status['status'], $hash ) ) {
-			$this->retry_event( $event_uuid, 'submission_reconcile_record_failed' );
-			return $this->error( 'submission_reconcile_record_failed' );
 		}
 		if ( ! $this->submissions->complete_reconciliation( (string) $submission['attempt_uuid'] ) ) {
 			$this->retry_event( $event_uuid, 'outbox_completion_failed' );
