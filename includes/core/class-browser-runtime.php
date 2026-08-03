@@ -235,18 +235,41 @@ final class Browser_Runtime {
 			'codes'  => $cron_ready ? array() : array( 'reconciliation_cron_missing' ),
 		);
 
-		$package = $this->file21_package_version();
-		$status  = null === $package ? 'warning' : ( Version::valid( $package ) && version_compare( $package, '1.0.3.2', '>=' ) ? 'pass' : 'fail' );
-		$rows[]  = array(
+		$package_identity = $this->file21_package_identity();
+		$status           = match ( $package_identity['state'] ) {
+			'current' => 'pass',
+			'missing' => 'warning',
+			default   => 'fail',
+		};
+		$code             = match ( $package_identity['state'] ) {
+			'missing' => 'file21_package_identity_missing',
+			'invalid' => 'file21_package_identity_invalid',
+			'too_low' => 'file21_package_identity_too_low',
+			default   => '',
+		};
+		$rows[]           = array(
 			'key'    => 'file21_package_identity',
 			'status' => $status,
 			'count'  => 'pass' === $status ? 0 : 1,
-			'codes'  => 'pass' === $status ? array() : array( null === $package ? 'file21_package_identity_unknown' : 'file21_package_identity_too_low' ),
+			'codes'  => 'pass' === $status ? array() : array( $code ),
 		);
 		return $rows;
 	}
 
-	private function file21_package_version(): ?string {
+	/** @return array{state:string,version:?string,source:?string} */
+	private function file21_package_identity(): array {
+		if ( defined( 'SABRI_HNF_PACKAGE_VERSION' ) ) {
+			$value = constant( 'SABRI_HNF_PACKAGE_VERSION' );
+			if ( ! is_string( $value ) || ! Version::valid_wordpress_package( $value ) ) {
+				return array( 'state' => 'invalid', 'version' => null, 'source' => 'constant' );
+			}
+			return array(
+				'state'   => Version::wordpress_package_at_least( $value, '1.0.3.2' ) ? 'current' : 'too_low',
+				'version' => $value,
+				'source'  => 'constant',
+			);
+		}
+
 		if ( ! function_exists( 'get_plugins' ) && defined( 'ABSPATH' ) ) {
 			$plugin_api = ABSPATH . 'wp-admin/includes/plugin.php';
 			if ( is_readable( $plugin_api ) ) {
@@ -254,24 +277,43 @@ final class Browser_Runtime {
 			}
 		}
 		if ( ! function_exists( 'get_plugins' ) ) {
-			return null;
+			return array( 'state' => 'missing', 'version' => null, 'source' => null );
 		}
-		$versions = array();
+
+		$matched         = false;
+		$invalid_version = false;
+		$versions        = array();
 		foreach ( get_plugins() as $basename => $headers ) {
 			$name   = isset( $headers['Name'] ) ? (string) $headers['Name'] : '';
 			$domain = isset( $headers['TextDomain'] ) ? (string) $headers['TextDomain'] : '';
 			if ( 'sabri-complete-home-news-feed' !== $domain && 'Sabri Complete Home and News Feed' !== $name && ! str_ends_with( (string) $basename, '/sabri-complete-home-news-feed.php' ) ) {
 				continue;
 			}
-			$version = isset( $headers['Version'] ) ? trim( (string) $headers['Version'] ) : '';
-			if ( Version::valid( $version ) ) {
-				$versions[] = $version;
+			$matched = true;
+			$version = isset( $headers['Version'] ) ? (string) $headers['Version'] : '';
+			if ( '' === $version ) {
+				continue;
 			}
+			if ( ! Version::valid_wordpress_package( $version ) ) {
+				$invalid_version = true;
+				continue;
+			}
+			$versions[] = $version;
 		}
+
 		if ( array() === $versions ) {
-			return null;
+			return array(
+				'state'   => $invalid_version ? 'invalid' : 'missing',
+				'version' => null,
+				'source'  => $matched ? 'plugin_header' : null,
+			);
 		}
-		usort( $versions, static fn ( string $left, string $right ): int => Version::compare( $right, $left ) );
-		return $versions[0];
+		usort( $versions, static fn ( string $left, string $right ): int => Version::compare_wordpress_package( $right, $left ) );
+		$version = $versions[0];
+		return array(
+			'state'   => Version::wordpress_package_at_least( $version, '1.0.3.2' ) ? 'current' : 'too_low',
+			'version' => $version,
+			'source'  => 'plugin_header',
+		);
 	}
 }

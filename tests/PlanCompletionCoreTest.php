@@ -215,4 +215,37 @@ final class PlanCompletionCoreTest extends TestCase {
 		$this->assertStringContainsString( 'independently certified', $docs );
 	}
 
+
+	public function test_file21_runtime_semver_and_package_identity_are_separate_version_tracks(): void {
+		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::valid( '1.0.3' ) );
+		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid( '1.0.3.2' ) );
+		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.3.2' ) );
+		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.3.2', '1.0.3.2' ) );
+		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.4', '1.0.3.2' ) );
+		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.3.1', '1.0.3.2' ) );
+		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.03.2' ) );
+		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.3.2.1' ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_file21_package_constant_1_0_3_2_produces_current_identity_and_pass_mapping(): void {
+		define( 'SABRI_HNF_PACKAGE_VERSION', '1.0.3.2' );
+		$reflection = new \ReflectionClass( \Sabri\UniversalComposer\Core\Browser_Runtime::class );
+		$runtime    = $reflection->newInstanceWithoutConstructor();
+		$method     = $reflection->getMethod( 'file21_package_identity' );
+		$identity   = $method->invoke( $runtime );
+		$this->assertSame( array( 'state' => 'current', 'version' => '1.0.3.2', 'source' => 'constant' ), $identity );
+
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-browser-runtime.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( "'current' => 'pass'", $source );
+		$this->assertStringContainsString( 'file21_package_identity_missing', $source );
+		$this->assertStringContainsString( 'file21_package_identity_invalid', $source );
+		$this->assertStringContainsString( 'file21_package_identity_too_low', $source );
+		$this->assertStringNotContainsString( 'file21_package_identity_unknown', $source );
+	}
+
 }

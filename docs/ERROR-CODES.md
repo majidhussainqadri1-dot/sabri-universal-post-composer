@@ -121,6 +121,14 @@ Controlled codes include:
 
 A route-only File 21 adapter must produce a release failure.
 
+### File 21 package-identity diagnostics
+
+- `file21_package_identity_missing`: neither `SABRI_HNF_PACKAGE_VERSION` nor a matching plugin-header package version is available;
+- `file21_package_identity_invalid`: the canonical package constant or matching nonempty header is not a strict numeric three- or four-part WordPress package identity;
+- `file21_package_identity_too_low`: a valid package identity is lower than `1.0.3.2`.
+
+File 21 runtime/API `SABRI_HNF_VERSION` remains a separate strict Semantic Versioning track with minimum `1.0.3`; package identity is never inferred from that runtime value.
+
 ## Create-page repair codes
 
 - `dry_run_ready`, `dry_run_repairable`, `dry_run_ambiguous`, `dry_run_missing`;

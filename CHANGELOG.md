@@ -2,6 +2,7 @@
 
 ## 1.0.0-rc.1 — Plan-complete Core contract 1.0.0 R6 candidate
 
+- Corrected File 21 package-identity diagnostics: canonical `SABRI_HNF_PACKAGE_VERSION`, distinct runtime/API and package tracks, strict three/four-part WordPress package comparison, and separate missing/invalid/too-low codes.
 - Added four independent Composer, Review, Publication, and Safety/Hold session dimensions.
 - Added REST contract 1.2.0 for type discovery, My Content session listing, PATCH autosave, safe discard, status alias, revisions, and native upload-token orchestration.
 - Added optional native draft-lifecycle, upload-token, and revision adapter contracts.

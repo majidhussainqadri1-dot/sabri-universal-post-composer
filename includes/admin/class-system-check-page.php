@@ -75,7 +75,7 @@ final class System_Check_Page {
 		'diagnostic_contract_invalid', 'duplicate_system_check', 'system_check_filter_invalid', 'system_check_filter_exception',
 		'unrecognized_diagnostic', 'session_store_missing', 'submission_outbox_store_missing',
 		'reconciliation_dead_letter_present', 'reconciliation_queue_pending', 'reconciliation_cron_missing',
-		'file21_package_identity_unknown', 'file21_package_identity_too_low', 'audit_store_missing',
+		'file21_package_identity_missing', 'file21_package_identity_invalid', 'file21_package_identity_too_low', 'audit_store_missing',
 		'upload_token_store_missing', 'taxonomy_map_invalid', 'plan_metadata_cleanup_missing',
 		'workspace_page_ready', 'workspace_page_repairable', 'workspace_page_ambiguous', 'workspace_page_missing',
 		'plan_contract_invalid', 'composer_feature_disabled', 'optional_adapter_pack_absent',
