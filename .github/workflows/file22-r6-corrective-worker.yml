@@ -1,0 +1,64 @@
+name: File 22 Plan-Complete R6 Corrective Worker
+
+on:
+  push:
+    branches:
+      - feat/file22-plan-complete-core-1.0.0-2026-08-03
+    paths:
+      - 'tools/file22-r6-chunk-*'
+      - '.github/workflows/file22-r6-corrective-worker.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: file22-plan-complete-r6-worker
+  cancel-in-progress: false
+
+jobs:
+  apply-review-test:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - name: Check out corrective branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: feat/file22-plan-complete-core-1.0.0-2026-08-03
+          fetch-depth: 0
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install locked dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+
+      - name: Apply plan-completion source
+        run: |
+          set -euo pipefail
+          cat tools/file22-r6-chunk-* | base64 -d | tar -xz
+
+      - name: Run complete review and QA
+        run: |
+          set -euo pipefail
+          composer lint
+          composer test
+          composer phpstan
+          composer phpcs
+          node --check assets/js/workflow-composer.js
+          git diff --check
+
+      - name: Commit exact reviewed source
+        run: |
+          set -euo pipefail
+          rm -rf .phpunit.cache
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/file22-r6-corrective-worker.yml tools/file22-r6-chunk-*
+          git add -A
+          git commit -m 'File 22 1.0.0-rc.1: complete central-plan Core source R6'
+          git push origin HEAD:feat/file22-plan-complete-core-1.0.0-2026-08-03
