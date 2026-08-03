@@ -163,6 +163,9 @@ final class Audit_Store {
 	}
 
 	public static function cleanup_expired(): int {
+		if ( ! self::table_exists() ) {
+			return 0;
+		}
 		global $wpdb;
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) || ! method_exists( $wpdb, 'prepare' ) ) {
 			return 0;

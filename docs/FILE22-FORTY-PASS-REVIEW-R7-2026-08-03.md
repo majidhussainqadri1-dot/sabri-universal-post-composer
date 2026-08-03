@@ -9,3 +9,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 3 | Untrusted native revision status mapping | Native revision statuses now pass through an explicit state map. |
 | 4 | Unbounded upload intent metadata | Upload purpose and metadata are bounded before native dispatch. |
 | 5 | Concurrent rate-limit bypass | A short owner-token mutex now serializes each rate-limit window. |
+| 6 | Audit cleanup and retention boundary | Audit cleanup now exits safely when the owner table is absent. |
