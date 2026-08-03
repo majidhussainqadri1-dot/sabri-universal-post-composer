@@ -1,0 +1,64 @@
+diff -ruN a/includes/core/class-submission-store.php b/includes/core/class-submission-store.php
+--- a/includes/core/class-submission-store.php	2026-08-03 10:13:09.365988070 +0000
++++ b/includes/core/class-submission-store.php	2026-08-03 10:13:09.365988070 +0000
+@@ -25,6 +25,7 @@
+ 	private const SCHEMA_OPTION           = 'supc_submission_schema_version';
+ 	private const SCHEMA_VERSION          = '1.0.0';
+ 	private const MAX_ATTEMPTS            = 5;
++	private const PROCESSING_LEASE_SECONDS = 600;
+ 	private const BACKOFF_SECONDS         = array( 60, 300, 1800, 7200, 43200 );
+ 	private const ATTEMPT_STATES          = array( 'prepared', 'dispatched', 'retryable', 'reconcile', 'resolved', 'failed', 'dead_letter' );
+ 	private const OUTBOX_STATES           = array( 'queued', 'processing', 'retry', 'completed', 'dead_letter' );
+@@ -403,11 +404,14 @@
+ 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_results' ) || ! method_exists( $wpdb, 'prepare' ) ) {
+ 			return array();
+ 		}
++		$now          = gmdate( 'Y-m-d H:i:s' );
++		$lease_cutoff = gmdate( 'Y-m-d H:i:s', time() - self::PROCESSING_LEASE_SECONDS );
+ 		$rows = $wpdb->get_results(
+ 			$wpdb->prepare(
+-				"SELECT event_uuid,attempt_uuid,session_uuid,user_id,adapter_key,native_reference,topic,status,attempts,next_attempt_at,last_error_code,created_at,updated_at,processed_at FROM %i WHERE status IN ('queued','retry') AND next_attempt_at <= %s ORDER BY next_attempt_at ASC,id ASC LIMIT %d",
++				"SELECT event_uuid,attempt_uuid,session_uuid,user_id,adapter_key,native_reference,topic,status,attempts,next_attempt_at,last_error_code,created_at,updated_at,processed_at FROM %i WHERE (status IN ('queued','retry') AND next_attempt_at <= %s) OR (status = 'processing' AND updated_at <= %s) ORDER BY next_attempt_at ASC,id ASC LIMIT %d",
+ 				self::outbox_table_name(),
+-				gmdate( 'Y-m-d H:i:s' ),
++				$now,
++				$lease_cutoff,
+ 				$limit
+ 			),
+ 			ARRAY_A
+@@ -420,14 +424,17 @@
+ 			return false;
+ 		}
+ 		global $wpdb;
++		$now          = gmdate( 'Y-m-d H:i:s' );
++		$lease_cutoff = gmdate( 'Y-m-d H:i:s', time() - self::PROCESSING_LEASE_SECONDS );
+ 		$claimed = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+ 			? $wpdb->query(
+ 				$wpdb->prepare(
+-					"UPDATE %i SET status = 'processing', updated_at = %s WHERE event_uuid = %s AND status IN ('queued','retry') AND next_attempt_at <= %s",
++					"UPDATE %i SET status = 'processing', updated_at = %s WHERE event_uuid = %s AND ((status IN ('queued','retry') AND next_attempt_at <= %s) OR (status = 'processing' AND updated_at <= %s))",
+ 					self::outbox_table_name(),
+-					gmdate( 'Y-m-d H:i:s' ),
++					$now,
+ 					strtolower( $event_uuid ),
+-					gmdate( 'Y-m-d H:i:s' )
++					$now,
++					$lease_cutoff
+ 				)
+ 			)
+ 			: false;
+diff -ruN a/tests/ReconciliationOutboxTest.php b/tests/ReconciliationOutboxTest.php
+--- a/tests/ReconciliationOutboxTest.php	2026-08-03 10:16:00.765994200 +0000
++++ b/tests/ReconciliationOutboxTest.php	2026-08-03 10:16:00.765994200 +0000
+@@ -114,4 +114,11 @@
+ 		$this->assertStringContainsString( 'public function complete_reconciliation', $store );
+ 		$this->assertStringContainsString( '$this->submissions->complete_reconciliation', $service );
+ 	}
++
++	public function test_review_round_four_abandoned_processing_jobs_have_a_bounded_reclaim_lease(): void {
++		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
++		$this->assertIsString( $source );
++		$this->assertStringContainsString( 'PROCESSING_LEASE_SECONDS = 600', $source );
++		$this->assertStringContainsString( "status = 'processing' AND updated_at <= %s", $source );
++	}
+ }
