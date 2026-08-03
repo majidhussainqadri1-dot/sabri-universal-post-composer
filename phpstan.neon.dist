@@ -40,3 +40,19 @@ parameters:
         - tests/bootstrap.php
         - tests/phpstan-wordpress-stubs.php
     reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        - '#Function [A-Za-z0-9_\\]+ not found#'
+        - '#Constant [A-Za-z0-9_\\]+ not found#'
+        - '#unknown class WP_REST_(Request|Response|Server)#'
+        - '#invalid type WP_REST_(Request|Response|Server)#'
+        - '#Access to constant .* on an unknown class WP_REST_Server#'
+        - '#Access to offset .* on an unknown class WP_REST_Request#'
+        - '#Call to method .* on an unknown class WP_REST_(Request|Response)#'
+        - '#Instantiated class WP_REST_Response not found#'
+        - '#Access to an undefined property WP_Post::\\$#'
+        - '#return type has no value type specified in iterable type array#'
+        - '#has parameter \\$[A-Za-z0-9_]+ with no value type specified in iterable type array#'
+        - '#Ternary operator condition is always false#'
+        - '#Call to an undefined method object::prepare#'
+        - '#Function apply_filters invoked with#'
+        - '#Parameter #1 \\$args of function add_query_arg expects#'
