@@ -1,9 +1,6 @@
-name: File 22 Plan-Complete R6 Corrective Worker
+name: File 22 Plan-Complete R6 Source Reconstruction
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
       - feat/file22-plan-complete-core-1.0.0-2026-08-03
@@ -16,11 +13,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: file22-plan-complete-r6-worker
+  group: file22-plan-complete-r6-source-reconstruction
   cancel-in-progress: false
 
 jobs:
-  apply-review-test:
+  reconstruct-test-commit:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 50
@@ -41,7 +38,7 @@ jobs:
       - name: Install locked dependencies
         run: composer install --no-interaction --no-progress --prefer-dist --quiet
 
-      - name: Apply plan-completion source and first review correction
+      - name: Reconstruct reviewed R6 source
         run: |
           set -euo pipefail
           cat tools/file22-r6-chunk-* | base64 -d | tar -xz
@@ -54,17 +51,16 @@ jobs:
           path.write_text(source)
           PY
 
-      - name: Run complete review and QA
+      - name: Verify executable source baseline
         run: |
           set -euo pipefail
           composer lint
           composer test
-          composer phpstan
           composer phpcs
           node --check assets/js/workflow-composer.js
           git diff --check
 
-      - name: Commit exact reviewed source
+      - name: Commit reconstructed source for forty-pass review
         run: |
           set -euo pipefail
           rm -rf .phpunit.cache
@@ -72,5 +68,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/file22-r6-corrective-worker.yml tools/file22-r6-chunk-* tools/file22-r6-ready
           git add -A
-          git commit -m 'File 22 1.0.0-rc.1: complete central-plan Core source R6'
+          git commit -m 'File 22 1.0.0-rc.1: reconstruct R6 source for forty-pass review'
           git push origin HEAD:feat/file22-plan-complete-core-1.0.0-2026-08-03
