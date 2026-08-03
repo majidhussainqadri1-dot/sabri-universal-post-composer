@@ -28,3 +28,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 22 | Processing lease recovery | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 23 | Retry mutation compare-and-swap | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 24 | Cross-store identity validation | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 25 | Monotonic native status mapping | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
