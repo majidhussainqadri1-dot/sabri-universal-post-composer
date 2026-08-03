@@ -1,0 +1,102 @@
+diff -ruN a/includes/core/class-reconciliation-service.php b/includes/core/class-reconciliation-service.php
+--- a/includes/core/class-reconciliation-service.php	2026-08-03 10:13:09.365988070 +0000
++++ b/includes/core/class-reconciliation-service.php	2026-08-03 10:13:09.365988070 +0000
+@@ -41,6 +41,14 @@
+ 			$this->retry_event( $event_uuid, 'native_reference_missing' );
+ 			return $error;
+ 		}
++		if (
++			! hash_equals( (string) $session['adapter_key'], (string) $submission['adapter_key'] ) ||
++			! is_string( $session['native_reference'] ) ||
++			! hash_equals( $session['native_reference'], $native_reference )
++		) {
++			$this->retry_event( $event_uuid, 'submission_identity_conflict' );
++			return $this->error( 'submission_identity_conflict' );
++		}
+ 		$status = $this->coordinator->status(
+ 			$user_id,
+ 			(string) $submission['adapter_key'],
+@@ -58,6 +66,10 @@
+ 			$this->retry_event( $event_uuid, 'reconciliation_hash_failed' );
+ 			return $this->error( 'reconciliation_hash_failed' );
+ 		}
++		if ( ! $this->submissions->mark_reconciled( (string) $submission['attempt_uuid'], (string) $status['status'], $hash ) ) {
++			$this->retry_event( $event_uuid, 'submission_reconcile_record_failed' );
++			return $this->error( 'submission_reconcile_record_failed' );
++		}
+ 		$updated = $this->sessions->apply_reconciliation(
+ 			$session_uuid,
+ 			$user_id,
+@@ -69,14 +81,9 @@
+ 		);
+ 		if ( $updated instanceof WP_Error ) {
+ 			$code = $this->safe_error_code( $updated );
+-			$this->submissions->mark_uncertain( (string) $submission['attempt_uuid'], $code, '' === $event_uuid );
+ 			$this->retry_event( $event_uuid, $code );
+ 			return $updated;
+ 		}
+-		if ( ! $this->submissions->mark_reconciled( (string) $submission['attempt_uuid'], (string) $status['status'], $hash ) ) {
+-			$this->retry_event( $event_uuid, 'submission_reconcile_record_failed' );
+-			return $this->error( 'submission_reconcile_record_failed' );
+-		}
+ 		if ( ! $this->submissions->complete_reconciliation( (string) $submission['attempt_uuid'] ) ) {
+ 			$this->retry_event( $event_uuid, 'outbox_completion_failed' );
+ 			return $this->error( 'outbox_completion_failed' );
+diff -ruN a/includes/core/class-session-store.php b/includes/core/class-session-store.php
+--- a/includes/core/class-session-store.php	2026-08-03 10:13:09.369988071 +0000
++++ b/includes/core/class-session-store.php	2026-08-03 10:13:09.365988070 +0000
+@@ -379,6 +379,12 @@
+ 		) {
+ 			return $this->error( 'submission_identity_conflict' );
+ 		}
++		if ( ! $this->transition_allows( (string) $current['state'], $state ) ) {
++			return $this->error( 'native_status_regression' );
++		}
++		if ( $state === (string) $current['state'] && empty( $current['reconciliation_required'] ) ) {
++			return $current;
++		}
+ 		global $wpdb;
+ 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) || ! method_exists( $wpdb, 'prepare' ) ) {
+ 			return $this->error( 'session_store_unavailable' );
+@@ -449,6 +455,19 @@
+ 		return 'sensitive' === $sensitivity_class ? self::SENSITIVE_TTL : self::ORDINARY_TTL;
+ 	}
+ 
++	private function transition_allows( string $current, string $target ): bool {
++		return match ( $current ) {
++			'published' => 'published' === $target,
++			'scheduled' => in_array( $target, array( 'scheduled', 'published', 'rejected', 'failed' ), true ),
++			'submitted' => in_array( $target, array( 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true ),
++			'rejected'  => 'rejected' === $target,
++			'failed'    => 'failed' === $target,
++			'draft'     => in_array( $target, array( 'draft', 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true ),
++			'new', 'valid', 'submitting', 'reconcile' => true,
++			default => false,
++		};
++	}
++
+ 	private function session_state_for_native( string $native_status ): string {
+ 		return match ( $native_status ) {
+ 			'draft'          => 'draft',
+diff -ruN a/tests/ReconciliationOutboxTest.php b/tests/ReconciliationOutboxTest.php
+--- a/tests/ReconciliationOutboxTest.php	2026-08-03 10:16:00.765994200 +0000
++++ b/tests/ReconciliationOutboxTest.php	2026-08-03 10:16:00.765994200 +0000
+@@ -136,4 +136,18 @@
+ 		$this->assertStringContainsString( "return 'stale';", $source );
+ 		$this->assertStringContainsString( "return 'completed';", $source );
+ 	}
++
++	public function test_review_round_seven_cross_store_identity_and_native_status_progression_are_enforced(): void {
++		$session = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-session-store.php' );
++		$service = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-reconciliation-service.php' );
++		$this->assertIsString( $session );
++		$this->assertIsString( $service );
++		$this->assertStringContainsString( 'private function transition_allows', $session );
++		$this->assertStringContainsString( "'native_status_regression'", $session );
++		$this->assertStringContainsString( 'hash_equals( (string) $session[\'adapter_key\'], (string) $submission[\'adapter_key\'] )', $service );
++		$this->assertLessThan(
++			strpos( $service, '$this->sessions->apply_reconciliation' ),
++			strpos( $service, '$this->submissions->mark_reconciled' )
++		);
++	}
+ }
