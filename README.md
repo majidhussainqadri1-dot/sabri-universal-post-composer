@@ -14,17 +14,22 @@ Sabri Universal Post Composer is the role-aware, adapter-driven creation gateway
 - File 25 remains the public profile, timeline, and visual-experience owner.
 - Missing or incompatible adapters fail independently; File 22 does not create substitute backends.
 
-## Version 0.2.0 candidate
+## Version 0.3.0 reconciliation candidate
 
-This branch adds the first private browser Composer over the reviewed server-side workflow coordinator:
+This branch extends the private browser Composer with durable submission identity, partial-failure recovery, and bounded reconciliation:
 
 - schema-driven accessible forms;
 - private REST namespace `sabri-composer/v1`;
 - native-owner draft creation and bounded autosave;
 - validation, same-origin private preview, idempotent submission, and status retrieval;
 - metadata-only `wp_supc_sessions` orchestration storage;
-- compare-and-swap lock versions and per-session operation leases;
-- idempotency identity persisted before native submission;
+- durable metadata-only `wp_supc_submissions` identity map and `wp_supc_outbox` reconciliation queue;
+- order-stable payload fingerprints that bind an idempotency key to one exact payload without storing the payload;
+- request-time and scheduled native-status reconciliation after timeout, network loss, or partial local failure;
+- five bounded retry attempts with 1 minute, 5 minute, 30 minute, 2 hour, and 12 hour backoff before dead-letter;
+- compare-and-swap lock versions and ten-minute per-session operation leases;
+- authority revalidation immediately before every native write and final submit dispatch;
+- ordinary session retention of 180 days and sensitive-session retention of 30 days;
 - adapter-version drift detection;
 - no File 22 storage of draft bodies, patient consent, identity evidence, or media bytes;
 - no browser `localStorage`, `sessionStorage`, or `IndexedDB` draft persistence;
@@ -67,7 +72,7 @@ Every adapter declares immutable versioned authority, native ownership, capabili
 
 ## Data and privacy boundary
 
-File 22 stores only bounded orchestration metadata: session UUID, user ID, adapter identity/version, opaque native reference, workflow state, lock version, idempotency key, error code, and timestamps. It does not duplicate permanent content, secure files, patient consent, identity evidence, clinical data, reviewer notes, or native publication history.
+File 22 stores only bounded orchestration metadata: session and attempt UUIDs, user ID, adapter identity/version, opaque native reference, workflow/reconciliation state, lock version, payload and response hashes, idempotency key, retry counters, error codes, and timestamps. It does not duplicate permanent content, secure files, patient consent, identity evidence, clinical data, reviewer notes, or native publication history.
 
 Private Create and REST surfaces are authenticated, nonce-protected, no-store, noindex, owner-scoped, bounded, and reauthorized on each operation. If required private response headers can no longer be guaranteed, the browser workflow fails closed.
 
@@ -81,12 +86,12 @@ Each coding batch follows:
 4. second correction and complete retest;
 5. exact-head deterministic package creation.
 
-The 0.2.0 candidate has passed PHPUnit, PHPStan, WordPress Coding Standards, PHP 8.1/8.2/8.3 syntax, repository contracts, JavaScript syntax, embedded manifest verification, external SHA-256 verification, and ZIP integrity at its reviewed source head. See:
+The current reconciliation candidate is governed by:
 
-`docs/FILE22-0.2.0-CORE-COMPOSER-REVIEW-AND-RELEASE-EVIDENCE-2026-08-02.md`
+`docs/FILE22-0.3.0-RECONCILIATION-REVIEW-R4-2026-08-03.md`
 
 ## Truthful status
 
-Version `0.2.0` is a coded, packaged, automated-QA-green candidate on Draft PR #23. It is not yet staging-accepted, live-deployed, or operational. Required remaining gates include exact File 21 `1.0.3.2` integration, Hostinger staging, real-role workflows, browser/device and WCAG 2.2 AA acceptance, active theme and LiteSpeed/cache tests, backup restoration, rollback rehearsal, Founder acceptance, approved live smoke testing, and post-deployment monitoring.
+Version `0.3.0` is a coded reconciliation candidate on Draft PR #23; exact-head packaging and automated QA govern promotion. It is not yet staging-accepted, live-deployed, or operational. Required remaining gates include exact File 21 `1.0.3.2` integration, Hostinger staging, real-role workflows, browser/device and WCAG 2.2 AA acceptance, active theme and LiteSpeed/cache tests, backup restoration, rollback rehearsal, Founder acceptance, approved live smoke testing, and post-deployment monitoring.
 
-The detailed pre-0.2.0 corrective history remains in `CHANGELOG.md` and the existing `docs/` review records.
+The detailed earlier corrective history remains in `CHANGELOG.md` and the existing `docs/` review records.
