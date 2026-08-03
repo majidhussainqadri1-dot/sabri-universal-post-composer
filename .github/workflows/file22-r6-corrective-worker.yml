@@ -1,6 +1,9 @@
 name: File 22 Plan-Complete R6 Source Reconstruction
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - feat/file22-plan-complete-core-1.0.0-2026-08-03
