@@ -114,4 +114,11 @@ final class ReconciliationOutboxTest extends TestCase {
 		$this->assertStringContainsString( 'public function complete_reconciliation', $store );
 		$this->assertStringContainsString( '$this->submissions->complete_reconciliation', $service );
 	}
+
+	public function test_review_round_four_abandoned_processing_jobs_have_a_bounded_reclaim_lease(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-submission-store.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( 'PROCESSING_LEASE_SECONDS = 600', $source );
+		$this->assertStringContainsString( "status = 'processing' AND updated_at <= %s", $source );
+	}
 }

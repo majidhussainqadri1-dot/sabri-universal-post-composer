@@ -25,6 +25,7 @@ final class Submission_Store {
 	private const SCHEMA_OPTION           = 'supc_submission_schema_version';
 	private const SCHEMA_VERSION          = '1.0.0';
 	private const MAX_ATTEMPTS            = 5;
+	private const PROCESSING_LEASE_SECONDS = 600;
 	private const BACKOFF_SECONDS         = array( 60, 300, 1800, 7200, 43200 );
 	private const ATTEMPT_STATES          = array( 'prepared', 'dispatched', 'retryable', 'reconcile', 'resolved', 'failed', 'dead_letter' );
 	private const OUTBOX_STATES           = array( 'queued', 'processing', 'retry', 'completed', 'dead_letter' );
@@ -403,11 +404,14 @@ final class Submission_Store {
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_results' ) || ! method_exists( $wpdb, 'prepare' ) ) {
 			return array();
 		}
+		$now          = gmdate( 'Y-m-d H:i:s' );
+		$lease_cutoff = gmdate( 'Y-m-d H:i:s', time() - self::PROCESSING_LEASE_SECONDS );
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT event_uuid,attempt_uuid,session_uuid,user_id,adapter_key,native_reference,topic,status,attempts,next_attempt_at,last_error_code,created_at,updated_at,processed_at FROM %i WHERE status IN ('queued','retry') AND next_attempt_at <= %s ORDER BY next_attempt_at ASC,id ASC LIMIT %d",
+				"SELECT event_uuid,attempt_uuid,session_uuid,user_id,adapter_key,native_reference,topic,status,attempts,next_attempt_at,last_error_code,created_at,updated_at,processed_at FROM %i WHERE (status IN ('queued','retry') AND next_attempt_at <= %s) OR (status = 'processing' AND updated_at <= %s) ORDER BY next_attempt_at ASC,id ASC LIMIT %d",
 				self::outbox_table_name(),
-				gmdate( 'Y-m-d H:i:s' ),
+				$now,
+				$lease_cutoff,
 				$limit
 			),
 			ARRAY_A
@@ -420,14 +424,17 @@ final class Submission_Store {
 			return false;
 		}
 		global $wpdb;
+		$now          = gmdate( 'Y-m-d H:i:s' );
+		$lease_cutoff = gmdate( 'Y-m-d H:i:s', time() - self::PROCESSING_LEASE_SECONDS );
 		$claimed = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
 			? $wpdb->query(
 				$wpdb->prepare(
-					"UPDATE %i SET status = 'processing', updated_at = %s WHERE event_uuid = %s AND status IN ('queued','retry') AND next_attempt_at <= %s",
+					"UPDATE %i SET status = 'processing', updated_at = %s WHERE event_uuid = %s AND ((status IN ('queued','retry') AND next_attempt_at <= %s) OR (status = 'processing' AND updated_at <= %s))",
 					self::outbox_table_name(),
-					gmdate( 'Y-m-d H:i:s' ),
+					$now,
 					strtolower( $event_uuid ),
-					gmdate( 'Y-m-d H:i:s' )
+					$now,
+					$lease_cutoff
 				)
 			)
 			: false;
