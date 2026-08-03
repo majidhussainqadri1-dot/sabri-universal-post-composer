@@ -45,6 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           cat tools/file22-r6-chunk-* | base64 -d | tar -xz
+          git checkout -- .github/workflows
           rm -f .github/workflows/file22-plan-complete-core.yml
           python3 - <<'PY'
           from pathlib import Path
@@ -70,7 +71,7 @@ jobs:
           rm -rf .phpunit.cache
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git rm .github/workflows/file22-r6-corrective-worker.yml tools/file22-r6-chunk-* tools/file22-r6-ready
+          git rm tools/file22-r6-chunk-* tools/file22-r6-ready
           git add -A
           git commit -m 'File 22 1.0.0-rc.1: reconstruct R6 source for forty-pass review'
           git push origin HEAD:feat/file22-plan-complete-core-1.0.0-2026-08-03
