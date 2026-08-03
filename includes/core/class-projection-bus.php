@@ -34,8 +34,13 @@ final class Projection_Bus {
 				}
 			}
 		}
-		$bounded['event']      = $event;
-		$bounded['occurred_at'] = gmdate( 'c' );
+		if ( ! isset( $bounded['session_uuid'], $bounded['adapter_key'] ) || ! Contract_Boundary::adapter_key( $bounded['adapter_key'] ) ) {
+			return false;
+		}
+		$bounded['event']            = $event;
+		$bounded['contract_version'] = defined( 'SUPC_PLAN_CONTRACT_VERSION' ) ? SUPC_PLAN_CONTRACT_VERSION : '1.0.0';
+		$bounded['event_uuid']       = function_exists( 'wp_generate_uuid4' ) ? strtolower( wp_generate_uuid4() ) : '';
+		$bounded['occurred_at']      = gmdate( 'c' );
 
 		// Companion owners consume these events; File 22 never delivers alerts,
 		// indexes content, or writes timeline/dashboard records itself.
