@@ -1,0 +1,83 @@
+name: Execute File 21 package identity correction
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  contents: write
+
+jobs:
+  execute-correction:
+    if: github.head_ref == 'feat/file22-plan-complete-core-1.0.0-2026-08-03'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feat/file22-plan-complete-core-1.0.0-2026-08-03
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Execute the bounded correction script
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          source = Path('.github/workflows/apply-file21-package-identity-fix.yml').read_text()
+          start_marker = "          python3 <<'PY'\n"
+          end_marker = "\n          PY\n"
+          if source.count(start_marker) != 1 or source.count(end_marker) != 1:
+              raise SystemExit('temporary correction workflow script markers are not unique')
+          script = source.split(start_marker, 1)[1].split(end_marker, 1)[0]
+          exec(compile(textwrap.dedent(script), '<file21-package-fix>', 'exec'), {'__name__': '__main__'})
+          Path('.github/workflows/apply-file21-package-identity-fix-pr.yml').unlink()
+          PY
+
+      - name: Install locked development dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Review cycle 1 — full correction verification
+        run: |
+          set -euo pipefail
+          composer lint
+          composer test
+          composer phpstan
+          composer phpcs
+          git diff --check
+
+      - name: Review cycle 2 — fresh adversarial verification
+        run: |
+          set -euo pipefail
+          php -r "define('ABSPATH', __DIR__ . '/'); require 'includes/core/class-version.php'; use Sabri\\UniversalComposer\\Core\\Version; assert(Version::valid_wordpress_package('1.0.3.2')); assert(Version::wordpress_package_at_least('1.0.3.2','1.0.3.2')); assert(!Version::wordpress_package_at_least('1.0.3.1','1.0.3.2')); assert(Version::wordpress_package_at_least('1.0.4','1.0.3.2')); assert(!Version::valid_wordpress_package('1.0.03.2')); assert(!Version::valid_wordpress_package('1.0.3.2.1')); assert(!Version::valid('1.0.3.2'));"
+          grep -F "SABRI_HNF_PACKAGE_VERSION" includes/core/class-browser-runtime.php
+          grep -F "file21_package_identity_missing" includes/core/class-browser-runtime.php
+          grep -F "file21_package_identity_invalid" includes/core/class-browser-runtime.php
+          grep -F "file21_package_identity_too_low" includes/core/class-browser-runtime.php
+          ! grep -F "file21_package_identity_unknown" includes/core/class-browser-runtime.php
+          composer test
+          composer phpstan
+          composer phpcs
+          git diff --check
+
+      - name: Commit corrected source to the Draft PR branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix: recognize File 21 four-part package identity'
+          git push origin HEAD:feat/file22-plan-complete-core-1.0.0-2026-08-03
