@@ -20,3 +20,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 14 | Upload cancellation idempotency | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 15 | Upload authority revalidation | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 16 | Operation-state allowlists | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 17 | Four-dimensional session state | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
