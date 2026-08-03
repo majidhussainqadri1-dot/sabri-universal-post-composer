@@ -10,9 +10,11 @@ declare(strict_types=1);
 namespace Sabri\UniversalComposer\Core;
 
 use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
+use Sabri\UniversalComposer\Http\Plan_Rest_Controller;
 use Sabri\UniversalComposer\Http\Reconciliation_Rest_Controller;
 use Sabri\UniversalComposer\Http\Rest_Controller;
 use Sabri\UniversalComposer\Presentation\Create_Surface;
+use Sabri\UniversalComposer\Presentation\My_Content_Workspace;
 use Sabri\UniversalComposer\Presentation\Workflow_Surface;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -23,31 +25,42 @@ final class Browser_Runtime {
 	private Registry $registry;
 	private Workflow_Coordinator $coordinator;
 	private Workflow_Surface $workflow_surface;
+	private My_Content_Workspace $my_content_workspace;
+	private Session_Store $sessions;
 	private Submission_Store $submission_store;
 	private Reconciliation_Service $reconciliation;
 	private Rest_Controller $rest_controller;
 	private Reconciliation_Rest_Controller $reconciliation_rest_controller;
+	private Plan_Rest_Controller $plan_rest_controller;
 	private bool $booted = false;
 
 	public function __construct() {
 		$plugin                  = Plugin::instance();
 		$this->registry          = $plugin->registry();
 		$this->coordinator       = $plugin->workflow_coordinator();
-		$sessions                = new Session_Store();
+		$this->sessions          = new Session_Store();
 		$this->submission_store  = new Submission_Store();
-		$this->reconciliation    = new Reconciliation_Service( $this->coordinator, $sessions, $this->submission_store );
+		$this->reconciliation    = new Reconciliation_Service( $this->coordinator, $this->sessions, $this->submission_store );
 		$this->workflow_surface  = new Workflow_Surface( $this->registry, $this->coordinator );
+		$this->my_content_workspace = new My_Content_Workspace( $this->registry, $this->coordinator, $this->sessions );
 		$this->rest_controller = new Rest_Controller(
 			$this->registry,
 			$this->coordinator,
-			$sessions
+			$this->sessions
 		);
 		$this->reconciliation_rest_controller = new Reconciliation_Rest_Controller(
 			$this->registry,
 			$this->coordinator,
-			$sessions,
+			$this->sessions,
 			$this->submission_store,
 			$this->reconciliation
+		);
+		$this->plan_rest_controller = new Plan_Rest_Controller(
+			$this->registry,
+			$this->coordinator,
+			$this->sessions,
+			new Upload_Token_Store(),
+			new Audit_Store()
 		);
 	}
 
@@ -58,9 +71,13 @@ final class Browser_Runtime {
 		$this->booted = true;
 		add_action( 'admin_init', array( Session_Store::class, 'maybe_install' ) );
 		add_action( 'admin_init', array( Submission_Store::class, 'maybe_install' ) );
+		add_action( 'admin_init', array( Upload_Token_Store::class, 'maybe_install' ) );
+		add_action( 'admin_init', array( Audit_Store::class, 'maybe_install' ) );
 		add_shortcode( 'sabri_universal_composer', array( $this, 'render_shortcode' ) );
+		add_shortcode( 'sabri_composer_my_content', array( $this->my_content_workspace, 'render' ) );
 		$this->rest_controller->register();
 		$this->reconciliation_rest_controller->register();
+		$this->plan_rest_controller->register();
 		add_action( 'supc_cleanup_expired_sessions', array( Submission_Store::class, 'cleanup_expired' ), 5 );
 		add_action( 'supc_cleanup_expired_sessions', array( Session_Store::class, 'cleanup_expired' ), 10 );
 		add_action( 'supc_process_reconciliation_queue', array( $this->reconciliation, 'process_due' ) );
@@ -142,7 +159,9 @@ final class Browser_Runtime {
 					'errorHeading'             => __( 'Please correct the following problems.', 'sabri-universal-post-composer' ),
 					'genericError'             => __( 'The request could not be completed. Your native draft was not duplicated.', 'sabri-universal-post-composer' ),
 					'requestBusy'              => __( 'Another draft operation is still running. Wait for it to finish and try again.', 'sabri-universal-post-composer' ),
-					'sessionRecovered'         => __( 'The workflow session was reconnected. Last update: %s. Draft field recovery remains with the native owner.', 'sabri-universal-post-composer' ),
+					'sessionRecovered'         => __( 'The workflow session was reconnected. Last update: %s.', 'sabri-universal-post-composer' ),
+					'draftRecovered'           => __( 'The native draft was recovered safely. Last update: %s.', 'sabri-universal-post-composer' ),
+					'draftRecoveryUnsupported' => __( 'This native adapter cannot safely restore draft fields yet. Editing is disabled to prevent a blank overwrite; open the native owner or start a new draft.', 'sabri-universal-post-composer' ),
 					'sessionNotRecovered'      => __( 'The previous workflow session could not be reconnected.', 'sabri-universal-post-composer' ),
 					'saving'                   => __( 'Saving draft…', 'sabri-universal-post-composer' ),
 					'saved'                    => __( 'Draft saved by the native content owner.', 'sabri-universal-post-composer' ),

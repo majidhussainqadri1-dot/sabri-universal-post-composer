@@ -7,17 +7,35 @@ parameters:
         - includes/core/class-contract-boundary.php
         - includes/core/class-runtime-trust.php
         - includes/core/class-safe-mode.php
+        - includes/core/class-migration-manager.php
         - includes/core/class-permission-resolver.php
         - includes/core/class-page-resolver.php
+        - includes/core/class-workspace-page-resolver.php
         - includes/core/class-registry.php
         - includes/core/class-workflow-validator.php
+        - includes/core/class-policy-engine.php
+        - includes/core/class-audit-store.php
+        - includes/core/class-upload-token-store.php
+        - includes/core/class-taxonomy-map.php
+        - includes/core/class-projection-bus.php
+        - includes/core/class-plan-completion-runtime.php
         - includes/core/class-workflow-coordinator.php
+        - includes/core/class-session-store.php
+        - includes/core/class-submission-store.php
+        - includes/core/class-reconciliation-service.php
+        - includes/core/class-browser-runtime.php
         - includes/core/class-plugin.php
         - includes/core/functions.php
+        - includes/http/class-rest-controller.php
+        - includes/http/class-reconciliation-rest-controller.php
+        - includes/http/class-plan-rest-controller.php
         - includes/presentation/class-create-surface.php
+        - includes/presentation/class-workflow-surface.php
+        - includes/presentation/class-my-content-workspace.php
         - includes/integration/class-shell-bridge.php
         - includes/integration/class-core-adapter-requirements.php
         - includes/admin/class-system-check-page.php
+        - includes/admin/class-activation-wizard.php
     bootstrapFiles:
         - tests/bootstrap.php
         - tests/phpstan-wordpress-stubs.php

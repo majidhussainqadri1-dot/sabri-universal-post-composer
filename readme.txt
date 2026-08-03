@@ -4,7 +4,7 @@ Tags: composer, publishing, workflow, homeopathy, platform
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 1.0.0-rc.1
 License: Proprietary
 
 Universal, role-aware creation gateway for the Sabri Social Homeopathy Platform.
@@ -13,7 +13,7 @@ Universal, role-aware creation gateway for the Sabri Social Homeopathy Platform.
 
 File 22 unifies authorized content-creation workflows without taking ownership from native modules. Permanent content, durable native drafts, moderation, secure media, patient consent, identity evidence, clinical records, publication history, and canonical URLs remain with their canonical owners.
 
-Version 0.3.0 adds a durable metadata-only submission map, payload-bound idempotency, request-time and scheduled reconciliation, bounded retry/dead-letter handling, partial-failure recovery, authoritative native-status recovery after network loss, and corrected ordinary/sensitive retention over the private schema-driven browser Composer.
+Version 1.0.0-rc.1 completes the File 22 Core source contract: role-aware type discovery, native-owned draft recovery and discard, four-dimensional workflow state, My Content metadata projection, policy holds, revision and opaque upload-token orchestration, audit/projection contracts, migration/rollback controls, and the durable reconciliation safeguards introduced in 0.3.0.
 
 File 22 never persists draft bodies, patient consent, identity evidence, or media bytes in its session, submission, or outbox tables. The browser client does not use localStorage, sessionStorage, or IndexedDB for draft content. Private surfaces are authenticated, nonce-protected, owner-scoped, no-store, noindex, bounded, and reauthorized on each operation.
 
@@ -27,13 +27,16 @@ Mandatory platform dependencies for this candidate:
 
 == Current Status ==
 
-Coded reconciliation candidate 0.3.0 on Draft PR #23. Exact-head automated QA and deterministic packaging are mandatory release evidence. It is not staging-accepted, live-deployed, operational, or approved as a production release.
+Coded plan-complete Core candidate 1.0.0-rc.1. Exact-head automated QA and deterministic packaging are mandatory release evidence. Optional native adapter packs remain independently certified. This package is not staging-accepted, live-deployed, operational, or approved as a production release.
 
 == Installation ==
 
 Install only on controlled staging with the exact reviewed package and SHA-256 evidence. Verify File 00, File 20, and File 21 contracts; Tools > Composer Health; real Founder/Administrator/doctor/suspended/visitor workflows; browser and WCAG 2.2 AA acceptance; LiteSpeed/theme/plugin compatibility; backup restoration; and rollback before any production promotion.
 
 == Changelog ==
+
+= 1.0.0-rc.1 =
+* Completes the harmonized File 22 Core source contract while preserving native ownership and separate staging/live gates.
 
 = 0.3.0 =
 * Added metadata-only `wp_supc_submissions` and `wp_supc_outbox` stores.

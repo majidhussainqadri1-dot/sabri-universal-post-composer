@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-rc.1 — Plan-complete Core contract 1.0.0 R6 candidate
+
+- Added four independent Composer, Review, Publication, and Safety/Hold session dimensions.
+- Added REST contract 1.2.0 for type discovery, My Content session listing, PATCH autosave, safe discard, status alias, revisions, and native upload-token orchestration.
+- Added optional native draft-lifecycle, upload-token, and revision adapter contracts.
+- Added common patient privacy, medical safety, references, copyright, emergency-content, reserved-type, and verified-seller policy holds without duplicating native policy engines.
+- Added metadata-only audit and upload-token stores with bounded retention.
+- Added versioned taxonomy aliases and metadata-only projection events for companion owners.
+- Added fail-soft optional adapter-pack diagnostics and plan-to-code traceability evidence.
+- Preserved the truthful boundary: source completion is not staging, live, or operational acceptance.
+
 ## 0.3.0 — Reconciliation candidate
 
 ### Fourth fresh adversarial review corrections

@@ -40,6 +40,35 @@
 		errors.focus();
 	};
 
+	const applyRecoveredPayload = (recovered) => {
+		if (!recovered || typeof recovered !== 'object' || Array.isArray(recovered)) {
+			return false;
+		}
+		form.querySelectorAll('[data-supc-field]').forEach((field) => {
+			if (!Object.prototype.hasOwnProperty.call(recovered, field.name)) {
+				return;
+			}
+			const value = recovered[field.name];
+			const type = field.dataset.fieldType;
+			if (type === 'checkbox') {
+				field.checked = Boolean(value);
+			} else if (type === 'multiselect' && Array.isArray(value)) {
+				const selected = new Set(value.map((item) => String(item)));
+				Array.from(field.options).forEach((option) => { option.selected = selected.has(option.value); });
+			} else if (value === null || value === undefined) {
+				field.value = '';
+			} else {
+				field.value = String(value);
+			}
+		});
+		dirty = false;
+		return true;
+	};
+
+	const disableUnsafeEditing = () => {
+		form.querySelectorAll('[data-supc-field], button').forEach((control) => { control.disabled = true; });
+	};
+
 	const payload = () => {
 		const result = {};
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
@@ -106,7 +135,14 @@
 			const restored = await request('/sessions/' + encodeURIComponent(uuid), 'GET');
 			if (restored.session.adapter_key === root.dataset.adapter) {
 				session = restored.session;
-				announce(config.strings.sessionRecovered.replace('%s', session.updated_at));
+				if (restored.draft_recovery === 'recovered' && applyRecoveredPayload(restored.draft_payload)) {
+					announce(config.strings.draftRecovered.replace('%s', session.updated_at));
+				} else if (session.native_reference_present && restored.draft_recovery === 'unsupported') {
+					disableUnsafeEditing();
+					announce(config.strings.draftRecoveryUnsupported);
+				} else {
+					announce(config.strings.sessionRecovered.replace('%s', session.updated_at));
+				}
 				if (session.reconciliation_required) {
 					window.setTimeout(() => attemptReconciliation(true), 1000);
 				}
@@ -289,7 +325,7 @@
 			announce(config.strings.submitFailed);
 			const details = error.data && error.data.details ? error.data.details : {};
 			const uncertain = Boolean(
-				session && session.native_reference && (
+				session && session.native_reference_present && (
 					session.reconciliation_required ||
 					details.reconciliation_required ||
 					!error.code ||

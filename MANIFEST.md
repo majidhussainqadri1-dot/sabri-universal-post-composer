@@ -7,6 +7,9 @@
 - `includes/contracts/interface-adapter.php`
 - `includes/contracts/interface-workflow-adapter.php`
 - `includes/contracts/interface-diagnostic-adapter.php`
+- `includes/contracts/interface-draft-lifecycle-adapter.php`
+- `includes/contracts/interface-upload-token-adapter.php`
+- `includes/contracts/interface-revision-adapter.php`
 - `includes/core/class-version.php`
 - `includes/core/class-contract-boundary.php`
 - `includes/core/class-runtime-trust.php`
@@ -15,14 +18,30 @@
 - `includes/core/class-page-resolver.php`
 - `includes/core/class-registry.php`
 - `includes/core/class-workflow-validator.php`
+- `includes/core/class-policy-engine.php`
+- `includes/core/class-audit-store.php`
+- `includes/core/class-upload-token-store.php`
+- `includes/core/class-taxonomy-map.php`
+- `includes/core/class-projection-bus.php`
+- `includes/core/class-plan-completion-runtime.php`
 - `includes/core/class-workflow-coordinator.php`
+- `includes/core/class-session-store.php`
+- `includes/core/class-submission-store.php`
+- `includes/core/class-reconciliation-service.php`
+- `includes/core/class-browser-runtime.php`
 - `includes/core/class-plugin.php`
 - `includes/core/functions.php`
 - `includes/integration/class-shell-bridge.php`
 - `includes/integration/class-core-adapter-requirements.php`
+- `includes/http/class-rest-controller.php`
+- `includes/http/class-reconciliation-rest-controller.php`
+- `includes/http/class-plan-rest-controller.php`
 - `includes/presentation/class-create-surface.php`
+- `includes/presentation/class-workflow-surface.php`
 - `includes/admin/class-system-check-page.php`
 - `assets/css/create-surface.css`
+- `assets/css/workflow-composer.css`
+- `assets/js/workflow-composer.js`
 
 ## Public documentation
 
@@ -37,6 +56,7 @@
 - `docs/DECISION-LOG.md`
 - `docs/ERROR-CODES.md`
 - `docs/FILE21-INTEGRATION.md`
+- `docs/FILE22-PLAN-TO-CODE-TRACEABILITY-R6-2026-08-03.md`
 - `docs/FILE22-CUMULATIVE-POST-CORRECTION-VERIFICATION-2026-07-30.md`
 - `docs/FILE22-POST-MERGE-INDEPENDENT-REVIEW-AND-CORRECTION-2026-07-30.md`
 - `docs/FILE22-SECOND-POST-MERGE-REVIEW-AND-CORRECTION-2026-07-30.md`
@@ -78,6 +98,8 @@ Historical phase review records remain evidence for their exact earlier source h
 ## Development and QA files
 
 - `.github/workflows/ci.yml`
+- `.github/workflows/file22-reconciliation-0.3.0.yml`
+- `.github/workflows/file22-plan-complete-core.yml`
 - `.github/workflows/cumulative-review-evidence.yml`
 - `.github/workflows/fifth-review-evidence.yml`
 - `.github/workflows/sixth-review-evidence.yml`
@@ -103,6 +125,7 @@ Historical phase review records remain evidence for their exact earlier source h
 - `tests/fixtures/sabri-unified-application-shell/includes/class-inherited-safe-mode.php`
 - `tests/fixtures/sabri-unified-application-shell/includes/functions.php`
 - `tests/fixtures/file20-legacy-1.0.0/sabri-unified-application-shell/sabri-unified-application-shell.php`
+- `tests/PlanCompletionCoreTest.php`
 - `tests/AccessibilityContrastTest.php`
 - `tests/AdminSystemCheckTest.php`
 - `tests/CoreAdapterRequirementsTest.php`
@@ -150,4 +173,4 @@ Development files are excluded from a future production ZIP according to `.disti
 
 ## Release boundary
 
-PR #6 has been merged into canonical `main`; subsequent cumulative review branches remain unmerged source corrections. No release ZIP, production checksum, machine-generated package manifest, controlled Files 00/20/21/22 staging acceptance, live deployment, or production approval has been declared. Complete role/IDOR/cache/browser/accessibility/RTL acceptance, actual File 20 visibility-contract upgrade, backup restoration, rollback proof, and explicit Founder authorization remain mandatory.
+PR #6 has been merged into canonical `main`; the R5 reconciliation branch has been merged; R6 plan-completion work remains a separate source candidate until its exact-head evidence and review are complete. No release ZIP, production checksum, machine-generated package manifest, controlled Files 00/20/21/22 staging acceptance, live deployment, or production approval has been declared. Complete role/IDOR/cache/browser/accessibility/RTL acceptance, actual File 20 visibility-contract upgrade, backup restoration, rollback proof, and explicit Founder authorization remain mandatory.

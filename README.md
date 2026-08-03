@@ -14,7 +14,7 @@ Sabri Universal Post Composer is the role-aware, adapter-driven creation gateway
 - File 25 remains the public profile, timeline, and visual-experience owner.
 - Missing or incompatible adapters fail independently; File 22 does not create substitute backends.
 
-## Version 0.3.0 reconciliation candidate
+## Version 1.0.0-rc.1 plan-complete Core candidate
 
 This branch extends the private browser Composer with durable submission identity, partial-failure recovery, and bounded reconciliation:
 
@@ -36,6 +36,22 @@ This branch extends the private browser Composer with durable submission identit
 - no-cache/noindex, nonce, ownership, request-size, and rate-limit boundaries;
 - responsive, keyboard-aware, reduced-motion, forced-colors, and RTL-compatible presentation;
 - deterministic exact-head packaging with embedded and external SHA-256 manifests.
+
+
+## Plan-complete Core contract 1.0.0 — R6 source candidate
+
+The merged R5 reconciliation runtime is now extended by a plan-to-code Core layer that closes the remaining source-contract gaps identified against the Definitive Master Plan v3.0 and the harmonized File 22 specification:
+
+- four independent session dimensions: Composer, Review, Publication, and Safety/Hold;
+- additive REST 1.2.0 contracts for type discovery, My Content session listing, PATCH autosave, discard, status alias, revisions, and native upload-token orchestration;
+- optional native draft-discard, upload-token, and revision interfaces;
+- common patient privacy, medical safety, reference, copyright-rights, emergency-content, and verified-marketplace-seller holds;
+- metadata-only upload-token and audit ledgers with bounded cleanup;
+- versioned taxonomy aliases without taking taxonomy ownership;
+- metadata-only projection events for Files 19, 23, 24, 25, Search, and SEO;
+- fail-soft diagnostic rows for separately certified Learning, Encyclopedia, Video, Reel, PDF, and Marketplace adapter packs.
+
+This is a **Core source candidate**, not a declaration that native adapter packs, Hostinger staging, production deployment, or operations are accepted. Permanent records and enforcement remain with native owners.
 
 ## Technical baseline
 
@@ -92,6 +108,6 @@ The current reconciliation candidate is governed by:
 
 ## Truthful status
 
-Version `0.3.0` is a coded reconciliation candidate on Draft PR #23; exact-head packaging and automated QA govern promotion. It is not yet staging-accepted, live-deployed, or operational. Required remaining gates include exact File 21 `1.0.3.2` integration, Hostinger staging, real-role workflows, browser/device and WCAG 2.2 AA acceptance, active theme and LiteSpeed/cache tests, backup restoration, rollback rehearsal, Founder acceptance, approved live smoke testing, and post-deployment monitoring.
+Version `1.0.0-rc.1` is the plan-complete File 22 Core source candidate. It includes the reconciled 0.3.0 submission/outbox foundation plus the missing Core contracts for type discovery, native draft recovery/discard, four-dimensional workflow state, My Content metadata, policy holds, revision/upload-token orchestration, audit/projection events, migration and rollback. Optional adapter packs are independently certified. It is not yet staging-accepted, live-deployed, or operational.
 
 The detailed earlier corrective history remains in `CHANGELOG.md` and the existing `docs/` review records.

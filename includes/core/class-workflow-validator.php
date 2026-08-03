@@ -31,8 +31,8 @@ final class Workflow_Validator {
 	private const FIELD_TYPES = array( 'text', 'textarea', 'select', 'multiselect', 'checkbox', 'number', 'date', 'datetime', 'url', 'email', 'opaque_reference' );
 	private const FIELD_PROPERTIES = array( 'type', 'label_code', 'description_code', 'required', 'privacy_class', 'minimum', 'maximum', 'choices' );
 	private const PRIVACY = array( 'public', 'private', 'sensitive' );
-	private const FINAL_STATUSES = array( 'draft', 'pending_review', 'scheduled', 'published', 'rejected', 'failed' );
-	private const DRAFT_STATUSES = array( 'draft', 'pending_review' );
+	private const FINAL_STATUSES = array( 'draft', 'pending_review', 'under_review', 'changes_requested', 'approved', 'withdrawn', 'scheduled', 'published', 'hidden', 'archived', 'deleted', 'rejected', 'failed' );
+	private const DRAFT_STATUSES = array( 'draft', 'pending_review', 'under_review', 'changes_requested' );
 	private const REFERENCE_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/D';
 	private const UUID_V4_PATTERN = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D';
 

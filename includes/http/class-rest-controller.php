@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Sabri\UniversalComposer\Http;
 
 use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
+use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Contract_Boundary;
 use Sabri\UniversalComposer\Core\Registry;
 use Sabri\UniversalComposer\Core\Safe_Mode;
@@ -58,7 +59,9 @@ final class Rest_Controller {
 	}
 
 	public function permission( WP_REST_Request $request ): bool|WP_Error {
-		if ( Safe_Mode::disabled() ) {
+		$method = strtoupper( (string) $request->get_method() );
+		$read_only = in_array( $method, array( 'GET', 'HEAD' ), true );
+		if ( Safe_Mode::disabled() && ( ! $read_only || ! Safe_Mode::read_only_recovery_allowed() ) ) {
 			return $this->error( 'safe_mode', 503 );
 		}
 		$user_id = get_current_user_id();
@@ -68,6 +71,9 @@ final class Rest_Controller {
 		$nonce = (string) $request->get_header( 'X-WP-Nonce' );
 		if ( '' === $nonce || ! function_exists( 'wp_verify_nonce' ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
 			return $this->error( 'invalid_rest_nonce', 403 );
+		}
+		if ( ! ( new Permission_Resolver() )->account_is_eligible( $user_id ) ) {
+			return $this->error( 'account_not_eligible', 403 );
 		}
 		if ( ! $this->within_rate_limit( $user_id ) ) {
 			return $this->error( 'rate_limited', 429 );
@@ -95,7 +101,7 @@ final class Rest_Controller {
 
 	public function schema( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$adapter = sanitize_key( (string) $request['adapter'] );
-		$result  = $this->coordinator->schema( get_current_user_id(), $adapter );
+		$result  = $this->coordinator->schema_read_only( get_current_user_id(), $adapter );
 		return $result instanceof WP_Error ? $this->normalize_error( $result ) : $this->response( $result );
 	}
 
@@ -117,7 +123,11 @@ final class Rest_Controller {
 		if ( $schema instanceof WP_Error ) {
 			return $this->normalize_error( $schema );
 		}
-		$session = $this->sessions->create( get_current_user_id(), $adapter_key, (string) $adapter->schema_version() );
+		$base        = $this->registry->adapter_contract( $adapter_key );
+		$sensitivity = isset( $base['privacy_classification'] ) && is_string( $base['privacy_classification'] )
+			? sanitize_key( $base['privacy_classification'] )
+			: 'private';
+		$session = $this->sessions->create( get_current_user_id(), $adapter_key, (string) $adapter->schema_version(), $sensitivity );
 		return $session instanceof WP_Error ? $this->normalize_error( $session ) : $this->response( array( 'session' => $this->public_session( $session ), 'schema' => $schema ), 201 );
 	}
 
@@ -128,18 +138,34 @@ final class Rest_Controller {
 		}
 		// Session ownership is not a durable authorization grant. Revalidate the
 		// current File 00 and native adapter policy before exposing any mapping.
-		$authorization = $this->coordinator->schema( get_current_user_id(), (string) $session['adapter_key'] );
+		$authorization = $this->coordinator->schema_read_only( get_current_user_id(), (string) $session['adapter_key'] );
 		if ( $authorization instanceof WP_Error ) {
 			return $this->normalize_error( $authorization );
 		}
-		$status = null;
+		$status         = null;
+		$draft_payload  = null;
+		$draft_recovery = 'not_applicable';
 		if ( is_string( $session['native_reference'] ) && '' !== $session['native_reference'] ) {
-			$status = $this->coordinator->status( get_current_user_id(), (string) $session['adapter_key'], (string) $session['native_reference'] );
+			$status = $this->coordinator->status_read_only( get_current_user_id(), (string) $session['adapter_key'], (string) $session['native_reference'] );
 			if ( $status instanceof WP_Error ) {
 				$status = null;
 			}
 		}
-		return $this->response( array( 'session' => $this->public_session( $session ), 'native_status' => $status ) );
+		if ( is_string( $session['native_reference'] ) && '' !== $session['native_reference'] ) {
+			$recovered = $this->coordinator->load_draft( get_current_user_id(), (string) $session['adapter_key'], (string) $session['native_reference'] );
+			if ( $recovered instanceof WP_Error ) {
+				$code = is_callable( array( $recovered, 'get_error_code' ) ) ? (string) $recovered->get_error_code() : '';
+				if ( 'supc_draft_recovery_unsupported' !== $code ) {
+					return $this->normalize_error( $recovered, array( 'session' => $this->public_session( $session, false ) ) );
+				}
+				$draft_recovery = 'unsupported';
+			} else {
+				$draft_payload  = $recovered;
+				$draft_recovery = 'recovered';
+			}
+		}
+		$native_authorized = is_array( $status ) || 'recovered' === $draft_recovery;
+		return $this->response( array( 'session' => $this->public_session( $session, $native_authorized ), 'native_status' => $status, 'draft_payload' => $draft_payload, 'draft_recovery' => $draft_recovery ) );
 	}
 
 	public function autosave( WP_REST_Request $request ): WP_REST_Response|WP_Error {
@@ -159,7 +185,8 @@ final class Rest_Controller {
 				$context['payload']
 			);
 			if ( $result instanceof WP_Error ) {
-				return $this->normalize_error( $result );
+				$held = $this->sessions->apply_policy_error( $context['session'], $result );
+				return $this->normalize_error( $result, array( 'session' => $this->public_session( $held ) ) );
 			}
 			$updated = $this->sessions->update(
 				(string) $context['session']['session_uuid'],
@@ -184,7 +211,11 @@ final class Rest_Controller {
 			return $context;
 		}
 		$result = $this->coordinator->validate( get_current_user_id(), (string) $context['session']['adapter_key'], $context['payload'] );
-		return $result instanceof WP_Error ? $this->normalize_error( $result ) : $this->response( $result );
+		if ( $result instanceof WP_Error ) {
+			$held = $this->sessions->apply_policy_error( $context['session'], $result );
+			return $this->normalize_error( $result, array( 'session' => $this->public_session( $held ) ) );
+		}
+		return $this->response( $result );
 	}
 
 	public function preview( WP_REST_Request $request ): WP_REST_Response|WP_Error {
@@ -203,7 +234,11 @@ final class Rest_Controller {
 			$payload                     = $context['payload'];
 			$payload['native_reference'] = $context['session']['native_reference'];
 			$result                      = $this->coordinator->preview( get_current_user_id(), (string) $context['session']['adapter_key'], $payload );
-			return $result instanceof WP_Error ? $this->normalize_error( $result ) : $this->response( $result );
+			if ( $result instanceof WP_Error ) {
+				$held = $this->sessions->apply_policy_error( $context['session'], $result );
+				return $this->normalize_error( $result, array( 'session' => $this->public_session( $held ) ) );
+			}
+			return $this->response( $result );
 		} finally {
 			$this->release_session_lock( strtolower( (string) $request['session'] ), $token );
 		}
@@ -237,9 +272,11 @@ final class Rest_Controller {
 			$payload['native_reference'] = $session['native_reference'];
 			$result                      = $this->coordinator->submit( get_current_user_id(), (string) $session['adapter_key'], $key, $payload );
 			if ( $result instanceof WP_Error ) {
-				return $this->normalize_error( $result, array( 'session' => $this->public_session( $session ) ) );
+				$held = $this->sessions->apply_policy_error( $session, $result );
+				return $this->normalize_error( $result, array( 'session' => $this->public_session( $held ) ) );
 			}
-			$state   = in_array( (string) ( $result['status'] ?? '' ), array( 'scheduled', 'published', 'rejected' ), true ) ? (string) $result['status'] : 'submitted';
+			$native_status = sanitize_key( (string) ( $result['status'] ?? 'pending_review' ) );
+			$state         = 'pending_review' === $native_status ? 'submitted' : $native_status;
 			$updated = $this->sessions->update(
 				$uuid,
 				get_current_user_id(),
@@ -260,6 +297,12 @@ final class Rest_Controller {
 		if ( $session instanceof WP_Error ) {
 			return $session;
 		}
+		$route     = trim( (string) $request->get_route(), '/' );
+		$segments  = explode( '/', $route );
+		$operation = sanitize_key( (string) end( $segments ) );
+		if ( ! $this->session_allows_operation( $session, $operation ) ) {
+			return $this->error( 'session_not_editable', 409, array( 'session' => $this->public_session( $session, false ) ) );
+		}
 		$body = $this->body( $request );
 		if ( $body instanceof WP_Error ) {
 			return $body;
@@ -274,6 +317,19 @@ final class Rest_Controller {
 			return $this->error( 'adapter_version_changed', 409, array( 'session' => $this->public_session( $session ) ) );
 		}
 		return array( 'session' => $session, 'payload' => $payload );
+	}
+
+
+	/** @param array<string,mixed> $session */
+	private function session_allows_operation( array $session, string $operation ): bool {
+		if ( ! empty( $session['reconciliation_required'] ) || in_array( (string) $session['state'], array( 'submitting', 'reconcile' ), true ) ) {
+			return false;
+		}
+		$editable = array( 'new', 'draft', 'valid', 'changes_requested', 'rejected', 'failed', 'withdrawn' );
+		if ( ! in_array( (string) $session['state'], $editable, true ) ) {
+			return false;
+		}
+		return 'submit' !== $operation || in_array( (string) $session['state'], array( 'draft', 'valid' ), true );
 	}
 
 	/** @return array<string,mixed>|WP_Error */
@@ -333,13 +389,19 @@ final class Rest_Controller {
 	}
 
 	/** @param array<string,mixed> $session @return array<string,mixed> */
-	private function public_session( array $session ): array {
+	private function public_session( array $session, bool $expose_native_reference = true ): array {
 		return array(
 			'session_uuid'    => (string) $session['session_uuid'],
 			'adapter_key'      => (string) $session['adapter_key'],
 			'adapter_version'  => (string) $session['adapter_version'],
-			'native_reference' => $session['native_reference'],
+			'native_reference' => $expose_native_reference ? $session['native_reference'] : null,
+			'native_reference_present' => is_string( $session['native_reference'] ?? null ) && '' !== (string) $session['native_reference'],
 			'state'            => (string) $session['state'],
+			'composer_state'   => (string) ( $session['composer_state'] ?? 'new' ),
+			'review_state'     => (string) ( $session['review_state'] ?? 'draft' ),
+			'publication_state'=> (string) ( $session['publication_state'] ?? 'unpublished' ),
+			'hold_state'       => (string) ( $session['hold_state'] ?? 'clear' ),
+			'reconciliation_required' => ! empty( $session['reconciliation_required'] ),
 			'lock_version'     => (int) $session['lock_version'],
 			'updated_at'       => (string) $session['updated_at'],
 			'expires_at'       => (string) $session['expires_at'],
@@ -371,6 +433,7 @@ final class Rest_Controller {
 			'supc_not_found', 'supc_session_not_found' => 404,
 			'supc_expired', 'supc_session_expired' => 410,
 			'supc_validation_failed',
+			'supc_policy_violation',
 			'supc_workflow_payload_required_field_missing',
 			'supc_workflow_payload_field_invalid' => 422,
 			'supc_conflict',

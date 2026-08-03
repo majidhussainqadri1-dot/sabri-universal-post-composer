@@ -24,7 +24,10 @@ if ( ! defined( 'SUPC_SUBJECT_SCHEMA_API_VERSION' ) ) {
 	define( 'SUPC_SUBJECT_SCHEMA_API_VERSION', '1.0.0' );
 }
 if ( ! defined( 'SUPC_REST_API_VERSION' ) ) {
-	define( 'SUPC_REST_API_VERSION', '1.1.0' );
+	define( 'SUPC_REST_API_VERSION', '1.2.0' );
+}
+if ( ! defined( 'SUPC_PLAN_CONTRACT_VERSION' ) ) {
+	define( 'SUPC_PLAN_CONTRACT_VERSION', '1.0.0' );
 }
 
 ( static function (): void {
@@ -50,7 +53,7 @@ if ( ! defined( 'SUPC_REST_API_VERSION' ) ) {
 	if ( ! defined( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' ) ) {
 		define( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED', true );
 	}
-	if ( ! class_exists( '\\Sabri\\UnifiedShell\\SafeMode', false ) ) {
+	if ( ! class_exists( '\Sabri\UnifiedShell\SafeMode', false ) ) {
 		require_once $shell_path . '/includes/class-safe-mode.php';
 	}
 	require_once $shell_path . '/includes/functions.php';
@@ -63,14 +66,29 @@ if ( ! function_exists( 'wp_json_encode' ) ) {
 }
 
 require_once SUPC_PATH . 'includes/contracts/interface-workflow-adapter.php';
+require_once SUPC_PATH . 'includes/contracts/interface-draft-lifecycle-adapter.php';
+require_once SUPC_PATH . 'includes/contracts/interface-draft-recovery-adapter.php';
+require_once SUPC_PATH . 'includes/contracts/interface-upload-token-adapter.php';
+require_once SUPC_PATH . 'includes/contracts/interface-revision-adapter.php';
 require_once SUPC_PATH . 'includes/core/class-workflow-validator.php';
+require_once SUPC_PATH . 'includes/core/class-policy-engine.php';
+require_once SUPC_PATH . 'includes/core/class-audit-store.php';
+require_once SUPC_PATH . 'includes/core/class-upload-token-store.php';
+require_once SUPC_PATH . 'includes/core/class-taxonomy-map.php';
+require_once SUPC_PATH . 'includes/core/class-projection-bus.php';
 require_once SUPC_PATH . 'includes/core/class-workflow-coordinator.php';
 require_once SUPC_PATH . 'includes/core/class-session-store.php';
+require_once SUPC_PATH . 'includes/core/class-plan-completion-runtime.php';
+require_once SUPC_PATH . 'includes/core/class-workspace-page-resolver.php';
+require_once SUPC_PATH . 'includes/core/class-migration-manager.php';
 require_once SUPC_PATH . 'includes/core/class-submission-store.php';
 require_once SUPC_PATH . 'includes/core/class-reconciliation-service.php';
 require_once SUPC_PATH . 'includes/presentation/class-workflow-surface.php';
+require_once SUPC_PATH . 'includes/presentation/class-my-content-workspace.php';
 require_once SUPC_PATH . 'includes/http/class-rest-controller.php';
 require_once SUPC_PATH . 'includes/http/class-reconciliation-rest-controller.php';
+require_once SUPC_PATH . 'includes/http/class-plan-rest-controller.php';
 require_once SUPC_PATH . 'includes/core/class-plugin.php';
 require_once SUPC_PATH . 'includes/core/class-browser-runtime.php';
+require_once SUPC_PATH . 'includes/admin/class-activation-wizard.php';
 require_once SUPC_PATH . 'includes/core/functions.php';
