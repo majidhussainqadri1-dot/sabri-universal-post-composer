@@ -1,4 +1,4 @@
-name: Execute File 21 package identity correction
+name: Export File 21 package identity correction
 
 on:
   pull_request:
@@ -8,10 +8,10 @@ on:
       - synchronize
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  execute-correction:
+  export-corrected-source:
     if: github.head_ref == 'feat/file22-plan-complete-core-1.0.0-2026-08-03'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -73,11 +73,27 @@ jobs:
           composer phpcs
           git diff --check
 
-      - name: Commit corrected source to the Draft PR branch
+      - name: Prepare corrected-source artifact
+        shell: bash
         run: |
           set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'fix: recognize File 21 four-part package identity'
-          git push origin HEAD:feat/file22-plan-complete-core-1.0.0-2026-08-03
+          rm -rf corrected-source .phpunit.cache
+          mkdir -p corrected-source/includes/core corrected-source/includes/admin corrected-source/tests corrected-source/docs corrected-source/.github/workflows
+          cp includes/core/class-version.php corrected-source/includes/core/
+          cp includes/core/class-browser-runtime.php corrected-source/includes/core/
+          cp includes/admin/class-system-check-page.php corrected-source/includes/admin/
+          cp tests/PlanCompletionCoreTest.php corrected-source/tests/
+          cp docs/ERROR-CODES.md corrected-source/docs/
+          cp docs/FILE21-PACKAGE-IDENTITY-CORRECTION-R8-2026-08-03.md corrected-source/docs/
+          cp CHANGELOG.md corrected-source/
+          cp .github/workflows/file22-reconciliation-0.3.0.yml corrected-source/.github/workflows/
+          git diff --binary > corrected-source/FILE21-PACKAGE-IDENTITY-CORRECTION.patch
+          sha256sum $(find corrected-source -type f -print | sort) > corrected-source/SHA256SUMS
+
+      - name: Upload corrected source and review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: file22-file21-package-identity-correction
+          path: corrected-source/
+          if-no-files-found: error
+          retention-days: 30
