@@ -11,3 +11,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 5 | Concurrent rate-limit bypass | A short owner-token mutex now serializes each rate-limit window. |
 | 6 | Audit cleanup and retention boundary | Audit cleanup now exits safely when the owner table is absent. |
 | 7 | Unbounded policy-filter amplification | Companion policy codes are bounded before validation and deduplication. |
+| 8 | Unbounded taxonomy alias expansion | Mutable taxonomy aliases are bounded per canonical type. |

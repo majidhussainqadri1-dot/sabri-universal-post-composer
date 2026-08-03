@@ -40,7 +40,7 @@ final class Taxonomy_Map {
 		// bounded before it can influence orchestration.
 		foreach ( $map as $canonical => $aliases ) {
 			$provided = isset( $filtered[ $canonical ] ) && is_array( $filtered[ $canonical ] ) ? $filtered[ $canonical ] : array();
-			foreach ( $provided as $alias ) {
+			foreach ( array_slice( $provided, 0, 128 ) as $alias ) {
 				if ( ! is_string( $alias ) ) {
 					continue;
 				}
