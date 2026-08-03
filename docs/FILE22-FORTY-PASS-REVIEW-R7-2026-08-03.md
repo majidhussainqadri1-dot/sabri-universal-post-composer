@@ -17,3 +17,4 @@ This record covers forty fresh repository-level review → correction → regres
 | 11 | Concurrent draft deletion | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 12 | Draft discard failure audit | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
 | 13 | Upload completion idempotency | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
+| 14 | Upload cancellation idempotency | No new source defect was found in this focus; the missing review/regression evidence was recorded and the full suite was rerun. |
