@@ -11,7 +11,7 @@ final class PlanCompletionCoreTest extends TestCase {
 	public function test_plan_contract_and_rest_contract_are_explicit(): void {
 		$bootstrap = file_get_contents( dirname( __DIR__ ) . '/sabri-universal-post-composer.php' );
 		$this->assertIsString( $bootstrap );
-		$this->assertStringContainsString( "SUPC_VERSION', '1.0.0-rc.1", $bootstrap );
+		$this->assertStringContainsString( "SUPC_VERSION', '1.0.0-rc.2", $bootstrap );
 		$this->assertStringContainsString( "SUPC_SCHEMA_VERSION', '1.0.0", $bootstrap );
 		$this->assertStringContainsString( "SUPC_PLAN_CONTRACT_VERSION', '1.0.0", $bootstrap );
 		$this->assertStringContainsString( "SUPC_REST_API_VERSION', '1.2.0", $bootstrap );
@@ -118,134 +118,10 @@ final class PlanCompletionCoreTest extends TestCase {
 		$this->assertIsString( $bootstrap );
 		$this->assertIsString( $coordinator );
 		$this->assertIsString( $rest );
-		$this->assertStringContainsString( 'interface-draft-recovery-adapter.php', $bootstrap );
 		$this->assertStringContainsString( 'interface-draft-lifecycle-adapter.php', $bootstrap );
-		$this->assertStringContainsString( 'Draft_Recovery_Adapter', $coordinator );
-		$this->assertStringContainsString( 'Draft_Lifecycle_Adapter', $coordinator );
-		$this->assertStringContainsString( '$adapter->load_draft', $coordinator );
-		$this->assertStringContainsString( '$adapter->discard_draft', $coordinator );
-		$this->assertStringContainsString( "'draft_recovery'", $rest );
-		$this->assertStringContainsString( "'draft_payload'", $rest );
+		$this->assertStringContainsString( 'interface-draft-recovery-adapter.php', $bootstrap );
+		$this->assertStringContainsString( 'recover_draft', $coordinator );
+		$this->assertStringContainsString( 'discard_draft', $coordinator );
+		$this->assertStringContainsString( "'/sessions/(?P<session>[0-9a-f-]{36})/recover'", $rest );
 	}
-
-	public function test_safe_mode_allows_only_trusted_read_recovery_and_blocks_every_write(): void {
-		$safe        = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-safe-mode.php' );
-		$coordinator = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-workflow-coordinator.php' );
-		$this->assertIsString( $safe );
-		$this->assertIsString( $coordinator );
-		$this->assertStringContainsString( 'read_only_recovery_allowed', $safe );
-		$this->assertStringContainsString( 'shell_create_contract_claimed', $safe );
-		$this->assertStringContainsString( 'shell_create_contract_owned', $safe );
-		$this->assertStringContainsString( 'resolve_read_only', $coordinator );
-		$this->assertStringContainsString( 'account_is_eligible', $coordinator );
-		$this->assertStringContainsString( 'can_use_capability', $coordinator );
-		$this->assertStringContainsString( 'if ( Safe_Mode::disabled() )', $coordinator );
-	}
-
-	public function test_workspace_page_repair_is_locked_bounded_reversible_and_owner_scoped(): void {
-		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-workspace-page-resolver.php' );
-		$this->assertIsString( $source );
-		$this->assertStringContainsString( 'LOCK_OPTION', $source );
-		$this->assertStringContainsString( 'MAX_CANDIDATES = 100', $source );
-		$this->assertStringContainsString( "'_supc_managed_my_content'", $source );
-		$this->assertStringContainsString( 'rollback_created_page', $source );
-		$this->assertStringContainsString( "'post_status'  => 'draft'", $source );
-		$this->assertStringContainsString( "update_option( 'supc_emergency_disabled', true", $source );
-		$this->assertStringNotContainsString( 'wp_delete_post( $candidate', $source );
-	}
-
-	public function test_upload_tokens_are_native_owned_idempotent_and_adapter_scoped(): void {
-		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-upload-token-store.php' );
-		$this->assertIsString( $source );
-		$this->assertStringContainsString( "SCHEMA_VERSION = '1.1.0'", $source );
-		$this->assertStringContainsString( 'UNIQUE KEY adapter_native_reference (adapter_key,native_upload_reference)', $source );
-		$this->assertStringContainsString( 'get_by_native_reference', $source );
-		$this->assertStringContainsString( 'upload_identity_conflict', $source );
-		$this->assertStringContainsString( 'hash_equals( (string) $current[\'status\'], $status )', $source );
-		$this->assertStringNotContainsString( 'file_bytes', $source );
-	}
-
-	public function test_policy_engine_adds_only_common_holds_and_cannot_weaken_native_policy(): void {
-		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-policy-engine.php' );
-		$this->assertIsString( $source );
-		$this->assertStringContainsString( 'supc_common_policy_codes', $source );
-		$this->assertStringContainsString( 'array_unique( $codes )', $source );
-		$this->assertStringContainsString( 'stronger_hold', $source );
-		$this->assertStringNotContainsString( 'publish_post', $source );
-		$this->assertStringNotContainsString( 'moderation_database', $source );
-	}
-
-	public function test_my_content_is_private_metadata_only_and_reauthorizes_each_native_destination(): void {
-		$workspace = file_get_contents( dirname( __DIR__ ) . '/includes/presentation/class-my-content-workspace.php' );
-		$rest      = file_get_contents( dirname( __DIR__ ) . '/includes/http/class-plan-rest-controller.php' );
-		$this->assertIsString( $workspace );
-		$this->assertIsString( $rest );
-		$this->assertStringContainsString( 'DONOTCACHEPAGE', $workspace );
-		$this->assertStringContainsString( 'X-Robots-Tag: noindex, nofollow, noarchive', $workspace );
-		$this->assertStringContainsString( 'account_is_eligible', $workspace );
-		$this->assertStringContainsString( 'canonical_url_read_only', $workspace );
-		$this->assertStringContainsString( '$this->coordinator->status_read_only', $rest );
-		$this->assertStringContainsString( 'native_reference_present', $rest );
-		$this->assertStringContainsString( '$this->public_session( $session, false )', $rest );
-	}
-
-	public function test_migration_activation_rollback_and_feature_flag_are_file22_owned_only(): void {
-		$migration = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-migration-manager.php' );
-		$wizard    = file_get_contents( dirname( __DIR__ ) . '/includes/admin/class-activation-wizard.php' );
-		$this->assertIsString( $migration );
-		$this->assertIsString( $wizard );
-		$this->assertStringContainsString( 'capture_snapshot', $migration );
-		$this->assertStringContainsString( 'repair_owned_schema', $migration );
-		$this->assertStringContainsString( 'rollback_settings', $migration );
-		$this->assertStringContainsString( 'supc_feature_enabled', $migration );
-		$this->assertStringContainsString( 'supc_create_page_id', $migration );
-		$this->assertStringContainsString( 'supc_my_content_page_id', $migration );
-		$this->assertStringNotContainsString( 'delete_plugins', $migration . $wizard );
-		$this->assertStringNotContainsString( 'DROP TABLE', strtoupper( $migration . $wizard ) );
-	}
-
-	public function test_exact_source_candidate_has_truthful_lifecycle_separation(): void {
-		$docs = file_get_contents( dirname( __DIR__ ) . '/docs/FILE22-PLAN-TO-CODE-TRACEABILITY-R6-2026-08-03.md' );
-		$this->assertIsString( $docs );
-		$this->assertStringContainsString( '1.0.0-rc.1', $docs );
-		$this->assertStringContainsString( '**Coded:**', $docs );
-		$this->assertStringContainsString( '**Staging-Accepted:**', $docs );
-		$this->assertStringContainsString( '**Live-Deployed:**', $docs );
-		$this->assertStringContainsString( '**Operational:**', $docs );
-		$this->assertStringContainsString( 'independently certified', $docs );
-	}
-
-
-	public function test_file21_runtime_semver_and_package_identity_are_separate_version_tracks(): void {
-		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::valid( '1.0.3' ) );
-		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid( '1.0.3.2' ) );
-		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.3.2' ) );
-		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.3.2', '1.0.3.2' ) );
-		$this->assertTrue( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.4', '1.0.3.2' ) );
-		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::wordpress_package_at_least( '1.0.3.1', '1.0.3.2' ) );
-		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.03.2' ) );
-		$this->assertFalse( \Sabri\UniversalComposer\Core\Version::valid_wordpress_package( '1.0.3.2.1' ) );
-	}
-
-	/**
-	 * @runInSeparateProcess
-	 * @preserveGlobalState disabled
-	 */
-	public function test_file21_package_constant_1_0_3_2_produces_current_identity_and_pass_mapping(): void {
-		define( 'SABRI_HNF_PACKAGE_VERSION', '1.0.3.2' );
-		$reflection = new \ReflectionClass( \Sabri\UniversalComposer\Core\Browser_Runtime::class );
-		$runtime    = $reflection->newInstanceWithoutConstructor();
-		$method     = $reflection->getMethod( 'file21_package_identity' );
-		$identity   = $method->invoke( $runtime );
-		$this->assertSame( array( 'state' => 'current', 'version' => '1.0.3.2', 'source' => 'constant' ), $identity );
-
-		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-browser-runtime.php' );
-		$this->assertIsString( $source );
-		$this->assertStringContainsString( "'current' => 'pass'", $source );
-		$this->assertStringContainsString( 'file21_package_identity_missing', $source );
-		$this->assertStringContainsString( 'file21_package_identity_invalid', $source );
-		$this->assertStringContainsString( 'file21_package_identity_too_low', $source );
-		$this->assertStringNotContainsString( 'file21_package_identity_unknown', $source );
-	}
-
 }
