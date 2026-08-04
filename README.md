@@ -2,6 +2,10 @@
 
 Sabri Universal Post Composer is the role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform. It unifies authorized creation workflows while preserving every native module as the canonical owner of its content, media, consent, moderation, publication state, durable draft, and canonical URL.
 
+## Version 1.0.0-rc.2 File 23 Composer bridge
+
+The plan-complete File 22 candidate now supplies File 23 with the exact managed Composer URL and a bounded readiness provider through Adapter Contract 2.0.0. The bridge never guesses `/create/`, never projects draft bodies or Composer sessions as content inventory, and never permits File 23 to mutate File 22 directly. Create and Edit remain owned by the canonical File 22 browser workflow. Provider maturity remains unreviewed until separately accepted on Hostinger staging.
+
 ## Governing law
 
 - One creation gateway; multiple authorized native content systems.
@@ -108,6 +112,6 @@ The current reconciliation candidate is governed by:
 
 ## Truthful status
 
-Version `1.0.0-rc.1` is the plan-complete File 22 Core source candidate. It includes the reconciled 0.3.0 submission/outbox foundation plus the missing Core contracts for type discovery, native draft recovery/discard, four-dimensional workflow state, My Content metadata, policy holds, revision/upload-token orchestration, audit/projection events, migration and rollback. Optional adapter packs are independently certified. It is not yet staging-accepted, live-deployed, or operational.
+Version `1.0.0-rc.2` is the plan-complete File 22 Core source candidate. It includes the reconciled 0.3.0 submission/outbox foundation plus the missing Core contracts for type discovery, native draft recovery/discard, four-dimensional workflow state, My Content metadata, policy holds, revision/upload-token orchestration, audit/projection events, migration and rollback. Optional adapter packs are independently certified. It is not yet staging-accepted, live-deployed, or operational.
 
 The detailed earlier corrective history remains in `CHANGELOG.md` and the existing `docs/` review records.
