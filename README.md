@@ -14,6 +14,10 @@ Sabri Universal Post Composer is the role-aware, adapter-driven creation gateway
 - File 25 remains the public profile, timeline, and visual-experience owner.
 - Missing or incompatible adapters fail independently; File 22 does not create substitute backends.
 
+## Version 0.3.1 File 23 Composer bridge
+
+File 22 now supplies File 23 with the exact managed Composer URL and a bounded readiness provider through Adapter Contract 2.0.0. The bridge never guesses `/create/`, never projects draft bodies or Composer sessions as content inventory, and never permits File 23 to mutate File 22 directly. Create and Edit remain owned by the canonical File 22 browser workflow. Provider maturity remains unreviewed until separately accepted on Hostinger staging.
+
 ## Version 0.3.0 reconciliation candidate
 
 This branch extends the private browser Composer with durable submission identity, partial-failure recovery, and bounded reconciliation:
@@ -92,6 +96,6 @@ The current reconciliation candidate is governed by:
 
 ## Truthful status
 
-Version `0.3.0` is a coded reconciliation candidate on Draft PR #23; exact-head packaging and automated QA govern promotion. It is not yet staging-accepted, live-deployed, or operational. Required remaining gates include exact File 21 `1.0.3.2` integration, Hostinger staging, real-role workflows, browser/device and WCAG 2.2 AA acceptance, active theme and LiteSpeed/cache tests, backup restoration, rollback rehearsal, Founder acceptance, approved live smoke testing, and post-deployment monitoring.
+Version `0.3.1` is a coded File 23 Composer-bridge candidate on Draft PR #23; exact-head packaging and automated QA govern promotion. It is not yet staging-accepted, live-deployed, or operational. Required remaining gates include exact File 21 `1.0.3.2` integration, Hostinger staging, real-role workflows, browser/device and WCAG 2.2 AA acceptance, active theme and LiteSpeed/cache tests, backup restoration, rollback rehearsal, Founder acceptance, approved live smoke testing, and post-deployment monitoring.
 
 The detailed earlier corrective history remains in `CHANGELOG.md` and the existing `docs/` review records.

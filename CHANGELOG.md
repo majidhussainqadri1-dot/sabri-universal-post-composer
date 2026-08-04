@@ -1,3 +1,10 @@
+## 0.3.1 — File 23 Composer Bridge
+
+- Publish only the exact File 22 managed Create URL to File 23.
+- Register bounded Composer readiness without exposing drafts or direct operations.
+- Keep Safe Mode, authority, no-store and canonical ownership boundaries fail closed.
+- Add no-guessed-route, privacy, load-order and direct-write-denial gates.
+
 # Changelog
 
 ## 0.3.0 — Reconciliation candidate
