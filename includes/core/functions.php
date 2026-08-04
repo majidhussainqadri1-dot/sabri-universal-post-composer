@@ -45,9 +45,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		define( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED', true );
 		define( 'SUPC_PUBLIC_API_COLLISIONS', '' );
 
-		/**
-		 * @return true|\WP_Error
-		 */
+		/** @return true|\WP_Error */
 		function supc_register_adapter( Adapter $adapter ) {
 			return Plugin::instance()->registry()->register( $adapter );
 		}
@@ -92,55 +90,37 @@ if ( ! defined( 'ABSPATH' ) ) {
 			}
 		}
 
-		/**
-		 * @return array<string, mixed>|\WP_Error
-		 */
+		/** @return array<string, mixed>|\WP_Error */
 		function supc_workflow_schema( string $adapter_key ): array|\WP_Error {
 			return Plugin::instance()->workflow_coordinator()->schema( get_current_user_id(), $adapter_key );
 		}
 
-		/**
-		 * @param array<string, mixed> $payload Draft payload.
-		 * @return array<string, mixed>|\WP_Error
-		 */
+		/** @param array<string, mixed> $payload @return array<string, mixed>|\WP_Error */
 		function supc_workflow_create_draft( string $adapter_key, ?string $native_reference, array $payload ): array|\WP_Error {
 			return Plugin::instance()->workflow_coordinator()->create_draft( get_current_user_id(), $adapter_key, $native_reference, $payload );
 		}
 
-		/**
-		 * @param array<string, mixed> $payload Draft payload.
-		 * @return array<string, mixed>|\WP_Error
-		 */
+		/** @param array<string, mixed> $payload @return array<string, mixed>|\WP_Error */
 		function supc_workflow_validate( string $adapter_key, array $payload ): array|\WP_Error {
 			return Plugin::instance()->workflow_coordinator()->validate( get_current_user_id(), $adapter_key, $payload );
 		}
 
-		/**
-		 * @param array<string, mixed> $payload Draft payload.
-		 * @return array<string, mixed>|\WP_Error
-		 */
+		/** @param array<string, mixed> $payload @return array<string, mixed>|\WP_Error */
 		function supc_workflow_preview( string $adapter_key, array $payload ): array|\WP_Error {
 			return Plugin::instance()->workflow_coordinator()->preview( get_current_user_id(), $adapter_key, $payload );
 		}
 
-		/**
-		 * @param array<string, mixed> $payload Final payload.
-		 * @return array<string, mixed>|\WP_Error
-		 */
+		/** @param array<string, mixed> $payload @return array<string, mixed>|\WP_Error */
 		function supc_workflow_submit( string $adapter_key, string $idempotency_key, array $payload ): array|\WP_Error {
 			return Plugin::instance()->workflow_coordinator()->submit( get_current_user_id(), $adapter_key, $idempotency_key, $payload );
 		}
 
-		/**
-		 * @return array<string, mixed>|\WP_Error
-		 */
+		/** @return array<string, mixed>|\WP_Error */
 		function supc_workflow_status( string $adapter_key, string $native_reference ): array|\WP_Error {
 			return Plugin::instance()->workflow_coordinator()->status( get_current_user_id(), $adapter_key, $native_reference );
 		}
 
-		/**
-		 * @return string|\WP_Error
-		 */
+		/** @return string|\WP_Error */
 		function supc_workflow_canonical_url( string $adapter_key, string $native_reference ): string|\WP_Error {
 			return Plugin::instance()->workflow_coordinator()->canonical_url( get_current_user_id(), $adapter_key, $native_reference );
 		}
@@ -164,3 +144,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		define( 'SUPC_PUBLIC_API_COLLISIONS', implode( ',', $public_api_collisions ) );
 	}
 } )();
+
+if ( ! defined( 'SUPC_FILE23_BRIDGE_VERSION' ) ) {
+	define( 'SUPC_FILE23_BRIDGE_VERSION', '0.3.1' );
+}
+require_once SUPC_PATH . 'includes/integration/class-file23-dashboard-bridge.php';
+( new \Sabri\UniversalComposer\Integration\File23_Dashboard_Bridge() )->register();
