@@ -164,3 +164,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		define( 'SUPC_PUBLIC_API_COLLISIONS', implode( ',', $public_api_collisions ) );
 	}
 } )();
+
+if ( ! defined( 'SUPC_FILE23_BRIDGE_VERSION' ) ) {
+	define( 'SUPC_FILE23_BRIDGE_VERSION', '1.0.0-rc.2' );
+}
+require_once SUPC_PATH . 'includes/integration/class-file23-dashboard-bridge.php';
+( new \Sabri\UniversalComposer\Integration\File23_Dashboard_Bridge() )->register();
