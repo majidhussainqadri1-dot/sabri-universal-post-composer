@@ -1,0 +1,136 @@
+name: File 22 File 23 Composer Bridge 0.3.1
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  correct-review-test-package:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/file22-file23-composer-bridge-0.3.1
+
+      - name: Apply reviewed Version 0.3.1 release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          plugin = Path('sabri-universal-post-composer.php')
+          text = plugin.read_text(encoding='utf-8')
+          replacements = {
+              'Version:     0.3.0': 'Version:     0.3.1',
+              "define( 'SUPC_VERSION', '0.3.0' );": "define( 'SUPC_VERSION', '0.3.1' );",
+          }
+          for old, new in replacements.items():
+              if old not in text and new not in text:
+                  raise SystemExit(f'Expected File 22 release marker missing: {old}')
+              text = text.replace(old, new)
+          plugin.write_text(text, encoding='utf-8')
+
+          readme = Path('README.md')
+          text = readme.read_text(encoding='utf-8')
+          marker = '## Version 0.3.1 File 23 Composer bridge'
+          if marker not in text:
+              insertion = '''\n## Version 0.3.1 File 23 Composer bridge\n\nFile 22 now supplies File 23 with the exact managed Composer URL and a bounded readiness provider through Adapter Contract 2.0.0. The bridge never guesses `/create/`, never projects draft bodies or Composer sessions as content inventory, and never permits File 23 to mutate File 22 directly. Create and Edit remain owned by the canonical File 22 browser workflow. Provider maturity remains unreviewed until separately accepted on Hostinger staging.\n'''
+              text = text.replace('\n## Version 0.3.0 reconciliation candidate\n', insertion + '\n## Version 0.3.0 reconciliation candidate\n', 1)
+          text = text.replace('Version `0.3.0` is a coded reconciliation candidate', 'Version `0.3.1` is a coded File 23 Composer-bridge candidate')
+          readme.write_text(text, encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          if changelog.exists():
+              text = changelog.read_text(encoding='utf-8')
+              marker = '## 0.3.1 — File 23 Composer Bridge'
+              if marker not in text:
+                  text = '''## 0.3.1 — File 23 Composer Bridge\n\n- Publish only the exact File 22 managed Create URL to File 23.\n- Register bounded Composer readiness without exposing drafts or direct operations.\n- Keep Safe Mode, authority, no-store and canonical ownership boundaries fail closed.\n- Add no-guessed-route, privacy, load-order and direct-write-denial gates.\n\n''' + text
+              changelog.write_text(text, encoding='utf-8')
+          PY
+          rm -f .github/workflows/file22-file23-composer-bridge-0.3.1.yml
+
+      - name: Commit corrected exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'File 22 0.3.1: finalize File 23 Composer bridge and review fixes'
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Syntax and focused adversarial gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l
+          php tests/run-file22-file23-dashboard-bridge-tests.php
+
+      - name: Deterministic installable package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, shutil, zipfile
+
+          root = Path.cwd()
+          build = root / '.file22-package-build'
+          package_root = build / 'sabri-universal-post-composer'
+          if build.exists(): shutil.rmtree(build)
+          package_root.mkdir(parents=True)
+          excluded_top = {'.git', '.github', '.file22-package-build', 'tests', 'tools', 'vendor', 'node_modules'}
+          excluded_suffixes = {'.zip', '.sha256'}
+          for source in sorted(root.rglob('*')):
+              rel = source.relative_to(root)
+              if not rel.parts or rel.parts[0] in excluded_top: continue
+              if any(part in {'.git', 'node_modules'} for part in rel.parts): continue
+              if source.is_dir() or source.suffix in excluded_suffixes: continue
+              target = package_root / rel
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(source, target)
+
+          out = root / '22-sabri-universal-post-composer-0.3.1-FILE23-BRIDGE-R1.zip'
+          if out.exists(): out.unlink()
+          epoch = (2020, 1, 1, 0, 0, 0)
+          with zipfile.ZipFile(out, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+              for source in sorted(package_root.rglob('*')):
+                  if source.is_dir(): continue
+                  arc = source.relative_to(build).as_posix()
+                  info = zipfile.ZipInfo(arc, epoch)
+                  info.compress_type = zipfile.ZIP_DEFLATED
+                  info.external_attr = 0o100644 << 16
+                  zf.writestr(info, source.read_bytes())
+          digest = hashlib.sha256(out.read_bytes()).hexdigest()
+          (root / f'{out.name}.sha256').write_text(f'{digest}  {out.name}\n', encoding='utf-8')
+          print(digest)
+          PY
+          sha256sum -c 22-sabri-universal-post-composer-0.3.1-FILE23-BRIDGE-R1.zip.sha256
+          unzip -t 22-sabri-universal-post-composer-0.3.1-FILE23-BRIDGE-R1.zip
+          unzip -p 22-sabri-universal-post-composer-0.3.1-FILE23-BRIDGE-R1.zip sabri-universal-post-composer/sabri-universal-post-composer.php | grep -F 'Version:     0.3.1'
+          unzip -l 22-sabri-universal-post-composer-0.3.1-FILE23-BRIDGE-R1.zip | grep -F 'class-file23-dashboard-bridge.php'
+
+      - name: Push exact reviewed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin HEAD:fix/file22-file23-composer-bridge-0.3.1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: file22-0.3.1-file23-composer-bridge-candidate
+          if-no-files-found: error
+          path: |
+            22-sabri-universal-post-composer-0.3.1-FILE23-BRIDGE-R1.zip
+            22-sabri-universal-post-composer-0.3.1-FILE23-BRIDGE-R1.zip.sha256
