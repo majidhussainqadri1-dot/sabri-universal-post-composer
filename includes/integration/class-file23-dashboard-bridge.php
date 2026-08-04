@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class File23_Dashboard_Bridge {
 	/** Register URL discovery and late provider registration. */
 	public function register(): void {
+		if ( ! function_exists( 'add_filter' ) || ! function_exists( 'add_action' ) ) {
+			return;
+		}
 		add_filter( 'spdb/file22_composer_url', array( $this, 'composer_url' ), 20, 1 );
 		add_action( 'spdb/register_adapters', array( $this, 'register_adapter' ), 20, 1 );
 	}
