@@ -168,11 +168,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( ! defined( 'SUPC_FILE23_BRIDGE_VERSION' ) ) {
 	define( 'SUPC_FILE23_BRIDGE_VERSION', '1.0.0-rc.2' );
 }
-require_once SUPC_PATH . 'includes/integration/class-file23-dashboard-bridge.php';
-$bridge_class = 'Sabri\\UniversalComposer\\Integration\\File23_Dashboard_Bridge';
-if ( class_exists( $bridge_class ) ) {
-	$bridge = new $bridge_class();
-	if ( is_callable( array( $bridge, 'register' ) ) ) {
-		$bridge->register();
+$bridge_file = dirname( __DIR__ ) . '/integration/class-file23-dashboard-bridge.php';
+if ( is_readable( $bridge_file ) ) {
+	require_once $bridge_file;
+	$bridge_class = 'Sabri\\UniversalComposer\\Integration\\File23_Dashboard_Bridge';
+	if ( class_exists( $bridge_class ) ) {
+		$bridge = new $bridge_class();
+		if ( is_callable( array( $bridge, 'register' ) ) ) {
+			$bridge->register();
+		}
 	}
 }
