@@ -122,6 +122,6 @@ final class PlanCompletionCoreTest extends TestCase {
 		$this->assertStringContainsString( 'interface-draft-recovery-adapter.php', $bootstrap );
 		$this->assertStringContainsString( 'load_draft', $coordinator );
 		$this->assertStringContainsString( 'discard_draft', $coordinator );
-		$this->assertStringContainsString( "'/sessions/(?P<session>[0-9a-f-]{36})/recover'", $rest );
+		$this->assertStringContainsString( '$this->coordinator->load_draft', $rest );
 	}
 }
