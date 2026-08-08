@@ -16,6 +16,7 @@ namespace Sabri\UniversalComposer\Http;
 use Sabri\UniversalComposer\Contracts\Adapter;
 use Sabri\UniversalComposer\Contracts\Future_Capability_Adapter;
 use Sabri\UniversalComposer\Core\Contract_Boundary;
+use Sabri\UniversalComposer\Core\Future_Intelligence_Hardening;
 use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Plugin;
 use Sabri\UniversalComposer\Core\Safe_Mode;
@@ -162,12 +163,17 @@ final class Future_Rest_Controller {
 			}
 		}
 
-		$sensitive = ! empty( $payload['sensitive'] );
-		if ( $sensitive && in_array( $capability, array( 'ai_copilot', 'medical_terminology', 'cross_format_derivative' ), true ) ) {
-			$allowed = (bool) apply_filters( 'supc_future_sensitive_capability_allowed', false, $capability, get_current_user_id(), $adapter_key );
-			if ( ! $allowed ) {
-				return $this->error( 'future_sensitive_external_advisory_blocked', 403 );
-			}
+		// Non-bypassable final preflight. Provider filters cannot override this
+		// result because no provider invocation/filter runs until it passes.
+		$preflight = ( new Future_Intelligence_Hardening() )->guard_request(
+			null,
+			$capability,
+			get_current_user_id(),
+			$adapter_key,
+			$payload
+		);
+		if ( $preflight instanceof WP_Error ) {
+			return $this->normalize_error( $preflight );
 		}
 
 		$result = apply_filters( 'supc_future_capability_result', null, $capability, get_current_user_id(), $adapter_key, $payload );
@@ -231,6 +237,12 @@ final class Future_Rest_Controller {
 		$filtered = apply_filters( 'supc_future_capabilities', $capabilities, $user_id, $adapter_key );
 		if ( is_array( $filtered ) ) {
 			$capabilities = $filtered;
+		}
+		// Apply the security/privacy reduction after every third-party filter so a
+		// later callback cannot re-add a sensitive external advisory capability.
+		$final = ( new Future_Intelligence_Hardening() )->filter_capabilities( $capabilities, $user_id, $adapter_key );
+		if ( is_array( $final ) ) {
+			$capabilities = $final;
 		}
 		$out = array();
 		foreach ( array_slice( $capabilities, 0, 32 ) as $capability ) {
