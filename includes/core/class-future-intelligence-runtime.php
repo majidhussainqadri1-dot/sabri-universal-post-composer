@@ -59,6 +59,16 @@ final class Future_Intelligence_Runtime {
 		if ( ! isset( $available[ $adapter_key ] ) ) {
 			return;
 		}
+		$adapter = $available[ $adapter_key ];
+		try {
+			$privacy_class = strtolower( trim( (string) $adapter->privacy_classification() ) );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			$privacy_class = 'sensitive';
+		}
+		if ( ! in_array( $privacy_class, array( 'public', 'private', 'sensitive' ), true ) ) {
+			$privacy_class = 'sensitive';
+		}
 
 		$version = defined( 'SUPC_FUTURE_INTELLIGENCE_VERSION' ) ? (string) SUPC_FUTURE_INTELLIGENCE_VERSION : '1.0.0';
 
@@ -91,22 +101,22 @@ final class Future_Intelligence_Runtime {
 			'supc-future-intelligence',
 			'SUPCFuture',
 			array(
-				'version'  => $version,
-				'restRoot' => untrailingslashit( esc_url_raw( rest_url( Rest_Controller::NAMESPACE ) ) ),
-				'nonce'    => wp_create_nonce( 'wp_rest' ),
-				'userId'   => get_current_user_id(),
-				'adapter'  => $adapter_key,
-				'locale'   => function_exists( 'determine_locale' ) ? determine_locale() : get_locale(),
-				'isRtl'    => is_rtl(),
-				'privacy'  => array(
-					// Keep the original v1 browser recovery path fail-closed. The audited
-					// v2 hardening script consumes the separate policy bit below.
+				'version'                      => $version,
+				'restRoot'                     => untrailingslashit( esc_url_raw( rest_url( Rest_Controller::NAMESPACE ) ) ),
+				'nonce'                        => wp_create_nonce( 'wp_rest' ),
+				'userId'                       => get_current_user_id(),
+				'adapter'                      => $adapter_key,
+				'adapterPrivacyClassification' => $privacy_class,
+				'locale'                       => function_exists( 'determine_locale' ) ? determine_locale() : get_locale(),
+				'isRtl'                        => is_rtl(),
+				'privacy'                      => array(
+					// The retired v1 path always stays disabled. The audited v2 path is
+					// additionally denied for an authoritative sensitive adapter.
 					'localEncryptedRecovery'   => false,
-					'auditedEncryptedRecovery' => (bool) apply_filters( 'supc_future_encrypted_recovery_allowed', true, get_current_user_id(), $adapter_key ),
-					'externalSensitiveAdvice'  => (bool) apply_filters( 'supc_future_sensitive_capability_allowed', false, 'client_discovery', get_current_user_id(), $adapter_key ),
+					'auditedEncryptedRecovery' => 'sensitive' !== $privacy_class && (bool) apply_filters( 'supc_future_encrypted_recovery_allowed', true, get_current_user_id(), $adapter_key ),
 					'sensitiveVoiceAllowed'    => (bool) apply_filters( 'supc_future_sensitive_voice_allowed', false, get_current_user_id(), $adapter_key ),
 				),
-				'strings'  => array(
+				'strings'                      => array(
 					'title'               => __( 'Composer Intelligence', 'sabri-universal-post-composer' ),
 					'providerUnavailable' => __( 'Provider unavailable', 'sabri-universal-post-composer' ),
 					'sensitiveBlocked'    => __( 'External advisory is disabled for sensitive drafts unless the governing owner explicitly authorizes it.', 'sabri-universal-post-composer' ),
