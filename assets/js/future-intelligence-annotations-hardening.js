@@ -16,6 +16,16 @@
 		node.textContent = String(message || '');
 		node.dataset.status = state || 'ready';
 	};
+	const resolutionConfirmed = (data, annotationId) => {
+		const result = data && data.result && typeof data.result === 'object' && !Array.isArray(data.result) ? data.result : null;
+		if (!result) return false;
+		const confirmed = result.resolved === true || String(result.status || '').toLowerCase() === 'resolved';
+		if (!confirmed) return false;
+		if (Object.prototype.hasOwnProperty.call(result, 'annotation_id')) {
+			return String(result.annotation_id || '') === String(annotationId);
+		}
+		return true;
+	};
 	const resolveAnnotation = async (annotationId) => {
 		const response = await fetch(restRoot + '/future/invoke', {
 			method: 'POST',
@@ -31,6 +41,7 @@
 		});
 		const data = await response.json().catch(() => ({}));
 		if (!response.ok) throw new Error(data.message || 'Annotation could not be resolved.');
+		if (!resolutionConfirmed(data, annotationId)) throw new Error('The native review owner did not confirm that this annotation is resolved.');
 		return data;
 	};
 
@@ -52,7 +63,7 @@
 				const parent = marker.parentElement;
 				marker.remove();
 				if (parent && !parent.querySelector('.supc-intel-annotation-marker')) parent.classList.remove('has-supc-intel-annotation');
-				setResult('Reviewer annotation resolved by explicit action. Native review owner remains authoritative.', 'ready');
+				setResult('Reviewer annotation resolution was confirmed by the native review owner.', 'ready');
 			} catch (error) {
 				setResult(error.message || 'Annotation could not be resolved.', 'error');
 				button.disabled = false;
