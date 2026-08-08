@@ -127,6 +127,7 @@
 		const walk = (node) => {
 			Array.from(node.children || []).forEach((child) => {
 				if (!allowed.has(child.tagName)) {
+					walk(child);
 					child.replaceWith(...Array.from(child.childNodes));
 					return;
 				}
@@ -461,7 +462,7 @@
 	};
 
 	const save = async (silent) => {
-		if (!dirty && session) {
+		if (!dirty && session && session.native_reference) {
 			return true;
 		}
 		if (!navigator.onLine) {
