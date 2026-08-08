@@ -29,6 +29,20 @@ interface Future_Capability_Adapter {
 	 * Invoke one capability without transferring permanent ownership to File 22.
 	 * File 22 must not persist the request or response body.
 	 *
+	 * For stateful capabilities, File 22 reserves the top-level `_supc_context`
+	 * payload key. The REST bridge rejects any client-supplied value for that key
+	 * and injects an owned, adapter-matching server context immediately before
+	 * provider dispatch. Current reserved context fields are bounded metadata:
+	 * session_uuid, adapter_key, native_reference, sensitivity_class,
+	 * lock_version and correlation_id. Providers MUST treat that context as an
+	 * orchestration pointer only, MUST re-authorize native mutations, and MUST
+	 * never turn it into a second canonical draft/publication/review store.
+	 *
+	 * AI/terminology/derivative implementers remain subject to the owning File 16
+	 * and privacy contracts: advisory output only, human review required, no
+	 * autonomous diagnosis/prescription/potency/dosage/emergency replacement,
+	 * no fabricated references, and no unauthorized patient-identifying egress.
+	 *
 	 * @param array<string,mixed> $payload Ephemeral, bounded invocation payload.
 	 * @return array<string,mixed>|\WP_Error
 	 */
