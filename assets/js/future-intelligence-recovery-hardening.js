@@ -36,9 +36,17 @@
 		return token;
 	};
 	const stableTabToken = tabToken();
-	const scope = () => session() || nativeReference() || stableTabToken;
+	// Freeze the browser-recovery scope for this page. A first autosave may cause
+	// the native session/reference to appear after typing; a dynamic key would
+	// strand the pre-save encrypted record under the old tab token.
+	const stableScope = session() || nativeReference() || stableTabToken;
+	const scope = () => stableScope;
 	const keyId = () => String(config.userId || 0) + ':' + adapter() + ':' + scope();
 	const userPrefix = () => String(config.userId || 0) + ':';
+	const protectedRecoveryField = (field) => {
+		const name = String(field && field.name || '');
+		return !field || !name || field.dataset.privacy === 'sensitive' || field.dataset.fieldType === 'opaque_reference' || /^(?:native_reference|publication_action)$/i.test(name) || /(?:consent|privacy_confirm|medical_disclaimer_confirm|copyright_declaration|rights_declaration|verification|capability|moderation|status)/i.test(name);
+	};
 
 	const openDb = () => new Promise((resolve, reject) => {
 		const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -94,7 +102,7 @@
 	const snapshot = () => {
 		const fields = {};
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
-			if (!field.name || field.dataset.privacy === 'sensitive') return;
+			if (protectedRecoveryField(field)) return;
 			if (field.dataset.fieldType === 'checkbox') fields[field.name] = field.checked;
 			else if (field.dataset.fieldType === 'multiselect') fields[field.name] = Array.from(field.selectedOptions || []).map((option) => option.value);
 			else fields[field.name] = field.value;
@@ -140,14 +148,17 @@
 	const apply = (recovered) => {
 		if (!recovered || !recovered.fields || isSensitive()) return false;
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
-			if (!field.name || field.dataset.privacy === 'sensitive' || !Object.prototype.hasOwnProperty.call(recovered.fields, field.name)) return;
+			if (protectedRecoveryField(field) || !Object.prototype.hasOwnProperty.call(recovered.fields, field.name)) return;
 			const value = recovered.fields[field.name];
 			if (field.dataset.fieldType === 'checkbox') field.checked = Boolean(value);
 			else if (field.dataset.fieldType === 'multiselect' && Array.isArray(value)) { const selected = new Set(value.map(String)); Array.from(field.options || []).forEach((option) => { option.selected = selected.has(option.value); }); }
 			else field.value = value == null ? '' : String(value);
 		});
-		form.dispatchEvent(new Event('input', { bubbles: true }));
+		// The previously loaded safety layer owns rich-text sanitization. Put the
+		// recovered source into the editor before dispatching the form-level input
+		// event so that layer can sanitize both source and rendered HTML together.
 		if (source && editor) editor.innerHTML = source.value;
+		form.dispatchEvent(new Event('input', { bubbles: true }));
 		return true;
 	};
 
