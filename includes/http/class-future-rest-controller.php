@@ -206,7 +206,7 @@ final class Future_Rest_Controller {
 		if ( $result instanceof WP_Error ) {
 			return $this->normalize_error( $result );
 		}
-		if ( ! is_array( $result ) || strlen( (string) wp_json_encode( $result ) ) > self::MAX_RESPONSE_BYTES ) {
+		if ( ! is_array( $result ) || ! $this->response_is_bounded( $result ) ) {
 			return $this->error( 'future_provider_response_invalid', 502 );
 		}
 
@@ -281,32 +281,40 @@ final class Future_Rest_Controller {
 
 	/** @param array<string,mixed> $payload */
 	private function payload_is_bounded( array $payload ): bool {
-		if ( count( $payload ) > 64 || strlen( (string) wp_json_encode( $payload ) ) > self::MAX_REQUEST_BYTES ) {
+		$encoded = wp_json_encode( $payload );
+		if ( count( $payload ) > 64 || ! is_string( $encoded ) || strlen( $encoded ) > self::MAX_REQUEST_BYTES ) {
 			return false;
 		}
-		$walk = static function ( mixed $value, int $depth = 0 ) use ( &$walk ): bool {
-			if ( $depth > 8 ) {
+		return $this->bounded_value( $payload, 0, 256, 131072 );
+	}
+
+	/** @param array<string,mixed> $result */
+	private function response_is_bounded( array $result ): bool {
+		$encoded = wp_json_encode( $result );
+		if ( ! is_string( $encoded ) || strlen( $encoded ) > self::MAX_RESPONSE_BYTES ) {
+			return false;
+		}
+		return $this->bounded_value( $result, 0, 256, 262144 );
+	}
+
+	private function bounded_value( mixed $value, int $depth, int $max_items, int $max_string_bytes ): bool {
+		if ( $depth > 8 || is_resource( $value ) || is_object( $value ) ) {
+			return false;
+		}
+		if ( is_string( $value ) ) {
+			return strlen( $value ) <= $max_string_bytes;
+		}
+		if ( is_array( $value ) ) {
+			if ( count( $value ) > $max_items ) {
 				return false;
 			}
-			if ( is_resource( $value ) || is_object( $value ) ) {
-				return false;
-			}
-			if ( is_string( $value ) && strlen( $value ) > 131072 ) {
-				return false;
-			}
-			if ( is_array( $value ) ) {
-				if ( count( $value ) > 256 ) {
+			foreach ( $value as $item ) {
+				if ( ! $this->bounded_value( $item, $depth + 1, $max_items, $max_string_bytes ) ) {
 					return false;
 				}
-				foreach ( $value as $item ) {
-					if ( ! $walk( $item, $depth + 1 ) ) {
-						return false;
-					}
-				}
 			}
-			return true;
-		};
-		return $walk( $payload );
+		}
+		return true;
 	}
 
 	private function within_rate_limit( int $user_id ): bool {
