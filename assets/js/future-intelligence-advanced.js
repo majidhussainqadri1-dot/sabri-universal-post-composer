@@ -18,6 +18,10 @@
 
 	const sessionUuid = () => new URL(window.location.href).searchParams.get('session') || '';
 	const sensitive = () => Boolean(root.querySelector('[data-privacy="sensitive"], [data-field-key*="patient"], [data-field-key*="consent"]'));
+	const protectedRemoteField = (field) => {
+		const name = String(field && field.name || '');
+		return !field || !name || field.dataset.fieldType === 'opaque_reference' || field.dataset.privacy === 'sensitive' || /^(?:native_reference|publication_action)$/i.test(name) || /(?:consent|privacy_confirm|medical_disclaimer_confirm|copyright_declaration|rights_declaration|verification|capability)/i.test(name);
+	};
 	const fieldSnapshot = () => {
 		const out = {};
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
@@ -179,28 +183,39 @@
 		if (apply) apply.disabled = true;
 		if (pull) pull.addEventListener('click', async () => {
 			pull.disabled = true;
+			remoteFields = null;
+			if (apply) apply.disabled = true;
 			try {
 				const response = await invoke('collaboration', { action: 'pull', current: fieldSnapshot() });
 				const data = resultPayload(response);
-				remoteFields = data && data.fields && typeof data.fields === 'object' ? data.fields : null;
+				remoteFields = data && data.fields && typeof data.fields === 'object' && !Array.isArray(data.fields) ? data.fields : null;
 				if (apply) apply.disabled = !remoteFields;
-				setResult('collaboration', remoteFields ? 'Remote update is available. Review provider details, then use Apply Remote Update if appropriate.' : 'No remote field update was returned.', 'ready');
+				setResult('collaboration', remoteFields ? 'Remote update is available. Protected authority, consent and sensitive fields cannot be applied by collaboration.' : 'No remote field update was returned.', 'ready');
 			} catch (error) { setResult('collaboration', error.message, 'error'); }
 			finally { pull.disabled = false; }
 		});
 		if (apply) apply.addEventListener('click', () => {
 			if (!remoteFields) return;
+			let applied = 0;
 			form.querySelectorAll('[data-supc-field]').forEach((field) => {
-				if (!Object.prototype.hasOwnProperty.call(remoteFields, field.name)) return;
+				if (protectedRemoteField(field) || !Object.prototype.hasOwnProperty.call(remoteFields, field.name)) return;
 				const value = remoteFields[field.name];
-				if (field.dataset.fieldType === 'checkbox') field.checked = Boolean(value);
-				else field.value = value == null ? '' : String(value);
+				if (field.dataset.fieldType === 'checkbox') {
+					field.checked = Boolean(value);
+				} else if (field.dataset.fieldType === 'multiselect') {
+					if (!Array.isArray(value)) return;
+					const selected = new Set(value.map(String));
+					Array.from(field.options || []).forEach((option) => { option.selected = selected.has(option.value); });
+				} else {
+					field.value = value == null ? '' : String(value);
+				}
 				if (field.matches('[data-supc-rte-source]') && editor) editor.textContent = String(value == null ? '' : value);
+				applied += 1;
 			});
 			remoteFields = null;
 			apply.disabled = true;
 			form.dispatchEvent(new Event('input', { bubbles: true }));
-			setResult('collaboration', 'Remote update applied by explicit human action. Review and save to the native owner.', 'ready');
+			setResult('collaboration', applied ? applied + ' remote field update(s) applied by explicit human action. Review and save to the native owner.' : 'No safe editable remote fields were applied.', applied ? 'ready' : 'warning');
 		});
 	}
 
@@ -216,7 +231,7 @@
 					const response = await invoke('conflict_merge', { action: 'inspect', current: fieldSnapshot() });
 					lastConflict = resultPayload(response);
 					setResult('conflict', JSON.stringify(lastConflict, null, 2), 'ready');
-				} catch (error) { setResult('conflict', error.message, 'error'); }
+				} catch (error) { lastConflict = null; setResult('conflict', error.message, 'error'); }
 				finally { fresh.disabled = false; }
 			});
 		}
@@ -230,6 +245,7 @@
 				try {
 					const response = await invoke('conflict_merge', { action: 'resolve', resolution, conflict_token: lastConflict.conflict_token || '', current: resolution === 'keep_current' || resolution === 'manual' ? fieldSnapshot() : {} });
 					setResult('conflict', 'Resolution sent explicitly: ' + resolution + '\n' + JSON.stringify(resultPayload(response), null, 2), 'ready');
+					lastConflict = null;
 				} catch (error) { setResult('conflict', error.message, 'error'); }
 				finally { button.disabled = false; }
 			});
