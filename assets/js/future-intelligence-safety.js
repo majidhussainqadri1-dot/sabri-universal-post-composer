@@ -63,6 +63,26 @@
 		return template.innerHTML;
 	};
 
+	// Capture human paste before the older Composer bubble handler. External
+	// anchors remain usable, but remote image/resource loads are stripped so a
+	// private Composer session cannot be disclosed to a pasted tracking pixel.
+	editor.addEventListener('paste', (event) => {
+		const clipboard = event.clipboardData;
+		if (!clipboard) return;
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		const html = clipboard.getData('text/html');
+		const plain = clipboard.getData('text/plain');
+		const raw = html || (() => {
+			const node = document.createElement('div');
+			node.textContent = plain;
+			return node.innerHTML;
+		})();
+		const cleaned = sanitize(raw);
+		document.execCommand('insertHTML', false, cleaned);
+		editor.dispatchEvent(new Event('input', { bubbles: true }));
+	}, true);
+
 	// Provider-backed template/collaboration applications deliberately dispatch
 	// an input event on the form. Capture that event before the stable Composer
 	// sees it so no provider-returned raw rich text can bypass the same browser
