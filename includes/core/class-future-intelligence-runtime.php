@@ -19,9 +19,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Future_Intelligence_Runtime {
 	private bool $registered = false;
 	private Future_Rest_Controller $rest;
+	private Future_Intelligence_Hardening $hardening;
 
 	public function __construct() {
-		$this->rest = new Future_Rest_Controller();
+		$hardening_file = __DIR__ . '/class-future-intelligence-hardening.php';
+		if ( ! class_exists( Future_Intelligence_Hardening::class, false ) && is_readable( $hardening_file ) ) {
+			require_once $hardening_file;
+		}
+		$this->rest      = new Future_Rest_Controller();
+		$this->hardening = new Future_Intelligence_Hardening();
 	}
 
 	public function register(): void {
@@ -29,6 +35,7 @@ final class Future_Intelligence_Runtime {
 			return;
 		}
 		$this->registered = true;
+		$this->hardening->register();
 		$this->rest->register();
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ), 40 );
 		add_filter( 'supc_system_check_report', array( $this, 'append_system_check' ), 88 );
@@ -127,6 +134,7 @@ final class Future_Intelligence_Runtime {
 	public function append_system_check( array $rows ): array {
 		$required = array(
 			SUPC_PATH . 'includes/contracts/interface-future-capability-adapter.php',
+			SUPC_PATH . 'includes/core/class-future-intelligence-hardening.php',
 			SUPC_PATH . 'includes/http/class-future-rest-controller.php',
 			SUPC_PATH . 'assets/js/future-intelligence.js',
 			SUPC_PATH . 'assets/js/future-intelligence-advanced.js',
