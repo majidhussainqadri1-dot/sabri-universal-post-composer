@@ -62,9 +62,6 @@ final class Future_Intelligence_Runtime {
 
 		$version = defined( 'SUPC_FUTURE_INTELLIGENCE_VERSION' ) ? (string) SUPC_FUTURE_INTELLIGENCE_VERSION : '1.0.0';
 
-		// Register the established Composer dependencies early so styles are not
-		// delayed until shortcode rendering and future scripts still execute after
-		// the stable workflow runtime.
 		if ( function_exists( 'wp_style_is' ) && ! wp_style_is( 'supc-create-surface', 'registered' ) ) {
 			wp_register_style( 'supc-create-surface', SUPC_URL . 'assets/css/create-surface.css', array( 'dashicons' ), SUPC_VERSION );
 		}
@@ -77,40 +74,12 @@ final class Future_Intelligence_Runtime {
 		wp_enqueue_style( 'supc-create-surface' );
 		wp_enqueue_style( 'supc-workflow-composer' );
 		wp_enqueue_script( 'supc-workflow-composer' );
-		wp_enqueue_style(
-			'supc-future-intelligence',
-			SUPC_URL . 'assets/css/future-intelligence.css',
-			array( 'supc-workflow-composer' ),
-			$version
-		);
-		wp_enqueue_script(
-			'supc-future-intelligence',
-			SUPC_URL . 'assets/js/future-intelligence.js',
-			array( 'supc-workflow-composer' ),
-			$version,
-			true
-		);
-		wp_enqueue_script(
-			'supc-future-intelligence-advanced',
-			SUPC_URL . 'assets/js/future-intelligence-advanced.js',
-			array( 'supc-future-intelligence' ),
-			$version,
-			true
-		);
-		wp_enqueue_script(
-			'supc-future-intelligence-safety',
-			SUPC_URL . 'assets/js/future-intelligence-safety.js',
-			array( 'supc-future-intelligence-advanced' ),
-			$version,
-			true
-		);
-		wp_enqueue_script(
-			'supc-future-intelligence-recovery-hardening',
-			SUPC_URL . 'assets/js/future-intelligence-recovery-hardening.js',
-			array( 'supc-future-intelligence-safety' ),
-			$version,
-			true
-		);
+		wp_enqueue_style( 'supc-future-intelligence', SUPC_URL . 'assets/css/future-intelligence.css', array( 'supc-workflow-composer' ), $version );
+		wp_enqueue_script( 'supc-future-intelligence', SUPC_URL . 'assets/js/future-intelligence.js', array( 'supc-workflow-composer' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-advanced', SUPC_URL . 'assets/js/future-intelligence-advanced.js', array( 'supc-future-intelligence' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-safety', SUPC_URL . 'assets/js/future-intelligence-safety.js', array( 'supc-future-intelligence-advanced' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-recovery-hardening', SUPC_URL . 'assets/js/future-intelligence-recovery-hardening.js', array( 'supc-future-intelligence-safety' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-annotations-hardening', SUPC_URL . 'assets/js/future-intelligence-annotations-hardening.js', array( 'supc-future-intelligence-recovery-hardening' ), $version, true );
 		wp_localize_script(
 			'supc-future-intelligence',
 			'SUPCFuture',
@@ -147,6 +116,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'assets/js/future-intelligence-advanced.js',
 			SUPC_PATH . 'assets/js/future-intelligence-safety.js',
 			SUPC_PATH . 'assets/js/future-intelligence-recovery-hardening.js',
+			SUPC_PATH . 'assets/js/future-intelligence-annotations-hardening.js',
 			SUPC_PATH . 'assets/css/future-intelligence.css',
 		);
 		$missing = array();
