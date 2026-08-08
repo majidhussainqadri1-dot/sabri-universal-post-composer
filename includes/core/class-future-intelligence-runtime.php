@@ -75,7 +75,8 @@ final class Future_Intelligence_Runtime {
 		wp_enqueue_style( 'supc-workflow-composer' );
 		wp_enqueue_script( 'supc-workflow-composer' );
 		wp_enqueue_style( 'supc-future-intelligence', SUPC_URL . 'assets/css/future-intelligence.css', array( 'supc-workflow-composer' ), $version );
-		wp_enqueue_script( 'supc-future-intelligence', SUPC_URL . 'assets/js/future-intelligence.js', array( 'supc-workflow-composer' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-capability-broker', SUPC_URL . 'assets/js/future-intelligence-capability-broker.js', array( 'supc-workflow-composer' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence', SUPC_URL . 'assets/js/future-intelligence.js', array( 'supc-future-intelligence-capability-broker' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-advanced', SUPC_URL . 'assets/js/future-intelligence-advanced.js', array( 'supc-future-intelligence' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-safety', SUPC_URL . 'assets/js/future-intelligence-safety.js', array( 'supc-future-intelligence-advanced' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-recovery-hardening', SUPC_URL . 'assets/js/future-intelligence-recovery-hardening.js', array( 'supc-future-intelligence-safety' ), $version, true );
@@ -115,6 +116,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'includes/contracts/interface-future-capability-adapter.php',
 			SUPC_PATH . 'includes/core/class-future-intelligence-hardening.php',
 			SUPC_PATH . 'includes/http/class-future-rest-controller.php',
+			SUPC_PATH . 'assets/js/future-intelligence-capability-broker.js',
 			SUPC_PATH . 'assets/js/future-intelligence.js',
 			SUPC_PATH . 'assets/js/future-intelligence-advanced.js',
 			SUPC_PATH . 'assets/js/future-intelligence-safety.js',
