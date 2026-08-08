@@ -95,7 +95,7 @@ final class Future_Intelligence_Hardening {
 			return $current;
 		}
 		$capability = sanitize_key( $capability );
-		if ( ! isset( self::ACTIONS[ $capability ] ) || ! $this->action_is_allowed( $capability, $payload ) ) {
+		if ( ! isset( self::ACTIONS[ $capability ] ) || ! $this->action_is_allowed( $capability, $payload, $user_id, $adapter_key ) ) {
 			return $this->error( 'future_capability_action_invalid', 400 );
 		}
 
@@ -109,16 +109,13 @@ final class Future_Intelligence_Hardening {
 	}
 
 	/** @param array<string,mixed> $payload */
-	private function action_is_allowed( string $capability, array $payload ): bool {
+	private function action_is_allowed( string $capability, array $payload, int $user_id, string $adapter_key ): bool {
 		$action = isset( $payload['action'] ) && is_string( $payload['action'] ) ? sanitize_key( $payload['action'] ) : '';
 
-		// Publication action names are owned by each registered native adapter.
-		// File 22 allows only the same bounded semantic family used by its
-		// server-rendered action bar; the provider cannot invent arbitrary verbs.
 		if ( 'publication_impact' === $capability ) {
-			return '' !== $action
-				&& strlen( $action ) <= 64
-				&& 1 === preg_match( '/(?:publish|submit|schedule|update|revision)/', $action );
+			// Do not authorize by a loose publish|submit|schedule|update|revision
+			// substring. The exact action must exist in the current native schema.
+			return $this->publication_action_is_allowed( $user_id, $adapter_key, $action );
 		}
 
 		if ( ! in_array( $action, self::ACTIONS[ $capability ], true ) ) {
@@ -141,6 +138,29 @@ final class Future_Intelligence_Hardening {
 			return '' !== $id && strlen( $id ) <= 128 && 1 === preg_match( '/^[A-Za-z0-9._:-]+$/D', $id );
 		}
 		return true;
+	}
+
+	private function publication_action_is_allowed( int $user_id, string $adapter_key, string $action ): bool {
+		if ( '' === $action || strlen( $action ) > 64 ) {
+			return false;
+		}
+		try {
+			$schema = Plugin::instance()->workflow_coordinator()->schema_read_only( $user_id, $adapter_key );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return false;
+		}
+		if ( $schema instanceof WP_Error || ! isset( $schema['fields']['publication_action'] ) || ! is_array( $schema['fields']['publication_action'] ) ) {
+			return false;
+		}
+		$definition = $schema['fields']['publication_action'];
+		$choices    = isset( $definition['choices'] ) && is_array( $definition['choices'] ) ? $definition['choices'] : array();
+		foreach ( array_keys( $choices ) as $candidate ) {
+			if ( is_scalar( $candidate ) && hash_equals( $action, sanitize_key( (string) $candidate ) ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** @param array<string,mixed> $payload */
