@@ -21,10 +21,10 @@
 		if (!result) return false;
 		const confirmed = result.resolved === true || String(result.status || '').toLowerCase() === 'resolved';
 		if (!confirmed) return false;
-		if (Object.prototype.hasOwnProperty.call(result, 'annotation_id')) {
-			return String(result.annotation_id || '') === String(annotationId);
-		}
-		return true;
+		// A generic "resolved" result is not sufficient. The native review owner
+		// must positively bind the confirmation to the exact annotation requested.
+		return Object.prototype.hasOwnProperty.call(result, 'annotation_id')
+			&& String(result.annotation_id || '') === String(annotationId);
 	};
 	const resolveAnnotation = async (annotationId) => {
 		const response = await fetch(restRoot + '/future/invoke', {
@@ -41,7 +41,7 @@
 		});
 		const data = await response.json().catch(() => ({}));
 		if (!response.ok) throw new Error(data.message || 'Annotation could not be resolved.');
-		if (!resolutionConfirmed(data, annotationId)) throw new Error('The native review owner did not confirm that this annotation is resolved.');
+		if (!resolutionConfirmed(data, annotationId)) throw new Error('The native review owner did not confirm resolution of this exact annotation.');
 		return data;
 	};
 
