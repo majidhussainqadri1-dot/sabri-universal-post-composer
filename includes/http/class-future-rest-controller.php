@@ -117,7 +117,11 @@ final class Future_Rest_Controller {
 		if ( ! ( new Permission_Resolver() )->account_is_eligible( $user_id ) ) {
 			return $this->error( 'future_account_not_eligible', 403 );
 		}
-		return $this->within_rate_limit( $user_id ) ? true : $this->error( 'future_rate_limited', 429 );
+		$route = method_exists( $request, 'get_route' ) ? (string) $request->get_route() : '';
+		if ( str_ends_with( $route, '/future/invoke' ) && ! $this->within_rate_limit( $user_id ) ) {
+			return $this->error( 'future_rate_limited', 429 );
+		}
+		return true;
 	}
 
 	public function capabilities( WP_REST_Request $request ): WP_REST_Response|WP_Error {
