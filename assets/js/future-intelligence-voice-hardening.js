@@ -18,6 +18,7 @@
 	let target = null;
 
 	const sensitive = () => Boolean(root.querySelector('[data-supc-field][data-privacy="sensitive"], .supc-workflow__field[data-privacy="sensitive"], [data-field-key*="patient"], [data-field-key*="consent"], [data-field-key*="clinical_case"], [data-field-key*="successful_case"], [data-field-key*="guardian"], [data-field-key*="credential"]'));
+	const sensitiveVoiceAllowed = () => Boolean(config.privacy && config.privacy.sensitiveVoiceAllowed);
 	const setResult = (message, state) => {
 		const node = panel.querySelector('[data-future-result="voice"]');
 		if (!node) return;
@@ -58,17 +59,18 @@
 		return false;
 	};
 
-	const stop = () => {
-		if (!recognition) return;
-		try { recognition.stop(); } catch (error) { /* Browser may already have stopped it. */ }
+	const stop = (message, state) => {
+		if (recognition) {
+			try { recognition.stop(); } catch (error) { /* Browser may already have stopped it. */ }
+		}
 		recognition = null;
 		button.setAttribute('aria-pressed', 'false');
-		setResult('Dictation stopped. No transcript is retained by File 22. Review inserted text before saving.', 'ready');
+		setResult(message || 'Dictation stopped. No transcript is retained by File 22. Review inserted text before saving.', state || 'ready');
 	};
 	button.setAttribute('aria-pressed', 'false');
 	button.addEventListener('click', () => {
 		if (recognition) { stop(); return; }
-		if (sensitive() && !(config.privacy && config.privacy.sensitiveVoiceAllowed)) {
+		if (sensitive() && !sensitiveVoiceAllowed()) {
 			setResult('Voice dictation is disabled for sensitive/patient-shaped drafts unless the governing privacy owner explicitly authorizes the browser speech service.', 'blocked');
 			return;
 		}
@@ -87,6 +89,13 @@
 		recognition.interimResults = false;
 		recognition.lang = String(config.locale || document.documentElement.lang || 'en-US').replace('_', '-');
 		recognition.onresult = (event) => {
+			// Revalidate immediately before every transcript insertion. The native
+			// workflow can become sensitive after dictation starts, and an earlier
+			// browser decision must never become a stale privacy authorization.
+			if (sensitive() && !sensitiveVoiceAllowed()) {
+				stop('Dictation stopped before transcript insertion because this workflow is now sensitive and the speech-service privacy owner has not opted in.', 'blocked');
+				return;
+			}
 			let text = '';
 			for (let index = event.resultIndex; index < event.results.length; index += 1) {
 				if (event.results[index].isFinal) text += event.results[index][0].transcript + ' ';
@@ -109,7 +118,7 @@
 		}
 	});
 
-	window.addEventListener('pagehide', stop, { once: true });
+	window.addEventListener('pagehide', () => stop('Dictation stopped because the Composer page is leaving.', 'ready'), { once: true });
 	if (source && editor) {
 		// Keep the stable source authoritative when dictating into rich text.
 		editor.addEventListener('input', () => { if (recognition) source.dispatchEvent(new Event('input', { bubbles: true })); });
