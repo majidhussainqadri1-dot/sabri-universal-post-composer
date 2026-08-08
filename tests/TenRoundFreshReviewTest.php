@@ -27,8 +27,8 @@ final class TenRoundFreshReviewTest extends TestCase {
 
 	public function test_review_2_provider_rich_text_cannot_load_remote_tracking_images(): void {
 		$js = $this->contents( 'assets/js/future-intelligence-safety.js' );
-		$this->assertStringContainsString( "url.origin === window.location.origin", $js );
-		$this->assertStringContainsString( "referrerpolicy", $js );
+		$this->assertStringContainsString( 'url.origin === window.location.origin', $js );
+		$this->assertStringContainsString( 'referrerpolicy', $js );
 		$this->assertStringContainsString( "child.removeAttribute('src')", $js );
 	}
 
@@ -37,7 +37,7 @@ final class TenRoundFreshReviewTest extends TestCase {
 		$js      = $this->contents( 'assets/js/future-intelligence-recovery-hardening.js' );
 		$this->assertStringContainsString( "'localEncryptedRecovery'   => false", $runtime );
 		$this->assertStringContainsString( "'auditedEncryptedRecovery'", $runtime );
-		$this->assertStringContainsString( "supc-future-recovery-v2", $js );
+		$this->assertStringContainsString( 'supc-future-recovery-v2', $js );
 		$this->assertStringContainsString( '24 * 60 * 60 * 1000', $js );
 		$this->assertStringContainsString( 'supcRecoveryToken', $js );
 		$this->assertStringContainsString( 'user_id', $js );
@@ -79,9 +79,9 @@ final class TenRoundFreshReviewTest extends TestCase {
 		$this->assertStringContainsString( '25 * 1024 * 1024', $js );
 		$this->assertStringContainsString( 'MAX_DIMENSION = 12000', $js );
 		$this->assertStringContainsString( 'MAX_PIXELS = 40000000', $js );
-		$this->assertStringContainsString( "image/jpeg", $js );
-		$this->assertStringContainsString( "image/png", $js );
-		$this->assertStringContainsString( "image/webp", $js );
+		$this->assertStringContainsString( 'image/jpeg', $js );
+		$this->assertStringContainsString( 'image/png', $js );
+		$this->assertStringContainsString( 'image/webp', $js );
 		$this->assertStringContainsString( 'bitmap.close', $js );
 		$this->assertStringContainsString( 'native upload workflow', $js );
 	}
@@ -98,7 +98,7 @@ final class TenRoundFreshReviewTest extends TestCase {
 	public function test_review_9_command_palette_has_focus_escape_and_target_hardening(): void {
 		$js  = $this->contents( 'assets/js/future-intelligence-accessibility-hardening.js' );
 		$css = $this->contents( 'assets/css/future-intelligence.css' );
-		$this->assertStringContainsString( "aria-modal", $js );
+		$this->assertStringContainsString( 'aria-modal', $js );
 		$this->assertStringContainsString( "event.key === 'Escape'", $js );
 		$this->assertStringContainsString( "event.key !== 'Tab'", $js );
 		$this->assertStringContainsString( 'restoreFocus', $js );
@@ -106,17 +106,21 @@ final class TenRoundFreshReviewTest extends TestCase {
 		$this->assertStringContainsString( ':focus-visible', $css );
 	}
 
-	public function test_review_10_templates_recovery_and_impact_preserve_native_authority(): void {
-		$template = $this->contents( 'assets/js/future-intelligence-template-hardening.js' );
-		$php      = $this->contents( 'includes/core/class-future-intelligence-hardening.php' );
-		$runtime  = $this->contents( 'includes/core/class-future-intelligence-runtime.php' );
+	public function test_review_10_templates_recovery_impact_and_preflight_preserve_native_authority(): void {
+		$template   = $this->contents( 'assets/js/future-intelligence-template-hardening.js' );
+		$php        = $this->contents( 'includes/core/class-future-intelligence-hardening.php' );
+		$controller = $this->contents( 'includes/http/class-future-rest-controller.php' );
+		$runtime    = $this->contents( 'includes/core/class-future-intelligence-runtime.php' );
 		$this->assertStringContainsString( 'protectedField', $template );
 		$this->assertStringContainsString( 'native_reference|publication_action', $template );
 		$this->assertStringContainsString( 'consent|privacy_confirm|medical_disclaimer_confirm', $template );
 		$this->assertStringContainsString( "'publication_impact' === \$capability", $php );
 		$this->assertStringContainsString( 'publish|submit|schedule|update|revision', $php );
+		$this->assertStringContainsString( 'Non-bypassable final preflight', $controller );
+		$this->assertStringContainsString( '->guard_request(', $controller );
+		$this->assertStringContainsString( '->filter_capabilities(', $controller );
 		$this->assertStringContainsString( 'future-intelligence-template-hardening.js', $runtime );
-		$this->assertStringNotContainsString( 'CREATE TABLE', $template . $php . $runtime );
+		$this->assertStringNotContainsString( 'CREATE TABLE', $template . $php . $controller . $runtime );
 	}
 
 	public function test_final_runtime_system_check_covers_every_hardening_asset(): void {
