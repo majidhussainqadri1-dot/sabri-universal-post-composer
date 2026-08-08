@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Sabri\UniversalComposer\Http;
 
+use Sabri\UniversalComposer\Contracts\Adapter;
 use Sabri\UniversalComposer\Contracts\Future_Capability_Adapter;
 use Sabri\UniversalComposer\Core\Contract_Boundary;
 use Sabri\UniversalComposer\Core\Permission_Resolver;
@@ -111,7 +112,7 @@ final class Future_Rest_Controller {
 	}
 
 	public function capabilities( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$adapter_key = sanitize_key( (string) $request['adapter'] );
+		$adapter_key   = sanitize_key( (string) $request['adapter'] );
 		$authorization = $this->authorized_adapter( $adapter_key );
 		if ( $authorization instanceof WP_Error ) {
 			return $authorization;
@@ -198,8 +199,7 @@ final class Future_Rest_Controller {
 		);
 	}
 
-	/** @return object|WP_Error */
-	private function authorized_adapter( string $adapter_key ): object|WP_Error {
+	private function authorized_adapter( string $adapter_key ): Adapter|WP_Error {
 		if ( ! Contract_Boundary::adapter_key( $adapter_key ) ) {
 			return $this->error( 'future_invalid_adapter', 400 );
 		}
@@ -211,14 +211,14 @@ final class Future_Rest_Controller {
 			unset( $error );
 			return $this->error( 'future_registry_unavailable', 503 );
 		}
-		if ( ! is_object( $adapter ) || ! isset( $available[ $adapter_key ] ) ) {
+		if ( ! $adapter instanceof Adapter || ! isset( $available[ $adapter_key ] ) ) {
 			return $this->error( 'future_adapter_not_authorized', 403 );
 		}
 		return $adapter;
 	}
 
 	/** @return array<int,string> */
-	private function bridge_capabilities( int $user_id, string $adapter_key, object $adapter ): array {
+	private function bridge_capabilities( int $user_id, string $adapter_key, Adapter $adapter ): array {
 		$capabilities = array();
 		if ( $adapter instanceof Future_Capability_Adapter ) {
 			try {
@@ -305,8 +305,8 @@ final class Future_Rest_Controller {
 	}
 
 	private function normalize_error( WP_Error $error ): WP_Error {
-		$code = (string) $error->get_error_code();
-		$data = $error->get_error_data();
+		$code   = (string) $error->get_error_code();
+		$data   = $error->get_error_data();
 		$status = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 422;
 		return new WP_Error( '' !== $code ? $code : 'future_provider_error', $error->get_error_message(), array( 'status' => max( 400, min( 599, $status ) ) ) );
 	}
