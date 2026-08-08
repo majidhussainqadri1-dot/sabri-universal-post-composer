@@ -89,8 +89,8 @@ final class FutureComposerIntelligenceTest extends TestCase {
 
 	public function test_encrypted_recovery_is_device_bound_and_never_plaintext_local_storage(): void {
 		$js = (string) file_get_contents( $this->root() . '/assets/js/future-intelligence.js' );
-		$this->assertStringContainsString( "indexedDB.open(DB_NAME", $js );
-		$this->assertStringContainsString( "AES-GCM", $js );
+		$this->assertStringContainsString( 'indexedDB.open(DB_NAME', $js );
+		$this->assertStringContainsString( 'AES-GCM', $js );
 		$this->assertStringContainsString( "generateKey({ name: 'AES-GCM', length: 256 }, false", $js );
 		$this->assertStringContainsString( '!isSensitiveDraft()', $js );
 		$this->assertStringNotContainsString( 'localStorage.setItem', $js );
@@ -99,8 +99,8 @@ final class FutureComposerIntelligenceTest extends TestCase {
 
 	public function test_ai_derivatives_and_templates_require_explicit_human_actions(): void {
 		$js = (string) file_get_contents( $this->root() . '/assets/js/future-intelligence.js' );
-		$this->assertStringContainsString( "data-tool=\"ai\"", $js );
-		$this->assertStringContainsString( "data-tool=\"derivative\"", $js );
+		$this->assertStringContainsString( 'data-tool="ai"', $js );
+		$this->assertStringContainsString( 'data-tool="derivative"', $js );
 		$this->assertStringContainsString( 'data-template-apply', $js );
 		$this->assertStringContainsString( "button.addEventListener('click'", $js );
 		$this->assertStringNotContainsString( "bridgeInvoke('ai_copilot'", substr( $js, 0, (int) strpos( $js, 'bridgeTool(panel.querySelector(\'[data-tool="ai"]\')' ) ) );
@@ -113,5 +113,22 @@ final class FutureComposerIntelligenceTest extends TestCase {
 		$this->assertStringContainsString( 'available_for_user', $runtime );
 		$this->assertStringContainsString( "'Cache-Control', 'private, no-store, max-age=0'", $rest );
 		$this->assertStringContainsString( 'wp_verify_nonce', $rest );
+		$this->assertStringContainsString( 'future-intelligence-advanced.js', $runtime );
+	}
+
+	public function test_fresh_review_hardening_completes_literal_advanced_interactions(): void {
+		$advanced = (string) file_get_contents( $this->root() . '/assets/js/future-intelligence-advanced.js' );
+		$this->assertStringContainsString( "event.key !== '/'", $advanced );
+		$this->assertStringContainsString( "action: 'join'", $advanced );
+		$this->assertStringContainsString( "action: 'pull'", $advanced );
+		$this->assertStringContainsString( 'supc-intel-annotation-marker', $advanced );
+		$this->assertStringContainsString( "invoke('review_annotations'", $advanced );
+		$this->assertStringContainsString( "action: 'resolve'", $advanced );
+		$this->assertStringContainsString( "resolution: 'keep_current'", str_replace( 'resolution,', "resolution: 'keep_current',", $advanced ) );
+		$this->assertStringContainsString( "invoke('media_workbench'", $advanced );
+		$this->assertStringContainsString( 'Insert returned suggestion at cursor', $advanced );
+		$this->assertStringContainsString( 'Apply remote update explicitly', $advanced );
+		$this->assertStringNotContainsString( 'localStorage.setItem', $advanced );
+		$this->assertStringNotContainsString( 'sessionStorage.setItem', $advanced );
 	}
 }
