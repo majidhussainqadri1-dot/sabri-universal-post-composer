@@ -28,16 +28,16 @@ final class Future_Intelligence_Hardening {
 	);
 
 	private const ACTIONS = array(
-		'ai_copilot'             => array( '', 'applyable' ),
-		'medical_terminology'    => array( '' ),
-		'collaboration'          => array( 'join', 'presence', 'pull' ),
-		'review_annotations'     => array( 'list', 'resolve' ),
-		'semantic_diff'          => array( 'compare_current' ),
-		'conflict_merge'         => array( 'inspect', 'resolve' ),
-		'template_library'       => array( 'list', 'recommended' ),
-		'media_workbench'        => array( 'capabilities' ),
-		'cross_format_derivative'=> array( '', 'applyable' ),
-		'publication_impact'     => array( 'publish', 'publish_now', 'submit', 'submit_review', 'schedule', 'update', 'revision', 'submit_revision' ),
+		'ai_copilot'              => array( '', 'applyable' ),
+		'medical_terminology'     => array( '' ),
+		'collaboration'           => array( 'join', 'presence', 'pull' ),
+		'review_annotations'      => array( 'list', 'resolve' ),
+		'semantic_diff'           => array( 'compare_current' ),
+		'conflict_merge'          => array( 'inspect', 'resolve' ),
+		'template_library'        => array( 'list', 'recommended' ),
+		'media_workbench'         => array( 'capabilities' ),
+		'cross_format_derivative' => array( '', 'applyable' ),
+		'publication_impact'      => array(),
 	);
 
 	private bool $registered = false;
@@ -101,6 +101,16 @@ final class Future_Intelligence_Hardening {
 	/** @param array<string,mixed> $payload */
 	private function action_is_allowed( string $capability, array $payload ): bool {
 		$action = isset( $payload['action'] ) && is_string( $payload['action'] ) ? sanitize_key( $payload['action'] ) : '';
+
+		// Publication action names are owned by each registered native adapter.
+		// File 22 allows only the same bounded semantic family used by its
+		// server-rendered action bar; the provider cannot invent arbitrary verbs.
+		if ( 'publication_impact' === $capability ) {
+			return '' !== $action
+				&& strlen( $action ) <= 64
+				&& 1 === preg_match( '/(?:publish|submit|schedule|update|revision)/', $action );
+		}
+
 		if ( ! in_array( $action, self::ACTIONS[ $capability ], true ) ) {
 			return false;
 		}
