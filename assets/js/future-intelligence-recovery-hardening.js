@@ -47,6 +47,24 @@
 		const name = String(field && field.name || '');
 		return !field || !name || field.dataset.privacy === 'sensitive' || field.dataset.fieldType === 'opaque_reference' || /^(?:native_reference|publication_action)$/i.test(name) || /(?:consent|privacy_confirm|medical_disclaimer_confirm|copyright_declaration|rights_declaration|verification|capability|moderation|status)/i.test(name);
 	};
+	const fieldsContainSensitiveContent = (fields) => {
+		const walk = (value, key, depth) => {
+			if (depth > 8) return true;
+			if (key && /(?:patient|consent|clinical|guardian|credential|identity|passport|cnic|phone|email|address|date_of_birth|dob|medical_record)/i.test(key)) return true;
+			if (typeof value === 'string') {
+				const sample = value.slice(0, 131072);
+				return /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(sample)
+					|| /\b\d{5}-?\d{7}-?\d\b/.test(sample)
+					|| /(?:\+?\d[\d\s().-]{8,}\d)/.test(sample)
+					|| /\b(?:\d{1,3}\.){3}\d{1,3}\b/.test(sample)
+					|| /\b(?:DOB|date of birth|تاریخ پیدائش)\s*[:\-]?\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/i.test(sample);
+			}
+			if (Array.isArray(value)) return value.some((item) => walk(item, key, depth + 1));
+			if (value && typeof value === 'object') return Object.keys(value).some((childKey) => walk(value[childKey], childKey, depth + 1));
+			return false;
+		};
+		return Boolean(fields && typeof fields === 'object' && walk(fields, '', 0));
+	};
 
 	const openDb = () => new Promise((resolve, reject) => {
 		const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -121,7 +139,13 @@
 	const persist = async () => {
 		if (!supported()) { await purgeCurrent(); return; }
 		const id = keyId();
-		const payload = JSON.stringify({ user_id: Number(config.userId || 0), adapter: adapter(), scope: scope(), fields: snapshot(), updated_at: new Date().toISOString() });
+		const fields = snapshot();
+		if (fieldsContainSensitiveContent(fields)) {
+			await purgeCurrent();
+			result('Potential personal/sensitive content detected — encrypted browser recovery is disabled and any local recovery for this draft was purged. Use the authoritative online save.', 'blocked');
+			return;
+		}
+		const payload = JSON.stringify({ user_id: Number(config.userId || 0), adapter: adapter(), scope: scope(), fields, updated_at: new Date().toISOString() });
 		const key = await recoveryKey();
 		const iv = crypto.getRandomValues(new Uint8Array(12));
 		const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(payload));
@@ -139,6 +163,7 @@
 			const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(record.iv || []) }, key, new Uint8Array(record.cipher || []));
 			const parsed = JSON.parse(new TextDecoder().decode(plain));
 			if (!parsed || Number(parsed.user_id) !== Number(config.userId || 0) || parsed.adapter !== adapter() || parsed.scope !== scope()) throw new Error('Recovery scope mismatch');
+			if (fieldsContainSensitiveContent(parsed.fields)) throw new Error('Recovery contains content that is not eligible for local storage');
 			return parsed;
 		} catch (error) {
 			await deletePair(id);
@@ -146,7 +171,7 @@
 		}
 	};
 	const apply = (recovered) => {
-		if (!recovered || !recovered.fields || isSensitive()) return false;
+		if (!recovered || !recovered.fields || isSensitive() || fieldsContainSensitiveContent(recovered.fields)) return false;
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
 			if (protectedRecoveryField(field) || !Object.prototype.hasOwnProperty.call(recovered.fields, field.name)) return;
 			const value = recovered.fields[field.name];
@@ -180,10 +205,10 @@
 
 	const show = async () => {
 		if (!restore || !discard) return;
-		if (isSensitive()) {
+		if (isSensitive() || fieldsContainSensitiveContent(snapshot())) {
 			await purgeCurrent();
 			restore.hidden = true; discard.hidden = true;
-			result('Sensitive draft — online secure save required. Local recovery has been purged.', 'blocked');
+			result('Sensitive or personally identifying draft content — online secure save required. Local recovery has been purged.', 'blocked');
 			return;
 		}
 		if (!supported()) {
@@ -205,7 +230,7 @@
 			const recovered = await read();
 			if (apply(recovered)) result('Encrypted recovery restored locally. Review and save to the authoritative native owner.', 'ready');
 			else result('No safe recovery was available for this draft.', 'warning');
-		} catch (error) { result('Encrypted recovery failed authentication and was securely discarded.', 'error'); }
+		} catch (error) { result('Encrypted recovery failed authentication/privacy eligibility and was securely discarded.', 'error'); }
 	});
 	if (discard) discard.addEventListener('click', async () => { await purgeCurrent(); await show(); });
 
