@@ -21,10 +21,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Future_Intelligence_Hardening {
+	/**
+	 * Provider capabilities that can receive or derive from draft content.
+	 * Sensitive/native-patient workflows require explicit governing-owner opt-in
+	 * for each exact capability; a browser hint alone can never authorize them.
+	 */
 	private const EXTERNAL_ADVISORY = array(
 		'ai_copilot',
 		'medical_terminology',
+		'collaboration',
+		'semantic_diff',
+		'conflict_merge',
+		'template_library',
 		'cross_format_derivative',
+		'publication_impact',
 	);
 
 	private const ACTIONS = array(
@@ -52,8 +62,8 @@ final class Future_Intelligence_Hardening {
 	}
 
 	/**
-	 * Hide external advisory capabilities for a sensitive native workflow unless
-	 * the governing owner explicitly authorizes that exact capability.
+	 * Hide content-bearing provider capabilities for a sensitive native workflow
+	 * unless the governing owner explicitly authorizes that exact capability.
 	 *
 	 * @param mixed $capabilities Provider-declared capability list.
 	 * @return mixed
