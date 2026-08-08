@@ -62,6 +62,14 @@ final class Future_Rest_Controller {
 		'publication_impact',
 	);
 
+	/** @var array<int,string> */
+	private const SESSION_BOUND_CAPABILITIES = array(
+		'collaboration',
+		'review_annotations',
+		'semantic_diff',
+		'conflict_merge',
+	);
+
 	public function register(): void {
 		add_action( 'rest_api_init', array( $this, 'routes' ), 30 );
 	}
@@ -146,6 +154,9 @@ final class Future_Rest_Controller {
 		}
 		if ( ! $this->payload_is_bounded( $payload ) ) {
 			return $this->error( 'future_payload_too_large', 413 );
+		}
+		if ( in_array( $capability, self::SESSION_BOUND_CAPABILITIES, true ) && '' === $session ) {
+			return $this->error( 'future_session_required', 409 );
 		}
 
 		$adapter = $this->authorized_adapter( $adapter_key );
