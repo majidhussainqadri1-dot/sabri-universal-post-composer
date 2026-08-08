@@ -83,6 +83,7 @@ final class Future_Intelligence_Runtime {
 		wp_enqueue_script( 'supc-future-intelligence-annotations-hardening', SUPC_URL . 'assets/js/future-intelligence-annotations-hardening.js', array( 'supc-future-intelligence-recovery-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-voice-hardening', SUPC_URL . 'assets/js/future-intelligence-voice-hardening.js', array( 'supc-future-intelligence-annotations-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-media-hardening', SUPC_URL . 'assets/js/future-intelligence-media-hardening.js', array( 'supc-future-intelligence-voice-hardening' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-accessibility-hardening', SUPC_URL . 'assets/js/future-intelligence-accessibility-hardening.js', array( 'supc-future-intelligence-media-hardening' ), $version, true );
 		wp_localize_script(
 			'supc-future-intelligence',
 			'SUPCFuture',
@@ -124,6 +125,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'assets/js/future-intelligence-annotations-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-voice-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-media-hardening.js',
+			SUPC_PATH . 'assets/js/future-intelligence-accessibility-hardening.js',
 			SUPC_PATH . 'assets/css/future-intelligence.css',
 		);
 		$missing = array();
