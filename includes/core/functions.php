@@ -179,3 +179,28 @@ if ( is_readable( $bridge_file ) ) {
 		}
 	}
 }
+
+/*
+ * Future Composer Intelligence Superset — 18 enhancements.
+ * This layer is intentionally loaded after the stable public API and File 23
+ * bridge. It is an advisory/orchestration facade and creates no competing
+ * canonical content, AI, moderation, annotation, media or distribution store.
+ */
+if ( ! defined( 'SUPC_FUTURE_INTELLIGENCE_VERSION' ) ) {
+	define( 'SUPC_FUTURE_INTELLIGENCE_VERSION', '1.0.0' );
+}
+$future_contract = dirname( __DIR__ ) . '/contracts/interface-future-capability-adapter.php';
+$future_rest     = dirname( __DIR__ ) . '/http/class-future-rest-controller.php';
+$future_runtime  = __DIR__ . '/class-future-intelligence-runtime.php';
+if ( is_readable( $future_contract ) && is_readable( $future_rest ) && is_readable( $future_runtime ) ) {
+	require_once $future_contract;
+	require_once $future_rest;
+	require_once $future_runtime;
+	$future_class = 'Sabri\\UniversalComposer\\Core\\Future_Intelligence_Runtime';
+	if ( class_exists( $future_class ) ) {
+		$future = new $future_class();
+		if ( is_callable( array( $future, 'register' ) ) ) {
+			$future->register();
+		}
+	}
+}
