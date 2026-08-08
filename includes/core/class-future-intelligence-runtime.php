@@ -80,6 +80,7 @@ final class Future_Intelligence_Runtime {
 		wp_enqueue_script( 'supc-future-intelligence-safety', SUPC_URL . 'assets/js/future-intelligence-safety.js', array( 'supc-future-intelligence-advanced' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-recovery-hardening', SUPC_URL . 'assets/js/future-intelligence-recovery-hardening.js', array( 'supc-future-intelligence-safety' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-annotations-hardening', SUPC_URL . 'assets/js/future-intelligence-annotations-hardening.js', array( 'supc-future-intelligence-recovery-hardening' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-voice-hardening', SUPC_URL . 'assets/js/future-intelligence-voice-hardening.js', array( 'supc-future-intelligence-annotations-hardening' ), $version, true );
 		wp_localize_script(
 			'supc-future-intelligence',
 			'SUPCFuture',
@@ -94,6 +95,7 @@ final class Future_Intelligence_Runtime {
 				'privacy'   => array(
 					'localEncryptedRecovery' => (bool) apply_filters( 'supc_future_encrypted_recovery_allowed', true, get_current_user_id(), $adapter_key ),
 					'externalSensitiveAdvice' => (bool) apply_filters( 'supc_future_sensitive_capability_allowed', false, 'client_discovery', get_current_user_id(), $adapter_key ),
+					'sensitiveVoiceAllowed' => (bool) apply_filters( 'supc_future_sensitive_voice_allowed', false, get_current_user_id(), $adapter_key ),
 				),
 				'strings'   => array(
 					'title'               => __( 'Composer Intelligence', 'sabri-universal-post-composer' ),
@@ -117,6 +119,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'assets/js/future-intelligence-safety.js',
 			SUPC_PATH . 'assets/js/future-intelligence-recovery-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-annotations-hardening.js',
+			SUPC_PATH . 'assets/js/future-intelligence-voice-hardening.js',
 			SUPC_PATH . 'assets/css/future-intelligence.css',
 		);
 		$missing = array();
