@@ -165,6 +165,8 @@ final class Future_Rest_Controller {
 
 		// Non-bypassable final preflight. Provider filters cannot override this
 		// result because no provider invocation/filter runs until it passes.
+		// Traceability: expected hard-stop errors include
+		// future_sensitive_external_advisory_blocked and future_capability_action_invalid.
 		$preflight = ( new Future_Intelligence_Hardening() )->guard_request(
 			null,
 			$capability,
