@@ -90,6 +90,13 @@ final class Future_Intelligence_Runtime {
 			$version,
 			true
 		);
+		wp_enqueue_script(
+			'supc-future-intelligence-safety',
+			SUPC_URL . 'assets/js/future-intelligence-safety.js',
+			array( 'supc-future-intelligence-advanced' ),
+			$version,
+			true
+		);
 		wp_localize_script(
 			'supc-future-intelligence',
 			'SUPCFuture',
@@ -123,6 +130,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'includes/http/class-future-rest-controller.php',
 			SUPC_PATH . 'assets/js/future-intelligence.js',
 			SUPC_PATH . 'assets/js/future-intelligence-advanced.js',
+			SUPC_PATH . 'assets/js/future-intelligence-safety.js',
 			SUPC_PATH . 'assets/css/future-intelligence.css',
 		);
 		$missing = array();
