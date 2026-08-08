@@ -23,6 +23,7 @@ final class Policy_Engine {
 	private const MEDICAL_TYPES  = array( 'clinical_case', 'patient_case', 'successful_case', 'disease', 'treatment', 'remedy', 'materia_medica', 'research' );
 	private const CONTACT_FIELDS = array( 'phone', 'phone_number', 'whatsapp', 'whatsapp_number', 'seller_phone', 'seller_whatsapp' );
 	private const REFERENCE_KEYS = array( 'references', 'citations', 'sources', 'evidence_references' );
+	private const RICH_TEXT_KEYS = array( 'content', 'body', 'main_content', 'post_content', 'article_body' );
 
 	/**
 	 * @param array<string,mixed> $payload Validated native-owner payload.
@@ -36,6 +37,15 @@ final class Policy_Engine {
 		$type  = $this->content_type( $adapter_key, $payload );
 		$codes = array();
 		$hold  = 'clear';
+
+		if ( $this->contains_unsafe_rich_content( $payload ) ) {
+			$codes[] = 'unsafe_rich_text_markup_prohibited';
+			$hold    = $this->stronger_hold( $hold, 'security_hold' );
+		}
+		if ( $this->contains_unsafe_link_protocol( $payload ) ) {
+			$codes[] = 'unsafe_link_or_embed_protocol';
+			$hold    = $this->stronger_hold( $hold, 'security_hold' );
+		}
 
 		if ( $this->contains_raw_contact( $payload ) && 'marketplace' === $type ) {
 			$codes[] = 'verified_seller_reference_required';
@@ -73,7 +83,6 @@ final class Policy_Engine {
 				$hold    = $this->stronger_hold( $hold, 'medical_hold' );
 			}
 		}
-
 
 		if ( $strict_phase && $this->uses_third_party_material( $payload ) ) {
 			if ( ! $this->truthy( $payload['rights_confirmed'] ?? $payload['copyright_permission_confirmed'] ?? false ) ) {
@@ -138,7 +147,6 @@ final class Policy_Engine {
 		return 'standard_publication';
 	}
 
-
 	private function stronger_hold( string $current, string $candidate ): string {
 		$priority = array(
 			'clear'          => 0,
@@ -149,6 +157,38 @@ final class Policy_Engine {
 			'suspended'      => 50,
 		);
 		return ( $priority[ $candidate ] ?? 40 ) > ( $priority[ $current ] ?? 0 ) ? $candidate : $current;
+	}
+
+	/** @param array<string,mixed> $payload */
+	private function contains_unsafe_rich_content( array $payload ): bool {
+		$forbidden = '/<(?:script|style|iframe|object|embed|form|input|button|textarea|select|option|svg|math|link|meta|base|applet)\b|\son[a-z0-9_-]+\s*=|\s(?:style|srcdoc|formaction)\s*=|(?:javascript|vbscript)\s*:|data\s*:\s*text\/html|expression\s*\(|url\s*\(\s*["\']?\s*javascript\s*:/i';
+		foreach ( self::RICH_TEXT_KEYS as $key ) {
+			$value = $payload[ $key ] ?? null;
+			if ( is_string( $value ) && 1 === preg_match( $forbidden, $value ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** @param array<string,mixed> $payload */
+	private function contains_unsafe_link_protocol( array $payload ): bool {
+		foreach ( $payload as $key => $value ) {
+			if ( ! is_string( $value ) ) {
+				continue;
+			}
+			$key = sanitize_key( (string) $key );
+			if ( in_array( $key, self::RICH_TEXT_KEYS, true ) ) {
+				if ( 1 === preg_match( '/\b(?:href|src)\s*=\s*["\']\s*(?!https?:\/\/|\/|#)[^"\']+/i', $value ) ) {
+					return true;
+				}
+				continue;
+			}
+			if ( preg_match( '/(?:url|link|embed|source)/', $key ) && preg_match( '/^[a-z][a-z0-9+.-]*:/i', trim( $value ) ) && 1 !== preg_match( '/^https?:\/\//i', trim( $value ) ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** @param array<string,mixed> $payload */
