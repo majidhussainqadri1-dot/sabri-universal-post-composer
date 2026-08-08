@@ -30,6 +30,7 @@ final class Future_Intelligence_Hardening {
 		'ai_copilot',
 		'medical_terminology',
 		'collaboration',
+		'review_annotations',
 		'semantic_diff',
 		'conflict_merge',
 		'template_library',
