@@ -80,7 +80,8 @@ final class Future_Intelligence_Runtime {
 		wp_enqueue_script( 'supc-future-intelligence-advanced', SUPC_URL . 'assets/js/future-intelligence-advanced.js', array( 'supc-future-intelligence' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-safety', SUPC_URL . 'assets/js/future-intelligence-safety.js', array( 'supc-future-intelligence-advanced' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-recovery-hardening', SUPC_URL . 'assets/js/future-intelligence-recovery-hardening.js', array( 'supc-future-intelligence-safety' ), $version, true );
-		wp_enqueue_script( 'supc-future-intelligence-annotations-hardening', SUPC_URL . 'assets/js/future-intelligence-annotations-hardening.js', array( 'supc-future-intelligence-recovery-hardening' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-recovery-retirement', SUPC_URL . 'assets/js/future-intelligence-recovery-retirement.js', array( 'supc-future-intelligence-recovery-hardening' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-annotations-hardening', SUPC_URL . 'assets/js/future-intelligence-annotations-hardening.js', array( 'supc-future-intelligence-recovery-retirement' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-voice-hardening', SUPC_URL . 'assets/js/future-intelligence-voice-hardening.js', array( 'supc-future-intelligence-annotations-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-media-hardening', SUPC_URL . 'assets/js/future-intelligence-media-hardening.js', array( 'supc-future-intelligence-voice-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-accessibility-hardening', SUPC_URL . 'assets/js/future-intelligence-accessibility-hardening.js', array( 'supc-future-intelligence-media-hardening' ), $version, true );
@@ -127,6 +128,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'assets/js/future-intelligence-advanced.js',
 			SUPC_PATH . 'assets/js/future-intelligence-safety.js',
 			SUPC_PATH . 'assets/js/future-intelligence-recovery-hardening.js',
+			SUPC_PATH . 'assets/js/future-intelligence-recovery-retirement.js',
 			SUPC_PATH . 'assets/js/future-intelligence-annotations-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-voice-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-media-hardening.js',
