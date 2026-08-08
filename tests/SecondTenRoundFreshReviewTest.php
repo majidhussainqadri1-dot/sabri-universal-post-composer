@@ -67,8 +67,8 @@ final class SecondTenRoundFreshReviewTest extends TestCase {
 
 	public function test_round_6_read_only_discovery_does_not_consume_mutation_rate_budget(): void {
 		$php = $this->contents( 'includes/http/class-future-rest-controller.php' );
-		$this->assertStringContainsString( "method_exists( $request, 'get_route' )", $php );
-		$this->assertStringContainsString( "str_ends_with( $route, '/future/invoke' )", $php );
+		$this->assertStringContainsString( 'method_exists( $request, \'get_route\' )', $php );
+		$this->assertStringContainsString( 'str_ends_with( $route, \'/future/invoke\' )', $php );
 		$this->assertStringContainsString( 'within_rate_limit( $user_id )', $php );
 	}
 
