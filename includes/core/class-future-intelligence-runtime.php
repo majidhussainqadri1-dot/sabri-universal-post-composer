@@ -25,7 +25,7 @@ final class Future_Intelligence_Runtime {
 	}
 
 	public function register(): void {
-		if ( $this->registered ) {
+		if ( $this->registered || ! function_exists( 'add_action' ) || ! function_exists( 'add_filter' ) ) {
 			return;
 		}
 		$this->registered = true;
@@ -54,6 +54,22 @@ final class Future_Intelligence_Runtime {
 		}
 
 		$version = defined( 'SUPC_FUTURE_INTELLIGENCE_VERSION' ) ? (string) SUPC_FUTURE_INTELLIGENCE_VERSION : '1.0.0';
+
+		// Register the established Composer dependencies early so styles are not
+		// delayed until shortcode rendering and the future script still executes
+		// after the stable workflow runtime.
+		if ( function_exists( 'wp_style_is' ) && ! wp_style_is( 'supc-create-surface', 'registered' ) ) {
+			wp_register_style( 'supc-create-surface', SUPC_URL . 'assets/css/create-surface.css', array( 'dashicons' ), SUPC_VERSION );
+		}
+		if ( function_exists( 'wp_style_is' ) && ! wp_style_is( 'supc-workflow-composer', 'registered' ) ) {
+			wp_register_style( 'supc-workflow-composer', SUPC_URL . 'assets/css/workflow-composer.css', array( 'supc-create-surface' ), SUPC_VERSION );
+		}
+		if ( function_exists( 'wp_script_is' ) && ! wp_script_is( 'supc-workflow-composer', 'registered' ) ) {
+			wp_register_script( 'supc-workflow-composer', SUPC_URL . 'assets/js/workflow-composer.js', array(), SUPC_VERSION, true );
+		}
+		wp_enqueue_style( 'supc-create-surface' );
+		wp_enqueue_style( 'supc-workflow-composer' );
+		wp_enqueue_script( 'supc-workflow-composer' );
 		wp_enqueue_style(
 			'supc-future-intelligence',
 			SUPC_URL . 'assets/css/future-intelligence.css',
@@ -83,11 +99,11 @@ final class Future_Intelligence_Runtime {
 					'externalSensitiveAdvice' => (bool) apply_filters( 'supc_future_sensitive_capability_allowed', false, 'client_discovery', get_current_user_id(), $adapter_key ),
 				),
 				'strings'   => array(
-					'title'             => __( 'Composer Intelligence', 'sabri-universal-post-composer' ),
+					'title'               => __( 'Composer Intelligence', 'sabri-universal-post-composer' ),
 					'providerUnavailable' => __( 'Provider unavailable', 'sabri-universal-post-composer' ),
-					'sensitiveBlocked'  => __( 'External advisory is disabled for sensitive drafts unless the governing owner explicitly authorizes it.', 'sabri-universal-post-composer' ),
-					'working'           => __( 'Working…', 'sabri-universal-post-composer' ),
-					'failed'            => __( 'The advisory request failed.', 'sabri-universal-post-composer' ),
+					'sensitiveBlocked'    => __( 'External advisory is disabled for sensitive drafts unless the governing owner explicitly authorizes it.', 'sabri-universal-post-composer' ),
+					'working'             => __( 'Working…', 'sabri-universal-post-composer' ),
+					'failed'              => __( 'The advisory request failed.', 'sabri-universal-post-composer' ),
 				),
 			)
 		);
