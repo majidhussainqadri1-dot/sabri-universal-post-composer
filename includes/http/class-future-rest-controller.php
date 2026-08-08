@@ -131,14 +131,20 @@ final class Future_Rest_Controller {
 			return $authorization;
 		}
 		$bridge = $this->bridge_capabilities( get_current_user_id(), $adapter_key, $authorization );
+		$privacy = $this->adapter_privacy( $authorization );
+		$local   = self::LOCAL_CAPABILITIES;
+		if ( 'sensitive' === $privacy ) {
+			$local = array_values( array_diff( $local, array( 'encrypted_offline_recovery' ) ) );
+		}
 		return $this->response(
 			array(
-				'version'             => defined( 'SUPC_FUTURE_INTELLIGENCE_VERSION' ) ? (string) SUPC_FUTURE_INTELLIGENCE_VERSION : '1.0.0',
-				'local_capabilities'  => self::LOCAL_CAPABILITIES,
-				'bridge_capabilities' => $bridge,
-				'all_capabilities'    => array_values( array_unique( array_merge( self::LOCAL_CAPABILITIES, $bridge ) ) ),
-				'ownership'           => 'native_owner',
-				'ephemeral_bridge'    => true,
+				'version'                        => defined( 'SUPC_FUTURE_INTELLIGENCE_VERSION' ) ? (string) SUPC_FUTURE_INTELLIGENCE_VERSION : '1.0.0',
+				'local_capabilities'             => $local,
+				'bridge_capabilities'            => $bridge,
+				'all_capabilities'               => array_values( array_unique( array_merge( $local, $bridge ) ) ),
+				'adapter_privacy_classification' => $privacy,
+				'ownership'                      => 'native_owner',
+				'ephemeral_bridge'               => true,
 			)
 		);
 	}
@@ -156,6 +162,9 @@ final class Future_Rest_Controller {
 		if ( ! Contract_Boundary::adapter_key( $adapter_key ) || ! in_array( $capability, self::BRIDGE_CAPABILITIES, true ) ) {
 			return $this->error( 'future_invalid_capability_request', 400 );
 		}
+		if ( isset( $payload['_supc_context'] ) ) {
+			return $this->error( 'future_reserved_context_prohibited', 400 );
+		}
 		if ( ! $this->payload_is_bounded( $payload ) ) {
 			return $this->error( 'future_payload_too_large', 413 );
 		}
@@ -171,6 +180,8 @@ final class Future_Rest_Controller {
 		if ( ! in_array( $capability, $declared, true ) ) {
 			return $this->error( 'future_capability_unavailable', 409 );
 		}
+
+		$owned = null;
 		if ( '' !== $session ) {
 			$owned = ( new Session_Store() )->get_owned( $session, get_current_user_id() );
 			if ( $owned instanceof WP_Error || ! hash_equals( $adapter_key, (string) ( $owned['adapter_key'] ?? '' ) ) ) {
@@ -178,27 +189,40 @@ final class Future_Rest_Controller {
 			}
 		}
 
+		$provider_payload = $payload;
+		if ( in_array( $capability, self::SESSION_BOUND_CAPABILITIES, true ) ) {
+			if ( ! is_array( $owned ) ) {
+				return $this->error( 'future_session_required', 409 );
+			}
+			$provider_payload['_supc_context'] = array(
+				'session_uuid'      => (string) $owned['session_uuid'],
+				'adapter_key'       => (string) $owned['adapter_key'],
+				'native_reference'  => is_string( $owned['native_reference'] ?? null ) ? (string) $owned['native_reference'] : '',
+				'sensitivity_class' => (string) ( $owned['sensitivity_class'] ?? $this->adapter_privacy( $adapter ) ),
+				'lock_version'      => (int) ( $owned['lock_version'] ?? 0 ),
+			);
+		}
+		if ( ! $this->payload_is_bounded( $provider_payload ) ) {
+			return $this->error( 'future_provider_context_too_large', 413 );
+		}
+
 		// Non-bypassable final preflight. Provider filters cannot override this
 		// result because no provider invocation/filter runs until it passes.
-		// Traceability: expected hard-stop errors include
-		// future_sensitive_external_advisory_blocked and future_capability_action_invalid.
-		// Governing owner opt-in remains the supc_future_sensitive_capability_allowed hook,
-		// which is evaluated inside Future_Intelligence_Hardening before provider dispatch.
 		$preflight = ( new Future_Intelligence_Hardening() )->guard_request(
 			null,
 			$capability,
 			get_current_user_id(),
 			$adapter_key,
-			$payload
+			$provider_payload
 		);
 		if ( $preflight instanceof WP_Error ) {
 			return $this->normalize_error( $preflight );
 		}
 
-		$result = apply_filters( 'supc_future_capability_result', null, $capability, get_current_user_id(), $adapter_key, $payload );
+		$result = apply_filters( 'supc_future_capability_result', null, $capability, get_current_user_id(), $adapter_key, $provider_payload );
 		if ( null === $result && $adapter instanceof Future_Capability_Adapter ) {
 			try {
-				$result = $adapter->invoke_future_capability( get_current_user_id(), $capability, $payload );
+				$result = $adapter->invoke_future_capability( get_current_user_id(), $capability, $provider_payload );
 			} catch ( \Throwable $error ) {
 				unset( $error );
 				$result = $this->error( 'future_provider_exception', 502 );
@@ -240,6 +264,16 @@ final class Future_Rest_Controller {
 			return $this->error( 'future_adapter_not_authorized', 403 );
 		}
 		return $adapter;
+	}
+
+	private function adapter_privacy( Adapter $adapter ): string {
+		try {
+			$value = strtolower( trim( $adapter->privacy_classification() ) );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return 'sensitive';
+		}
+		return in_array( $value, array( 'public', 'private', 'sensitive' ), true ) ? $value : 'sensitive';
 	}
 
 	/** @return array<int,string> */
@@ -323,15 +357,14 @@ final class Future_Rest_Controller {
 
 	private function within_rate_limit( int $user_id ): bool {
 		if ( ! function_exists( 'get_transient' ) || ! function_exists( 'set_transient' ) ) {
-			return true;
+			return false;
 		}
 		$key   = 'supc_future_rate_' . hash( 'sha256', (string) $user_id . '|' . (string) floor( time() / self::RATE_WINDOW ) );
 		$count = (int) get_transient( $key );
 		if ( $count >= self::RATE_LIMIT ) {
 			return false;
 		}
-		set_transient( $key, $count + 1, self::RATE_WINDOW + 5 );
-		return true;
+		return false !== set_transient( $key, $count + 1, self::RATE_WINDOW + 5 );
 	}
 
 	/** @param array<string,mixed> $data */
@@ -340,6 +373,7 @@ final class Future_Rest_Controller {
 		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
 		$response->header( 'Pragma', 'no-cache' );
 		$response->header( 'X-Content-Type-Options', 'nosniff' );
+		$response->header( 'Referrer-Policy', 'no-referrer' );
 		return $response;
 	}
 
@@ -347,10 +381,39 @@ final class Future_Rest_Controller {
 		$code   = (string) $error->get_error_code();
 		$data   = $error->get_error_data();
 		$status = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 422;
-		return new WP_Error( '' !== $code ? $code : 'future_provider_error', $error->get_error_message(), array( 'status' => max( 400, min( 599, $status ) ) ) );
+		$reference = is_array( $data ) && isset( $data['support_reference'] ) && is_string( $data['support_reference'] )
+			? $data['support_reference']
+			: $this->support_reference();
+		return new WP_Error(
+			'' !== $code ? $code : 'future_provider_error',
+			$error->get_error_message(),
+			array(
+				'status'            => max( 400, min( 599, $status ) ),
+				'support_reference' => $reference,
+			)
+		);
+	}
+
+	private function support_reference(): string {
+		try {
+			$random = bin2hex( random_bytes( 6 ) );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			$random = substr( hash( 'sha256', (string) microtime( true ) . '|' . (string) get_current_user_id() ), 0, 12 );
+		}
+		return 'SUPC-FUT-' . strtoupper( $random );
 	}
 
 	private function error( string $code, int $status ): WP_Error {
-		return new WP_Error( 'supc_' . sanitize_key( $code ), __( 'The Future Composer Intelligence request could not be completed.', 'sabri-universal-post-composer' ), array( 'status' => $status ) );
+		$reference = $this->support_reference();
+		do_action( 'supc_future_error', sanitize_key( $code ), $status, get_current_user_id(), $reference );
+		return new WP_Error(
+			'supc_' . sanitize_key( $code ),
+			__( 'The Future Composer Intelligence request could not be completed.', 'sabri-universal-post-composer' ),
+			array(
+				'status'            => $status,
+				'support_reference' => $reference,
+			)
+		);
 	}
 }
