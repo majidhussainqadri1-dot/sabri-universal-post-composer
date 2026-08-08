@@ -17,7 +17,7 @@
 	let recognition = null;
 	let target = null;
 
-	const sensitive = () => Boolean(root.querySelector('[data-supc-field][data-privacy="sensitive"], .supc-workflow__field[data-privacy="sensitive"], [data-field-key*="patient"], [data-field-key*="consent"], [data-field-key*="clinical_case"], [data-field-key*="successful_case"], [data-field-key*="guardian"], [data-field-key*="credential"]'));
+	const sensitive = () => String(config.adapterPrivacyClassification || '').toLowerCase() === 'sensitive' || Boolean(root.querySelector('[data-supc-field][data-privacy="sensitive"], .supc-workflow__field[data-privacy="sensitive"], [data-field-key*="patient"], [data-field-key*="consent"], [data-field-key*="clinical_case"], [data-field-key*="successful_case"], [data-field-key*="guardian"], [data-field-key*="credential"]'));
 	const sensitiveVoiceAllowed = () => Boolean(config.privacy && config.privacy.sensitiveVoiceAllowed);
 	const setResult = (message, state) => {
 		const node = panel.querySelector('[data-future-result="voice"]');
