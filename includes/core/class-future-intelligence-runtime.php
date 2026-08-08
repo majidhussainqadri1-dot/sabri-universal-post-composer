@@ -56,8 +56,8 @@ final class Future_Intelligence_Runtime {
 		$version = defined( 'SUPC_FUTURE_INTELLIGENCE_VERSION' ) ? (string) SUPC_FUTURE_INTELLIGENCE_VERSION : '1.0.0';
 
 		// Register the established Composer dependencies early so styles are not
-		// delayed until shortcode rendering and the future script still executes
-		// after the stable workflow runtime.
+		// delayed until shortcode rendering and future scripts still execute after
+		// the stable workflow runtime.
 		if ( function_exists( 'wp_style_is' ) && ! wp_style_is( 'supc-create-surface', 'registered' ) ) {
 			wp_register_style( 'supc-create-surface', SUPC_URL . 'assets/css/create-surface.css', array( 'dashicons' ), SUPC_VERSION );
 		}
@@ -80,6 +80,13 @@ final class Future_Intelligence_Runtime {
 			'supc-future-intelligence',
 			SUPC_URL . 'assets/js/future-intelligence.js',
 			array( 'supc-workflow-composer' ),
+			$version,
+			true
+		);
+		wp_enqueue_script(
+			'supc-future-intelligence-advanced',
+			SUPC_URL . 'assets/js/future-intelligence-advanced.js',
+			array( 'supc-future-intelligence' ),
 			$version,
 			true
 		);
@@ -115,6 +122,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'includes/contracts/interface-future-capability-adapter.php',
 			SUPC_PATH . 'includes/http/class-future-rest-controller.php',
 			SUPC_PATH . 'assets/js/future-intelligence.js',
+			SUPC_PATH . 'assets/js/future-intelligence-advanced.js',
 			SUPC_PATH . 'assets/css/future-intelligence.css',
 		);
 		$missing = array();
