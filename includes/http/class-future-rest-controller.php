@@ -15,6 +15,7 @@ namespace Sabri\UniversalComposer\Http;
 
 use Sabri\UniversalComposer\Contracts\Adapter;
 use Sabri\UniversalComposer\Contracts\Future_Capability_Adapter;
+use Sabri\UniversalComposer\Core\Audit_Store;
 use Sabri\UniversalComposer\Core\Contract_Boundary;
 use Sabri\UniversalComposer\Core\Future_Intelligence_Hardening;
 use Sabri\UniversalComposer\Core\Permission_Resolver;
@@ -135,6 +136,9 @@ final class Future_Rest_Controller {
 		$local   = self::LOCAL_CAPABILITIES;
 		if ( 'sensitive' === $privacy ) {
 			$local = array_values( array_diff( $local, array( 'encrypted_offline_recovery' ) ) );
+			if ( ! (bool) apply_filters( 'supc_future_sensitive_voice_allowed', false, get_current_user_id(), $adapter_key ) ) {
+				$local = array_values( array_diff( $local, array( 'voice_dictation' ) ) );
+			}
 		}
 		return $this->response(
 			array(
@@ -158,6 +162,7 @@ final class Future_Rest_Controller {
 		$capability  = isset( $body['capability'] ) && is_string( $body['capability'] ) ? sanitize_key( $body['capability'] ) : '';
 		$payload     = isset( $body['payload'] ) && is_array( $body['payload'] ) ? $body['payload'] : array();
 		$session     = isset( $body['session_uuid'] ) && is_string( $body['session_uuid'] ) ? strtolower( trim( $body['session_uuid'] ) ) : '';
+		$correlation = $this->support_reference();
 
 		if ( ! Contract_Boundary::adapter_key( $adapter_key ) || ! in_array( $capability, self::BRIDGE_CAPABILITIES, true ) ) {
 			return $this->error( 'future_invalid_capability_request', 400 );
@@ -178,6 +183,7 @@ final class Future_Rest_Controller {
 		}
 		$declared = $this->bridge_capabilities( get_current_user_id(), $adapter_key, $adapter );
 		if ( ! in_array( $capability, $declared, true ) ) {
+			$this->audit( $capability, $adapter_key, 'denied', $session, null, $correlation );
 			return $this->error( 'future_capability_unavailable', 409 );
 		}
 
@@ -185,6 +191,7 @@ final class Future_Rest_Controller {
 		if ( '' !== $session ) {
 			$owned = ( new Session_Store() )->get_owned( $session, get_current_user_id() );
 			if ( $owned instanceof WP_Error || ! hash_equals( $adapter_key, (string) ( $owned['adapter_key'] ?? '' ) ) ) {
+				$this->audit( $capability, $adapter_key, 'denied', null, null, $correlation );
 				return $this->error( 'future_session_mismatch', 409 );
 			}
 		}
@@ -200,14 +207,14 @@ final class Future_Rest_Controller {
 				'native_reference'  => is_string( $owned['native_reference'] ?? null ) ? (string) $owned['native_reference'] : '',
 				'sensitivity_class' => (string) ( $owned['sensitivity_class'] ?? $this->adapter_privacy( $adapter ) ),
 				'lock_version'      => (int) ( $owned['lock_version'] ?? 0 ),
+				'correlation_id'    => $correlation,
 			);
 		}
 		if ( ! $this->payload_is_bounded( $provider_payload ) ) {
+			$this->audit( $capability, $adapter_key, 'failed', $session, is_array( $owned ) ? ( $owned['native_reference'] ?? null ) : null, $correlation );
 			return $this->error( 'future_provider_context_too_large', 413 );
 		}
 
-		// Non-bypassable final preflight. Provider filters cannot override this
-		// result because no provider invocation/filter runs until it passes.
 		$preflight = ( new Future_Intelligence_Hardening() )->guard_request(
 			null,
 			$capability,
@@ -216,7 +223,8 @@ final class Future_Rest_Controller {
 			$provider_payload
 		);
 		if ( $preflight instanceof WP_Error ) {
-			return $this->normalize_error( $preflight );
+			$this->audit( $capability, $adapter_key, 'denied', $session, is_array( $owned ) ? ( $owned['native_reference'] ?? null ) : null, $correlation );
+			return $this->normalize_error( $preflight, $correlation );
 		}
 
 		$result = apply_filters( 'supc_future_capability_result', null, $capability, get_current_user_id(), $adapter_key, $provider_payload );
@@ -229,21 +237,26 @@ final class Future_Rest_Controller {
 			}
 		}
 		if ( null === $result ) {
+			$this->audit( $capability, $adapter_key, 'failed', $session, is_array( $owned ) ? ( $owned['native_reference'] ?? null ) : null, $correlation );
 			return $this->error( 'future_provider_unavailable', 503 );
 		}
 		if ( $result instanceof WP_Error ) {
-			return $this->normalize_error( $result );
+			$this->audit( $capability, $adapter_key, 'failed', $session, is_array( $owned ) ? ( $owned['native_reference'] ?? null ) : null, $correlation );
+			return $this->normalize_error( $result, $correlation );
 		}
 		if ( ! is_array( $result ) || ! $this->response_is_bounded( $result ) ) {
+			$this->audit( $capability, $adapter_key, 'failed', $session, is_array( $owned ) ? ( $owned['native_reference'] ?? null ) : null, $correlation );
 			return $this->error( 'future_provider_response_invalid', 502 );
 		}
 
-		do_action( 'supc_future_capability_invoked', $capability, get_current_user_id(), $adapter_key, true );
+		$this->audit( $capability, $adapter_key, 'success', $session, is_array( $owned ) ? ( $owned['native_reference'] ?? null ) : null, $correlation );
+		do_action( 'supc_future_capability_invoked', $capability, get_current_user_id(), $adapter_key, true, $correlation );
 		return $this->response(
 			array(
-				'capability' => $capability,
-				'result'     => $result,
-				'ephemeral'  => true,
+				'capability'     => $capability,
+				'result'         => $result,
+				'ephemeral'      => true,
+				'correlation_id' => $correlation,
 			)
 		);
 	}
@@ -291,8 +304,6 @@ final class Future_Rest_Controller {
 		if ( is_array( $filtered ) ) {
 			$capabilities = $filtered;
 		}
-		// Apply the security/privacy reduction after every third-party filter so a
-		// later callback cannot re-add a sensitive external advisory capability.
 		$final = ( new Future_Intelligence_Hardening() )->filter_capabilities( $capabilities, $user_id, $adapter_key );
 		if ( is_array( $final ) ) {
 			$capabilities = $final;
@@ -367,6 +378,19 @@ final class Future_Rest_Controller {
 		return false !== set_transient( $key, $count + 1, self::RATE_WINDOW + 5 );
 	}
 
+	private function audit( string $capability, string $adapter_key, string $outcome, ?string $session_uuid, mixed $native_reference, string $correlation ): void {
+		$event = 'future.' . sanitize_key( $capability );
+		$native = is_string( $native_reference ) && '' !== $native_reference ? $native_reference : null;
+		$session = is_string( $session_uuid ) && 1 === preg_match( '/^[0-9a-f-]{36}$/D', strtolower( $session_uuid ) ) ? strtolower( $session_uuid ) : null;
+		try {
+			( new Audit_Store() )->record( get_current_user_id(), $adapter_key, $event, $outcome, $session, $native, $correlation );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			// Audit-storage failure must not turn an already-authorized advisory into
+			// a false success/failure. File 24/System Check can surface ledger health.
+		}
+	}
+
 	/** @param array<string,mixed> $data */
 	private function response( array $data, int $status = 200 ): WP_REST_Response {
 		$response = new WP_REST_Response( $data, $status );
@@ -377,19 +401,27 @@ final class Future_Rest_Controller {
 		return $response;
 	}
 
-	private function normalize_error( WP_Error $error ): WP_Error {
+	private function normalize_error( WP_Error $error, ?string $correlation = null ): WP_Error {
 		$code   = (string) $error->get_error_code();
 		$data   = $error->get_error_data();
 		$status = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 422;
-		$reference = is_array( $data ) && isset( $data['support_reference'] ) && is_string( $data['support_reference'] )
-			? $data['support_reference']
-			: $this->support_reference();
+		$reference = is_string( $correlation ) && '' !== $correlation
+			? $correlation
+			: ( is_array( $data ) && isset( $data['support_reference'] ) && is_string( $data['support_reference'] ) ? $data['support_reference'] : $this->support_reference() );
+		$field = is_array( $data ) && isset( $data['field'] ) && is_string( $data['field'] ) && 1 === preg_match( '/^[a-z][a-z0-9_.-]{0,63}$/D', $data['field'] ) ? $data['field'] : null;
+		$retryable = is_array( $data ) && isset( $data['retryable'] ) && is_bool( $data['retryable'] )
+			? $data['retryable']
+			: in_array( $status, array( 429, 502, 503, 504 ), true );
+		do_action( 'supc_future_error', '' !== $code ? $code : 'future_provider_error', $status, get_current_user_id(), $reference );
 		return new WP_Error(
 			'' !== $code ? $code : 'future_provider_error',
 			$error->get_error_message(),
 			array(
 				'status'            => max( 400, min( 599, $status ) ),
 				'support_reference' => $reference,
+				'field'             => $field,
+				'retryable'         => $retryable,
+				'draft_protected'   => true,
 			)
 		);
 	}
@@ -413,6 +445,8 @@ final class Future_Rest_Controller {
 			array(
 				'status'            => $status,
 				'support_reference' => $reference,
+				'retryable'         => in_array( $status, array( 429, 502, 503, 504 ), true ),
+				'draft_protected'   => true,
 			)
 		);
 	}
