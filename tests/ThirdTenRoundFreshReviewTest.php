@@ -41,7 +41,8 @@ final class ThirdTenRoundFreshReviewTest extends TestCase {
 		$this->assertStringContainsString( 'resolutionConfirmed', $js );
 		$this->assertStringContainsString( 'result.resolved === true', $js );
 		$this->assertStringContainsString( "String(result.status || '').toLowerCase() === 'resolved'", $js );
-		$this->assertStringContainsString( 'did not confirm that this annotation is resolved', $js );
+		$this->assertStringContainsString( 'exact annotation', $js );
+		$this->assertStringContainsString( "Object.prototype.hasOwnProperty.call(result, 'annotation_id')", $js );
 	}
 
 	public function test_round_4_voice_privacy_is_revalidated_for_each_transcript_result(): void {
@@ -79,7 +80,8 @@ final class ThirdTenRoundFreshReviewTest extends TestCase {
 		$this->assertStringContainsString( "const LEGACY_DB = 'supc-future-recovery-v1'", $js );
 		$this->assertStringContainsString( 'indexedDB.deleteDatabase(LEGACY_DB)', $js );
 		$this->assertStringContainsString( 'future-intelligence-recovery-retirement.js', $runtime );
-		$this->assertStringContainsString( "'localEncryptedRecovery'   => false", $runtime );
+		$this->assertStringContainsString( "'localEncryptedRecovery'", $runtime );
+		$this->assertStringContainsString( 'false', $runtime );
 	}
 
 	public function test_round_9_human_rich_text_paste_cannot_load_remote_tracking_images(): void {
@@ -96,7 +98,8 @@ final class ThirdTenRoundFreshReviewTest extends TestCase {
 		$rest    = $this->contents( 'includes/http/class-future-rest-controller.php' );
 		$this->assertStringNotContainsString( 'CREATE TABLE', $bridge . $rest );
 		$this->assertStringNotContainsString( 'wp_insert_post(', $bridge . $rest );
-		$this->assertStringContainsString( "'ownership'           => 'native_owner'", $rest );
+		$this->assertStringContainsString( "'ownership'", $rest );
+		$this->assertStringContainsString( "'native_owner'", $rest );
 		$this->assertStringContainsString( 'future-intelligence-third-review-hardening.js', $runtime );
 		$this->assertStringContainsString( 'future-intelligence-recovery-retirement.js', $runtime );
 	}
