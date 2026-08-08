@@ -33,6 +33,30 @@
 		if (returnFocus && document.contains(returnFocus) && typeof returnFocus.focus === 'function') returnFocus.focus();
 		returnFocus = null;
 	};
+	const closeFallback = () => {
+		if (!dialog.hasAttribute('open')) return;
+		dialog.removeAttribute('open');
+		dialog.dispatchEvent(new Event('close'));
+	};
+	// Base command handlers call dialog.close(). Older browsers can expose the
+	// element without the native dialog API, so provide a safe behavioral shim.
+	if (typeof dialog.close !== 'function') dialog.close = closeFallback;
+	const openSafely = () => {
+		rememberOpener();
+		if (dialog.hasAttribute('open')) {
+			window.setTimeout(focusFirst, 0);
+			return;
+		}
+		try {
+			if (nativeModal) dialog.showModal();
+			else dialog.setAttribute('open', '');
+		} catch (error) {
+			// A re-entrant native showModal must never break the Composer. If another
+			// listener opened it first, treat the existing open state as success.
+			if (!dialog.hasAttribute('open')) return;
+		}
+		window.setTimeout(focusFirst, 0);
+	};
 
 	new MutationObserver(() => {
 		if (!dialog.hasAttribute('open')) return;
@@ -46,8 +70,7 @@
 		if (!dialog.hasAttribute('open')) return;
 		if (event.key === 'Escape' && !nativeModal) {
 			event.preventDefault();
-			dialog.removeAttribute('open');
-			restoreFocus();
+			closeFallback();
 			return;
 		}
 		if (event.key !== 'Tab' || nativeModal) return;
@@ -59,12 +82,25 @@
 		else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
 	}, true);
 
+	// Replace the base palette button so unsupported/re-entrant showModal calls
+	// cannot reach the older unguarded listener.
+	const oldLauncher = document.querySelector('[data-local-tool="command"]');
+	if (oldLauncher) {
+		const launcher = oldLauncher.cloneNode(true);
+		oldLauncher.replaceWith(launcher);
+		launcher.addEventListener('click', openSafely);
+	}
+	// Capture Ctrl/Cmd+K before the base bubble listener and use the guarded open.
+	window.addEventListener('keydown', (event) => {
+		if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 'k') return;
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		openSafely();
+	}, true);
+
 	const fallbackClose = dialog.querySelector('button[value="cancel"]');
 	if (fallbackClose) fallbackClose.addEventListener('click', () => {
-		if (!nativeModal) {
-			dialog.removeAttribute('open');
-			restoreFocus();
-		}
+		if (!nativeModal) closeFallback();
 	});
 
 	// Any command that closes the palette must leave a deterministic focus
