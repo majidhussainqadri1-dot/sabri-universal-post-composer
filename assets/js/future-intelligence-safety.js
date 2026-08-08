@@ -11,8 +11,12 @@
 	const safeUrl = (value, image) => {
 		try {
 			const url = new URL(String(value || ''), window.location.origin);
-			const protocols = image ? ['http:', 'https:'] : ['http:', 'https:'];
-			return protocols.includes(url.protocol) ? url.href : '';
+			if (image) {
+				if (url.protocol === 'blob:' && url.origin === window.location.origin) return url.href;
+				if (['http:', 'https:'].includes(url.protocol) && url.origin === window.location.origin) return url.href;
+				return '';
+			}
+			return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
 		} catch (error) {
 			return '';
 		}
@@ -42,11 +46,16 @@
 					if (child.tagName === 'IMG' && ['src', 'alt', 'title'].includes(name)) {
 						if (name === 'src') {
 							const src = safeUrl(attribute.value, true);
-							if (src) child.setAttribute('src', src); else child.removeAttribute('src');
+							if (src) {
+								child.setAttribute('src', src);
+								child.setAttribute('referrerpolicy', 'no-referrer');
+							} else {
+								child.removeAttribute('src');
+							}
 						}
 						return;
 					}
-					if (!(child.tagName === 'A' && name === 'rel')) child.removeAttribute(attribute.name);
+					if (!(child.tagName === 'A' && name === 'rel') && !(child.tagName === 'IMG' && name === 'referrerpolicy')) child.removeAttribute(attribute.name);
 				});
 			});
 		};
@@ -58,7 +67,8 @@
 	// an input event on the form. Capture that event before the stable Composer
 	// sees it so no provider-returned raw rich text can bypass the same browser
 	// allowlist used for human paste/editing. Server-side validation remains the
-	// final authority.
+	// final authority. Remote image URLs are stripped to prevent tracking pixels
+	// or third-party resource disclosure inside private composer sessions.
 	form.addEventListener('input', (event) => {
 		if (event.target !== form) return;
 		const cleaned = sanitize(source.value);
