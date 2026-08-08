@@ -239,7 +239,8 @@
 		timer = window.setTimeout(() => persist().catch(() => {}), 2500);
 	});
 	const autosave = root.querySelector('[data-supc-autosave-state]');
-	if (autosave) new MutationObserver(() => { if (/saved|completed/i.test(autosave.textContent || '')) purgeCurrent().catch(() => {}); }).observe(autosave, { childList: true, characterData: true, subtree: true });
+	const autosaveSucceeded = () => /^(?:saved|completed)$/i.test(String(autosave && autosave.textContent || '').trim());
+	if (autosave) new MutationObserver(() => { if (autosaveSucceeded()) purgeCurrent().catch(() => {}); }).observe(autosave, { childList: true, characterData: true, subtree: true });
 
 	document.addEventListener('click', (event) => {
 		if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
