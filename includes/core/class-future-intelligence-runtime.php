@@ -114,6 +114,12 @@ final class Future_Intelligence_Runtime {
 					// additionally denied for an authoritative sensitive adapter.
 					'localEncryptedRecovery'   => false,
 					'auditedEncryptedRecovery' => 'sensitive' !== $privacy_class && (bool) apply_filters( 'supc_future_encrypted_recovery_allowed', true, get_current_user_id(), $adapter_key ),
+					// Compatibility flag for the original browser listener only. It is
+					// intentionally true so that the browser does not invent a second,
+					// generic authorization decision. Exact per-capability sensitive
+					// authorization is performed by capability discovery and the final
+					// non-bypassable server preflight.
+					'externalSensitiveAdvice'  => true,
 					'sensitiveVoiceAllowed'    => (bool) apply_filters( 'supc_future_sensitive_voice_allowed', false, get_current_user_id(), $adapter_key ),
 				),
 				'strings'                      => array(
