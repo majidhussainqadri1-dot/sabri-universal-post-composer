@@ -167,6 +167,8 @@ final class Future_Rest_Controller {
 		// result because no provider invocation/filter runs until it passes.
 		// Traceability: expected hard-stop errors include
 		// future_sensitive_external_advisory_blocked and future_capability_action_invalid.
+		// Governing owner opt-in remains the supc_future_sensitive_capability_allowed hook,
+		// which is evaluated inside Future_Intelligence_Hardening before provider dispatch.
 		$preflight = ( new Future_Intelligence_Hardening() )->guard_request(
 			null,
 			$capability,
