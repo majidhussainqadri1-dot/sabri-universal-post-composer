@@ -18,19 +18,27 @@
 	const DB_NAME = 'supc-future-recovery-v2';
 	const DB_VERSION = 1;
 	const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+	const MAX_RECOVERY_BYTES = 262144;
+	const MAX_RECOVERY_FIELDS = 128;
+	const SESSION_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+	const REFERENCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/;
 	let timer = null;
 
-	const isSensitive = () => Boolean(root.querySelector('[data-supc-field][data-privacy="sensitive"], .supc-workflow__field[data-privacy="sensitive"], [data-field-key*="patient"], [data-field-key*="consent"], [data-field-key*="clinical_case"], [data-field-key*="successful_case"], [data-field-key*="guardian"], [data-field-key*="credential"]'));
+	const isSensitive = () => String(config.adapterPrivacyClassification || '').toLowerCase() === 'sensitive' || Boolean(root.querySelector('[data-supc-field][data-privacy="sensitive"], .supc-workflow__field[data-privacy="sensitive"], [data-field-key*="patient"], [data-field-key*="consent"], [data-field-key*="clinical_case"], [data-field-key*="successful_case"], [data-field-key*="guardian"], [data-field-key*="credential"]'));
 	const supported = () => Boolean(enabledByPolicy && window.isSecureContext && window.crypto && crypto.subtle && window.indexedDB && !isSensitive());
 	const adapter = () => String(config.adapter || root.dataset.adapter || 'unknown');
-	const session = () => new URL(window.location.href).searchParams.get('session') || '';
+	const session = () => {
+		const value = new URL(window.location.href).searchParams.get('session') || '';
+		return SESSION_PATTERN.test(value) ? value.toLowerCase() : '';
+	};
 	const nativeReference = () => {
 		const field = form.querySelector('[name="native_reference"]');
-		return field ? String(field.value || '').trim() : '';
+		const value = field ? String(field.value || '').trim() : '';
+		return REFERENCE_PATTERN.test(value) ? value : '';
 	};
 	const tabToken = () => {
 		const state = history.state && typeof history.state === 'object' ? history.state : {};
-		if (typeof state.supcRecoveryToken === 'string' && /^[0-9a-f-]{36}$/i.test(state.supcRecoveryToken)) return state.supcRecoveryToken;
+		if (typeof state.supcRecoveryToken === 'string' && /^(?:[0-9a-f]{32}|[0-9a-f-]{36})$/i.test(state.supcRecoveryToken)) return state.supcRecoveryToken;
 		const token = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16))).map((value) => value.toString(16).padStart(2, '0')).join('');
 		try { history.replaceState(Object.assign({}, state, { supcRecoveryToken: token }), document.title, window.location.href); } catch (error) { /* In-memory token remains valid for this page. */ }
 		return token;
@@ -45,7 +53,7 @@
 	const userPrefix = () => String(config.userId || 0) + ':';
 	const protectedRecoveryField = (field) => {
 		const name = String(field && field.name || '');
-		return !field || !name || field.dataset.privacy === 'sensitive' || field.dataset.fieldType === 'opaque_reference' || /^(?:native_reference|publication_action)$/i.test(name) || /(?:consent|privacy_confirm|medical_disclaimer_confirm|copyright_declaration|rights_declaration|verification|capability|moderation|status)/i.test(name);
+		return !field || !name || field.dataset.privacy === 'sensitive' || field.dataset.fieldType === 'opaque_reference' || /^(?:native_reference|publication_action)$/i.test(name) || /(?:consent|privacy_confirm|medical_disclaimer_confirm|copyright_declaration|rights_declaration|verification|capability|moderation|status|guardian|credential|identity_evidence)/i.test(name);
 	};
 	const fieldsContainSensitiveContent = (fields) => {
 		const walk = (value, key, depth) => {
@@ -64,6 +72,15 @@
 			return false;
 		};
 		return Boolean(fields && typeof fields === 'object' && walk(fields, '', 0));
+	};
+	const fieldsAreBounded = (fields) => {
+		if (!fields || typeof fields !== 'object' || Array.isArray(fields) || Object.keys(fields).length > MAX_RECOVERY_FIELDS) return false;
+		try {
+			const encoded = JSON.stringify(fields);
+			return typeof encoded === 'string' && new TextEncoder().encode(encoded).byteLength <= MAX_RECOVERY_BYTES;
+		} catch (error) {
+			return false;
+		}
 	};
 
 	const openDb = () => new Promise((resolve, reject) => {
@@ -120,10 +137,10 @@
 	const snapshot = () => {
 		const fields = {};
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
-			if (protectedRecoveryField(field)) return;
+			if (protectedRecoveryField(field) || Object.keys(fields).length >= MAX_RECOVERY_FIELDS) return;
 			if (field.dataset.fieldType === 'checkbox') fields[field.name] = field.checked;
-			else if (field.dataset.fieldType === 'multiselect') fields[field.name] = Array.from(field.selectedOptions || []).map((option) => option.value);
-			else fields[field.name] = field.value;
+			else if (field.dataset.fieldType === 'multiselect') fields[field.name] = Array.from(field.selectedOptions || []).slice(0, 128).map((option) => String(option.value).slice(0, 1024));
+			else fields[field.name] = String(field.value == null ? '' : field.value).slice(0, 131072);
 		});
 		return fields;
 	};
@@ -136,16 +153,32 @@
 		}
 		return key;
 	};
+	const result = (message, status) => {
+		const node = panel.querySelector('[data-future-result="offline"]');
+		if (!node) return;
+		node.textContent = String(message || '');
+		node.dataset.status = status || 'ready';
+	};
 	const persist = async () => {
 		if (!supported()) { await purgeCurrent(); return; }
 		const id = keyId();
 		const fields = snapshot();
+		if (!fieldsAreBounded(fields)) {
+			await purgeCurrent();
+			result('Draft exceeds the bounded encrypted-recovery envelope. Continue with the authoritative online save; no oversized browser recovery was retained.', 'blocked');
+			return;
+		}
 		if (fieldsContainSensitiveContent(fields)) {
 			await purgeCurrent();
 			result('Potential personal/sensitive content detected — encrypted browser recovery is disabled and any local recovery for this draft was purged. Use the authoritative online save.', 'blocked');
 			return;
 		}
 		const payload = JSON.stringify({ user_id: Number(config.userId || 0), adapter: adapter(), scope: scope(), fields, updated_at: new Date().toISOString() });
+		if (new TextEncoder().encode(payload).byteLength > MAX_RECOVERY_BYTES + 4096) {
+			await purgeCurrent();
+			result('Encrypted recovery envelope exceeded its local safety bound and was not stored.', 'blocked');
+			return;
+		}
 		const key = await recoveryKey();
 		const iv = crypto.getRandomValues(new Uint8Array(12));
 		const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(payload));
@@ -158,12 +191,17 @@
 		if (!record) return null;
 		const updated = Date.parse(String(record.updated_at || ''));
 		if (!updated || Date.now() - updated > MAX_AGE_MS) { await deletePair(id); return null; }
+		if (!Array.isArray(record.iv) || record.iv.length !== 12 || !Array.isArray(record.cipher) || record.cipher.length > MAX_RECOVERY_BYTES + 8192) {
+			await deletePair(id);
+			throw new Error('Recovery envelope is malformed or oversized');
+		}
 		try {
 			const key = await recoveryKey();
-			const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(record.iv || []) }, key, new Uint8Array(record.cipher || []));
+			const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(record.iv), tagLength: 128 }, key, new Uint8Array(record.cipher));
+			if (plain.byteLength > MAX_RECOVERY_BYTES + 4096) throw new Error('Recovery plaintext exceeds safety bound');
 			const parsed = JSON.parse(new TextDecoder().decode(plain));
 			if (!parsed || Number(parsed.user_id) !== Number(config.userId || 0) || parsed.adapter !== adapter() || parsed.scope !== scope()) throw new Error('Recovery scope mismatch');
-			if (fieldsContainSensitiveContent(parsed.fields)) throw new Error('Recovery contains content that is not eligible for local storage');
+			if (!fieldsAreBounded(parsed.fields) || fieldsContainSensitiveContent(parsed.fields)) throw new Error('Recovery is not eligible for local storage');
 			return parsed;
 		} catch (error) {
 			await deletePair(id);
@@ -171,13 +209,13 @@
 		}
 	};
 	const apply = (recovered) => {
-		if (!recovered || !recovered.fields || isSensitive() || fieldsContainSensitiveContent(recovered.fields)) return false;
+		if (!recovered || !recovered.fields || isSensitive() || !fieldsAreBounded(recovered.fields) || fieldsContainSensitiveContent(recovered.fields)) return false;
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
 			if (protectedRecoveryField(field) || !Object.prototype.hasOwnProperty.call(recovered.fields, field.name)) return;
 			const value = recovered.fields[field.name];
 			if (field.dataset.fieldType === 'checkbox') field.checked = Boolean(value);
 			else if (field.dataset.fieldType === 'multiselect' && Array.isArray(value)) { const selected = new Set(value.map(String)); Array.from(field.options || []).forEach((option) => { option.selected = selected.has(option.value); }); }
-			else field.value = value == null ? '' : String(value);
+			else field.value = value == null ? '' : String(value).slice(0, field.maxLength && field.maxLength > 0 ? Math.min(field.maxLength, 131072) : 131072);
 		});
 		// The previously loaded safety layer owns rich-text sanitization. Put the
 		// recovered source into the editor before dispatching the form-level input
@@ -187,12 +225,6 @@
 		return true;
 	};
 
-	const result = (message, status) => {
-		const node = panel.querySelector('[data-future-result="offline"]');
-		if (!node) return;
-		node.textContent = String(message || '');
-		node.dataset.status = status || 'ready';
-	};
 	const offlineButtonOld = panel.querySelector('[data-local-tool="offline"]');
 	const restoreOld = panel.querySelector('[data-recovery-restore]');
 	const discardOld = panel.querySelector('[data-recovery-discard]');
@@ -205,15 +237,16 @@
 
 	const show = async () => {
 		if (!restore || !discard) return;
-		if (isSensitive() || fieldsContainSensitiveContent(snapshot())) {
+		const currentFields = snapshot();
+		if (isSensitive() || !fieldsAreBounded(currentFields) || fieldsContainSensitiveContent(currentFields)) {
 			await purgeCurrent();
 			restore.hidden = true; discard.hidden = true;
-			result('Sensitive or personally identifying draft content — online secure save required. Local recovery has been purged.', 'blocked');
+			result('Sensitive, personally identifying, or oversized draft content — online secure save required. Local recovery has been purged.', 'blocked');
 			return;
 		}
 		if (!supported()) {
 			restore.hidden = true; discard.hidden = true;
-			result('Encrypted recovery requires an approved policy, HTTPS, WebCrypto and IndexedDB.', 'blocked');
+			result('Encrypted recovery requires an approved non-sensitive adapter policy, HTTPS, WebCrypto and IndexedDB.', 'blocked');
 			return;
 		}
 		const record = await get('drafts', keyId());
@@ -230,7 +263,7 @@
 			const recovered = await read();
 			if (apply(recovered)) result('Encrypted recovery restored locally. Review and save to the authoritative native owner.', 'ready');
 			else result('No safe recovery was available for this draft.', 'warning');
-		} catch (error) { result('Encrypted recovery failed authentication/privacy eligibility and was securely discarded.', 'error'); }
+		} catch (error) { result('Encrypted recovery failed authentication/privacy/size eligibility and was securely discarded.', 'error'); }
 	});
 	if (discard) discard.addEventListener('click', async () => { await purgeCurrent(); await show(); });
 
