@@ -10,9 +10,9 @@
 	const source = root.querySelector('[data-supc-rte-source]');
 	if (!form || !panel || !config.privacy) return;
 
-	// Disable the v1 recovery listener dynamically before the user can type.
-	// This replacement owns the audited recovery path from this point forward.
-	const enabledByPolicy = Boolean(config.privacy.localEncryptedRecovery);
+	// The legacy v1 path is disabled at localization time. This audited v2 path
+	// has its own policy bit so v1 can never create/read a recovery store first.
+	const enabledByPolicy = Boolean(config.privacy.auditedEncryptedRecovery);
 	config.privacy.localEncryptedRecovery = false;
 
 	const DB_NAME = 'supc-future-recovery-v2';
@@ -205,7 +205,6 @@
 	const autosave = root.querySelector('[data-supc-autosave-state]');
 	if (autosave) new MutationObserver(() => { if (/saved|completed/i.test(autosave.textContent || '')) purgeCurrent().catch(() => {}); }).observe(autosave, { childList: true, characterData: true, subtree: true });
 
-	// Best-effort browser purge before a normal WordPress logout navigation.
 	document.addEventListener('click', (event) => {
 		if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
 		const link = event.target && event.target.closest ? event.target.closest('a[href]') : null;
