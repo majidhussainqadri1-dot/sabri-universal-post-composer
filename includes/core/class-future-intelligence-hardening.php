@@ -21,11 +21,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Future_Intelligence_Hardening {
-	/**
-	 * Provider capabilities that can receive or derive from draft content.
-	 * Sensitive/native-patient workflows require explicit governing-owner opt-in
-	 * for each exact capability; a browser hint alone can never authorize them.
-	 */
 	private const EXTERNAL_ADVISORY = array(
 		'ai_copilot',
 		'medical_terminology',
@@ -62,13 +57,6 @@ final class Future_Intelligence_Hardening {
 		add_filter( 'supc_future_capability_result', array( $this, 'guard_request' ), -1000, 5 );
 	}
 
-	/**
-	 * Hide content-bearing provider capabilities for a sensitive native workflow
-	 * unless the governing owner explicitly authorizes that exact capability.
-	 *
-	 * @param mixed $capabilities Provider-declared capability list.
-	 * @return mixed
-	 */
 	public function filter_capabilities( mixed $capabilities, int $user_id, string $adapter_key ): mixed {
 		if ( ! is_array( $capabilities ) || ! $this->adapter_is_sensitive( $user_id, $adapter_key ) ) {
 			return $capabilities;
@@ -86,11 +74,7 @@ final class Future_Intelligence_Hardening {
 		);
 	}
 
-	/**
-	 * @param mixed               $current Provider result accumulated so far.
-	 * @param array<string,mixed> $payload Capability payload.
-	 * @return mixed
-	 */
+	/** @param array<string,mixed> $payload */
 	public function guard_request( mixed $current, string $capability, int $user_id, string $adapter_key, array $payload ): mixed {
 		if ( null !== $current ) {
 			return $current;
@@ -99,7 +83,6 @@ final class Future_Intelligence_Hardening {
 		if ( ! isset( self::ACTIONS[ $capability ] ) || ! $this->action_is_allowed( $capability, $payload, $user_id, $adapter_key ) ) {
 			return $this->error( 'future_capability_action_invalid', 400 );
 		}
-
 		if ( in_array( $capability, self::EXTERNAL_ADVISORY, true ) && $this->request_is_sensitive( $user_id, $adapter_key, $payload ) ) {
 			$allowed = (bool) apply_filters( 'supc_future_sensitive_capability_allowed', false, $capability, $user_id, $adapter_key );
 			if ( ! $allowed ) {
@@ -112,13 +95,9 @@ final class Future_Intelligence_Hardening {
 	/** @param array<string,mixed> $payload */
 	private function action_is_allowed( string $capability, array $payload, int $user_id, string $adapter_key ): bool {
 		$action = isset( $payload['action'] ) && is_string( $payload['action'] ) ? sanitize_key( $payload['action'] ) : '';
-
 		if ( 'publication_impact' === $capability ) {
-			// Do not authorize by a loose publish|submit|schedule|update|revision
-			// substring. The exact action must exist in the current native schema.
 			return $this->publication_action_is_allowed( $user_id, $adapter_key, $action );
 		}
-
 		if ( ! in_array( $action, self::ACTIONS[ $capability ], true ) ) {
 			return false;
 		}
@@ -132,7 +111,11 @@ final class Future_Intelligence_Hardening {
 		}
 		if ( 'conflict_merge' === $capability && 'resolve' === $action ) {
 			$resolution = isset( $payload['resolution'] ) && is_string( $payload['resolution'] ) ? sanitize_key( $payload['resolution'] ) : '';
-			return in_array( $resolution, array( 'keep_current', 'accept_native', 'manual' ), true );
+			$token      = isset( $payload['conflict_token'] ) && is_string( $payload['conflict_token'] ) ? trim( $payload['conflict_token'] ) : '';
+			return in_array( $resolution, array( 'keep_current', 'accept_native', 'manual' ), true )
+				&& '' !== $token
+				&& strlen( $token ) <= 512
+				&& 1 === preg_match( '/^[A-Za-z0-9._~:+\/-]+$/D', $token );
 		}
 		if ( 'review_annotations' === $capability && 'resolve' === $action ) {
 			$id = isset( $payload['annotation_id'] ) && is_scalar( $payload['annotation_id'] ) ? trim( (string) $payload['annotation_id'] ) : '';
@@ -172,11 +155,6 @@ final class Future_Intelligence_Hardening {
 		return $this->payload_contains_sensitive_shape( $payload );
 	}
 
-	/**
-	 * Determine sensitivity from server-owned adapter metadata first, then use
-	 * schema fields as a defense-in-depth signal. Missing/invalid metadata fails
-	 * closed because a browser-provided hint is never authoritative.
-	 */
 	private function adapter_is_sensitive( int $user_id, string $adapter_key ): bool {
 		try {
 			$registry = Plugin::instance()->registry();
@@ -200,7 +178,6 @@ final class Future_Intelligence_Hardening {
 		if ( 'sensitive' === $classification ) {
 			return true;
 		}
-
 		try {
 			$schema = Plugin::instance()->workflow_coordinator()->schema_read_only( $user_id, $adapter_key );
 		} catch ( \Throwable $error ) {
@@ -212,9 +189,7 @@ final class Future_Intelligence_Hardening {
 		}
 		foreach ( $schema['fields'] as $key => $definition ) {
 			$name    = is_string( $key ) ? strtolower( $key ) : '';
-			$privacy = is_array( $definition ) && isset( $definition['privacy_class'] ) && is_string( $definition['privacy_class'] )
-				? strtolower( $definition['privacy_class'] )
-				: '';
+			$privacy = is_array( $definition ) && isset( $definition['privacy_class'] ) && is_string( $definition['privacy_class'] ) ? strtolower( $definition['privacy_class'] ) : '';
 			if ( in_array( $privacy, array( 'sensitive', 'restricted', 'private_sensitive', 'medical_sensitive', 'clinical_sensitive' ), true ) ) {
 				return true;
 			}
