@@ -9,7 +9,7 @@ File 22 remains the one role-aware create/edit/draft/validate/preview/submit/rev
 ## Implemented enhancements
 
 1. **AI Composer Copilot Bridge** — explicit human-triggered outline/rewrite/summary/title/citation assistance through an authorized provider; no silent insertion or auto-publication. Oversized provider payloads fail closed instead of being silently truncated.
-2. **Evidence Graph & Citation Heatmap** — local claim/reference analysis with uncited-claim sampling.
+2. **Evidence Graph & Citation Heatmap** — local claim/reference analysis. The active final path analyzes the complete bounded draft or refuses the analysis; it does not present a silently truncated/first-N sample as if it were complete.
 3. **Medical Terminology Intelligence** — authorized-provider terminology guidance; not diagnosis, prescription, potency, dosage or emergency authority; oversized advisory payloads fail closed.
 4. **Patient Privacy De-identification Assistant** — local advisory detection for email/phone, CNIC/national-ID, passport-like values, medical-record identifiers, DOB shapes, GPS coordinate shapes and explicit-address labels without sending the draft to a third party. Native Patient Case privacy/consent remains authoritative.
 5. **Voice-to-Structured Composer** — browser speech recognition into the selected permitted text field or rich editor. Target type, field length and current sensitivity are rechecked immediately before insertion; no partial over-limit transcript is inserted.
@@ -18,14 +18,14 @@ File 22 remains the one role-aware create/edit/draft/validate/preview/submit/rev
 8. **Semantic Revision Diff** — provider-owned meaning-level comparison of current and authoritative revisions using a complete bounded snapshot; oversized drafts are not partially compared.
 9. **Conflict Merge Studio** — provider bridge for conflict inspection/resolution instead of blind overwrite. Resolution requires a bounded conflict token and the browser keeps the conflict open unless the native owner positively confirms the exact token/resolution.
 10. **Governed Template & Block Library** — provider-backed approved templates; application requires an explicit human action, protects authority/privacy/identity fields, uses a complete bounded current snapshot and applies only after whole-envelope validation.
-11. **Command Palette / Slash Commands** — Ctrl/Cmd+K keyboard palette plus literal slash-command access for save, validation, preview, navigation and focus actions.
+11. **Command Palette / Slash Commands** — Ctrl/Cmd+K keyboard palette plus literal slash-command access for save, validation, preview, navigation and focus actions. Both keyboard entry paths are routed through the hardened modal/focus lifecycle.
 12. **Adaptive Composer Mode** — risk/device-aware Quick-vs-Advanced mode selection, with full controls forced for risk/compliance-shaped drafts.
 13. **Accessibility Coach** — local checks for missing alt text, vague links, heading skips/empties and tables without headers; command-dialog focus/re-entry/fallback behavior is hardened separately.
 14. **Advanced Media Workbench Bridge** — bounded local JPEG/PNG/WebP rotate/center-square crop, then direct hand-off into the native upload-token workflow; File 22 never becomes the media vault.
 15. **Cross-Format Derivative Studio** — explicit provider-backed summary/Reel/video/lesson/social derivative generation; never auto-published and never silently generated from a truncated source body.
 16. **Explainable Content Readiness Score** — advisory score from completeness, evidence, privacy, accessibility, safety and metadata; not a ranking, moderation or publication permission decision.
 17. **Publication Impact Simulator** — authoritative-provider bridge for audience/destination/notification/search impact. The proposed action must exist in the current native publication-action schema and no distribution truth is written by File 22.
-18. **Encrypted Offline Recovery for Low-Risk Drafts** — active v3 IndexedDB AES-GCM recovery with a non-extractable CryptoKey, 24-hour ceiling, user/adapter/tab-session lineage, session aliasing, current-schema fingerprint, PII/content screening and atomic two-phase restore. Sensitive/patient/consent/identity-shaped workflows remain ineligible. Plaintext draft bodies are not written to localStorage or sessionStorage. Retired v1/v2 recovery databases are never imported or reused.
+18. **Encrypted Offline Recovery for Low-Risk Drafts** — active v3 IndexedDB AES-GCM recovery with a non-extractable CryptoKey, 24-hour ceiling, user/adapter/tab-session lineage, session aliasing, current-schema fingerprint, PII/content screening and atomic two-phase restore. Sensitive/patient/consent/identity-shaped workflows remain ineligible. A low-risk recovery is purged immediately when the live form becomes sensitive/identifying or exceeds the recovery bound; plaintext draft bodies are not written to localStorage or sessionStorage. Retired v1/v2 recovery databases are never imported or reused.
 
 ## Capability contract
 
@@ -43,13 +43,16 @@ Stateful provider capabilities receive a server-owned `_supc_context` containing
 ## Security, privacy and abuse-prevention invariants
 
 - REST requests require a logged-in eligible File 00 subject, a valid WordPress REST nonce and a currently creatable/available registered adapter.
+- A dedicated `rest_request_before_callbacks` File-22 pre-dispatch guard now rechecks the current subject/adapter and rejects client authority-key spoofing, invalid stateful sessions, non-human collaboration joins, sensitive provider egress and contextual abuse **before the File 22 route callback and before any capability-result provider filter can execute**.
 - Request and response bodies are bounded and are not persisted by File 22.
 - Sensitive external/provider capabilities are reduced per capability and require the governing owner’s exact opt-in when the authoritative adapter/request is sensitive; the browser’s own hint is never treated as authority.
+- Sensitive-shape server screening covers email/phone, CNIC/national-ID/passport labels, medical-record/MRN/patient identifiers, DOB shapes, GPS coordinate shapes and explicit-address labels in addition to sensitive field names.
 - Stateful provider context is reconstructed from the current owned File 22 session immediately before provider dispatch; client authority-key spoofing is rejected.
-- A second contextual mutation budget includes user, privacy-minimized hashed server-observed IP, adapter, capability and time window. Its option mutex has bounded expiry/stale takeover and token-matched release; storage uncertainty fails closed.
+- Contextual mutation budgets include user, privacy-minimized hashed server-observed IP, adapter, capability and time window. Option mutexes have bounded expiry/stale takeover and token-matched release; storage uncertainty fails closed. Server-observed IP input is normalized/sanitized and only its keyed HMAC participates in the scope.
 - Local privacy/evidence/accessibility/readiness checks remain in-browser.
-- Active encrypted recovery is v3. It rejects sensitive content, over-bound envelopes, schema drift and partial/truncated restore. Account-switch/logout cleanup is best-effort and foreign-user records are purged when the Composer opens.
+- Active encrypted recovery is v3. It rejects sensitive content, over-bound envelopes, schema drift and partial/truncated restore. A live transition from low-risk to sensitive/identifying/over-bound content triggers immediate exact-scope recovery purge. Account-switch/logout cleanup is best-effort and foreign-user records are purged when the Composer opens.
 - Provider-returned rich text and restored/pasted rich text pass browser sanitization; remote tracking images are not loaded into a private Composer session.
+- File 22 audit storage remains metadata-only. Native references and support correlations are stored only as keyed HMAC reductions, and session/event UUIDs are strictly validated.
 - File 22 does not create a new media store, AI backend, annotation database, collaboration content store, moderation backend or publication backend.
 
 ## Human-action guarantees
