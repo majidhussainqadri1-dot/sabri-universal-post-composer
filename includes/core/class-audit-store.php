@@ -18,6 +18,7 @@ final class Audit_Store {
 	private const SCHEMA_OPTION  = 'supc_audit_schema_version';
 	private const SCHEMA_VERSION = '1.0.0';
 	private const RETENTION      = 31536000; // 365 days.
+	private const UUID_PATTERN   = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D';
 
 	public static function install(): bool {
 		global $wpdb;
@@ -86,7 +87,7 @@ final class Audit_Store {
 			! Contract_Boundary::adapter_key( $adapter_key ) ||
 			! Contract_Boundary::code( $event_code ) ||
 			! in_array( $outcome, array( 'success', 'denied', 'failed', 'pending' ), true ) ||
-			( null !== $session_uuid && 1 !== preg_match( '/^[0-9a-f-]{36}$/D', strtolower( $session_uuid ) ) ) ||
+			( null !== $session_uuid && 1 !== preg_match( self::UUID_PATTERN, strtolower( $session_uuid ) ) ) ||
 			! function_exists( 'wp_generate_uuid4' )
 		) {
 			return false;
@@ -96,7 +97,10 @@ final class Audit_Store {
 			return false;
 		}
 		$event_uuid = strtolower( wp_generate_uuid4() );
-		$inserted   = $wpdb->insert(
+		if ( 1 !== preg_match( self::UUID_PATTERN, $event_uuid ) ) {
+			return false;
+		}
+		$inserted = $wpdb->insert(
 			self::table_name(),
 			array(
 				'event_uuid'             => $event_uuid,
@@ -105,8 +109,8 @@ final class Audit_Store {
 				'adapter_key'             => $adapter_key,
 				'event_code'              => $event_code,
 				'outcome'                 => $outcome,
-				'native_reference_hash'   => null === $native_reference || '' === $native_reference ? null : hash( 'sha256', $native_reference ),
-				'correlation_hash'        => null === $correlation || '' === $correlation ? null : hash( 'sha256', $correlation ),
+				'native_reference_hash'   => null === $native_reference || '' === $native_reference ? null : $this->privacy_hash( $native_reference ),
+				'correlation_hash'        => null === $correlation || '' === $correlation ? null : $this->privacy_hash( $correlation ),
 				'created_at'              => gmdate( 'Y-m-d H:i:s' ),
 			),
 			array( '%s', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s' )
@@ -117,7 +121,6 @@ final class Audit_Store {
 		do_action( 'supc_audit_event', $event_code, $outcome, Contract_Boundary::public_identifier( $adapter_key ) );
 		return true;
 	}
-
 
 	/**
 	 * Return bounded aggregate observability without exposing users, content,
@@ -184,5 +187,12 @@ final class Audit_Store {
 		global $wpdb;
 		$prefix = is_object( $wpdb ) && isset( $wpdb->prefix ) ? (string) $wpdb->prefix : 'wp_';
 		return $prefix . self::TABLE_SUFFIX;
+	}
+
+	private function privacy_hash( string $value ): ?string {
+		if ( '' === $value || ! function_exists( 'wp_salt' ) ) {
+			return null;
+		}
+		return hash_hmac( 'sha256', $value, wp_salt( 'auth' ) );
 	}
 }
