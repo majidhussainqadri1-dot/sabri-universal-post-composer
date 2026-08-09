@@ -87,13 +87,13 @@ The governing boundaries are: File 22 is the role-aware creation/orchestration f
 | 77 | File 16 AI/clinical boundary | Clear | Provider contract states advisory/human-reviewed AI only; diagnosis/prescription/potency/dosage/emergency replacement and fabricated references are prohibited. |
 | 78 | File 24 privacy/security boundary | Clear | File 22 implements module-local enforcement/assurance signals without becoming the cross-platform control plane. |
 | 79 | Regression evidence robustness | **Defect corrected** | Intermediate exact-head CI exposed four stale source-string assertions after stronger hardening; tests were corrected to assert semantic invariants without weakening production logic. |
-| 80 | Final exact-head regression / release truth | Pending exact-head workflows | Must be updated only after all final source/test/doc mutations complete and the exact-head workflows finish. |
+| 80 | Final exact-head regression / release truth | **Defect corrected** | Initial final-gate PHPUnit exposed two remaining stale/brittle evidence assertions: one expected a line-wrapped File 16 safety sentence as one contiguous source string, and one expected a removed explanatory comment instead of the actual native-schema authorization invariant. Both tests were corrected without weakening production logic. Exact-head automated QA must be green before any Source/Automated-QA completion claim. |
 
-## Defect accounting before final exact-head gate
+## Defect accounting
 
-Defects have been found and immediately corrected in rounds: **2, 4, 6, 7, 8, 10, 16, 18, 19, 20, 23, 24, 28, 31, 32, 33, 34, 35, 36, 42, 45, 56, 57, 59, 61, 71, 79**.
+Defects were found and immediately corrected in rounds: **2, 4, 6, 7, 8, 10, 16, 18, 19, 20, 23, 24, 28, 31, 32, 33, 34, 35, 36, 42, 45, 56, 57, 59, 61, 71, 79, 80**.
 
-Round 80 is intentionally left pending in this ledger until the final exact-head CI/review workflows complete. If that gate exposes a new source/test defect, the defect will be corrected immediately and Round 80 will be recorded as a defect round; otherwise it will be recorded Clear.
+That is **28 defect-bearing rounds** and **52 rounds in which no new defect was found**. The final completion statement is valid only if the latest exact source head passes its automated workflows; the PR body records that exact-head evidence after the rerun.
 
 ## Release truth
 
