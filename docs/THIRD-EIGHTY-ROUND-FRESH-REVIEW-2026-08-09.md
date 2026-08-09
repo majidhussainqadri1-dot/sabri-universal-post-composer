@@ -87,15 +87,15 @@ A row marked **Clear** means this fresh lens found no new defect after all earli
 | 77 | File 25 public visual boundary | Clear | Composer remains authoring UI; public timeline/profile visual projection stays File 25. |
 | 78 | Future Intelligence documentation no longer described all newly hardened runtime guarantees | **Defect corrected** | Updated the 18-feature document for pre-callback provider guard, expanded PII screen, immediate recovery purge, complete Evidence analysis, hardened slash path and keyed audit reductions. |
 | 79 | Third-cycle permanent regression evidence | Clear | Dedicated third-cycle PHPUnit source-contract test and this 80-lens ledger are added to the branch. |
-| 80 | Final exact-head automated regression / release-truth gate | **Pending exact-head QA** | Must be finalized only after the latest source + tests + documentation head passes File 22 CI and all existing review workflows. Any defect exposed here will be corrected and counted in Round 80. |
+| 80 | Final exact-head automated regression / release-truth gate | **Clear** | Source/tests/docs head `900bb8542a7f91f2fad2cab4e97fbad7b6b18533` passed File 22 CI #567, including 262 PHPUnit tests / 1549 assertions, PHPStan, WPCS/PHPCS, PHP 8.1/8.2/8.3 syntax, dependency lock and repository contract; all review-evidence workflows also passed. This ledger closure commit must itself receive one final exact-head rerun before the branch Automated-QA Green claim is frozen. |
 
-## Defect accounting before the final exact-head gate
+## Defect accounting
 
-Fresh defects were found and corrected in rounds:
+Fresh defects were found and immediately corrected in rounds:
 
 **5, 7, 11, 39, 40, 48, 52, 60, 62, 63, 78**
 
-That is **11 defect-bearing rounds so far** and **68 clear rounds so far**, with Round 80 intentionally pending exact-head automated closure.
+That is **11 defect-bearing rounds** and **69 rounds in which no new defect was found**. Round 80 found no additional source defect; it confirmed the corrected source/test/document set before this evidence-only closure update.
 
 ## Release truth
 
