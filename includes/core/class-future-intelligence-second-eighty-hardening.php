@@ -196,7 +196,9 @@ final class Future_Intelligence_Second_Eighty_Hardening {
 		$limit  = max( 1, min( 300, $limit ) );
 		$bucket = (int) floor( time() / $window );
 
-		$remote = isset( $_SERVER['REMOTE_ADDR'] ) && is_scalar( $_SERVER['REMOTE_ADDR'] ) ? trim( (string) $_SERVER['REMOTE_ADDR'] ) : '';
+		$remote = isset( $_SERVER['REMOTE_ADDR'] ) && is_scalar( $_SERVER['REMOTE_ADDR'] )
+			? sanitize_text_field( wp_unslash( (string) $_SERVER['REMOTE_ADDR'] ) )
+			: '';
 		if ( '' === $remote || false === filter_var( $remote, FILTER_VALIDATE_IP ) ) {
 			$remote = 'unknown';
 		}
