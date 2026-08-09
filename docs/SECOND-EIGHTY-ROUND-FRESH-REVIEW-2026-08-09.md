@@ -4,7 +4,7 @@
 
 This is a **second independent 80-lens review cycle** of the corrected File 22 Universal Post Composer / Future Composer Intelligence branch. It starts from the previously green corrected source rather than reusing the first eighty-round conclusions. Every lens was re-evaluated against the current central governing plan, File 22 Harmonized Final v3.0, current source boundaries and the applicable native-owner contracts.
 
-A row marked **Clear** means no new defect was found in that lens after all earlier corrections in this second cycle. **Defect corrected** means the new cycle found a material coding, privacy, authority, completeness, recovery, UX or documentation defect and the correction was made before later lenses were evaluated. This evidence is bounded; it is not a claim of absolute infallibility.
+A row marked **Clear** means no new defect was found in that lens after all earlier corrections in this second cycle. **Defect corrected** means the new cycle found a material coding, privacy, authority, completeness, recovery, UX, QA-evidence or documentation defect and the correction was made before closure. This evidence is bounded; it is not a claim of absolute infallibility.
 
 | # | Fresh review lens | Result | Immediate correction / evidence |
 |---:|---|---|---|
@@ -87,15 +87,15 @@ A row marked **Clear** means no new defect was found in that lens after all earl
 | 77 | Existing regression-contract compatibility | Clear | Corrections were made without intentionally weakening prior ownership/privacy/compatibility contracts. |
 | 78 | Release-gate truthfulness | Clear | Source/Automated-QA remain distinct from package, staging, live and operational gates. |
 | 79 | Second-cycle permanent evidence and regression coverage | Clear | Dedicated second 80-round ledger and regression test file are added to the branch. |
-| 80 | Final exact-head automated regression / release truth | **Pending exact-head QA** | This row must be finalized only after the latest source/test/doc head passes File 22 CI and all existing review workflows. If CI exposes a defect, it will be corrected and this round will be counted as defect-bearing. |
+| 80 | Final exact-head automated regression / release truth | **Defect corrected** | Initial final-gate CI #555 exposed unslashed/unsanitized `$_SERVER['REMOTE_ADDR']` use in the new contextual rate limiter under WordPress Coding Standards; the server-observed input is now `wp_unslash()`ed, `sanitize_text_field()`ed and then validated as an IP before HMAC hashing. CI #556 and all review workflows then passed on the corrected runtime head before this evidence-only closure update. A brittle recovery-bound test assertion was also tightened to assert the actual source invariant directly. |
 
-## Defect accounting before the final exact-head gate
+## Defect accounting
 
-New defects were found and corrected in this second independent cycle in rounds:
+New defects were found and immediately corrected in this second independent cycle in rounds:
 
-**3, 7, 12, 18, 19, 22, 25, 31, 36, 38, 39, 41, 55, 72**
+**3, 7, 12, 18, 19, 22, 25, 31, 36, 38, 39, 41, 55, 72, 80**
 
-That is **14 defect-bearing rounds so far** and **65 clear rounds so far**, with Round 80 intentionally pending the final exact-head automated gate.
+That is **15 defect-bearing rounds** and **65 rounds in which no new defect was found**. The final source/evidence head must itself pass the exact-head automated workflows after this ledger/test closure update before the final Automated-QA Green claim is made.
 
 ## Release truth
 
