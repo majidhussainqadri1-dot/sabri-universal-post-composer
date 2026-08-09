@@ -39,7 +39,7 @@ final class SecondTenRoundFreshReviewTest extends TestCase {
 
 	public function test_round_3_sensitive_content_provider_egress_is_default_blocked(): void {
 		$php = $this->contents( 'includes/core/class-future-intelligence-hardening.php' );
-		foreach ( array( 'ai_copilot', 'medical_terminology', 'collaboration', 'semantic_diff', 'conflict_merge', 'template_library', 'cross_format_derivative', 'publication_impact' ) as $capability ) {
+		foreach ( array( 'ai_copilot', 'medical_terminology', 'collaboration', 'review_annotations', 'semantic_diff', 'conflict_merge', 'template_library', 'cross_format_derivative', 'publication_impact' ) as $capability ) {
 			$this->assertStringContainsString( "'{$capability}'", $php );
 		}
 		$this->assertStringContainsString( 'adapter_is_sensitive', $php );
@@ -72,13 +72,13 @@ final class SecondTenRoundFreshReviewTest extends TestCase {
 		$this->assertStringContainsString( 'within_rate_limit( $user_id )', $php );
 	}
 
-	public function test_round_7_capability_cache_is_bound_to_nonce_and_does_not_cache_failures(): void {
+	public function test_round_7_capability_discovery_no_longer_monkey_patches_global_fetch(): void {
 		$js = $this->contents( 'assets/js/future-intelligence-capability-broker.js' );
-		$this->assertStringContainsString( "headerValue(input, init, 'X-WP-Nonce')", $js );
-		$this->assertStringContainsString( "'|nonce:'", $js );
-		$this->assertStringContainsString( "'|credentials:'", $js );
-		$this->assertStringContainsString( 'if (!response.ok) cache.delete(key)', $js );
-		$this->assertStringContainsString( "method !== 'GET'", $js );
+		$this->assertStringContainsString( "mode: 'native-fetch'", $js );
+		$this->assertStringContainsString( 'globalFetchPatched: false', $js );
+		$this->assertStringContainsString( 'Deliberately do not replace window.fetch', $js );
+		$this->assertStringNotContainsString( 'window.fetch =', $js );
+		$this->assertStringNotContainsString( 'nativeFetch(', $js );
 	}
 
 	public function test_round_8_accessibility_review_remains_green(): void {
