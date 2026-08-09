@@ -112,7 +112,9 @@ final class EightyRoundFreshReviewTest extends TestCase {
 		$rest     = $this->contents( 'includes/http/class-future-rest-controller.php' );
 		$future   = $this->contents( 'assets/js/future-intelligence-third-review-hardening.js' );
 		$this->assertStringContainsString( 'owning File 16', $contract );
-		$this->assertStringContainsString( 'no autonomous diagnosis/prescription/potency/dosage/emergency replacement', $contract );
+		$this->assertStringContainsString( 'advisory output only, human review required', $contract );
+		$this->assertStringContainsString( 'autonomous diagnosis/prescription/potency/dosage/emergency replacement', $contract );
+		$this->assertStringContainsString( 'no fabricated references', $contract );
 		$this->assertStringContainsString( "'ownership'", $rest );
 		$this->assertStringContainsString( "'native_owner'", $rest );
 		$this->assertStringNotContainsString( 'CREATE TABLE', $contract . $rest . $future );
