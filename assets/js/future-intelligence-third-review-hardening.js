@@ -11,6 +11,8 @@
 
 	const restRoot = String(config.restRoot || '').replace(/\/+$/, '');
 	const capabilities = new Set();
+	const MAX_PROVIDER_FIELDS = 128;
+	const MAX_FIELD_LENGTH = 131072;
 	let remoteFields = null;
 	let conflictState = null;
 
@@ -22,15 +24,16 @@
 	};
 	const protectedField = (field) => {
 		const name = String(field && field.name || '');
-		return !field || !name || field.dataset.privacy === 'sensitive' || /^(?:publication_action)$/i.test(name) || /(?:consent|privacy_confirm|medical_disclaimer_confirm|copyright_declaration|rights_declaration|verification|capability|moderation|status|guardian|credential|identity_evidence)/i.test(name);
+		return !field || !name || field.dataset.privacy === 'sensitive' || /^(?:publication_action)$/i.test(name) || /(?:consent|privacy_confirm|medical_disclaimer_confirm|copyright_declaration|rights_declaration|verification|capability|moderation|status|guardian|credential|identity_evidence|author_id|effective_author)/i.test(name);
 	};
 	const providerSnapshot = () => {
 		const out = {};
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
+			if (Object.keys(out).length >= MAX_PROVIDER_FIELDS) return;
 			if (!field.name || field.name === 'native_reference' || field.dataset.fieldType === 'opaque_reference' || protectedField(field)) return;
 			if (field.dataset.fieldType === 'checkbox') out[field.name] = Boolean(field.checked);
 			else if (field.dataset.fieldType === 'multiselect') out[field.name] = Array.from(field.selectedOptions || []).map((option) => String(option.value).slice(0, 512)).slice(0, 128);
-			else out[field.name] = String(field.value == null ? '' : field.value).slice(0, 131072);
+			else out[field.name] = String(field.value == null ? '' : field.value).slice(0, MAX_FIELD_LENGTH);
 		});
 		const reference = nativeReference();
 		if (reference) out.native_reference = reference;
@@ -79,9 +82,11 @@
 			return true;
 		}
 		if (field.dataset.fieldType === 'multiselect') {
-			if (!Array.isArray(value)) return false;
+			if (!Array.isArray(value) || value.length > 128) return false;
 			const allowed = new Set(Array.from(field.options || []).map((option) => option.value));
-			const selected = new Set(value.map(String).filter((item) => allowed.has(item)));
+			const candidates = value.map(String);
+			if (candidates.some((item) => item.length > 512 || !allowed.has(item))) return false;
+			const selected = new Set(candidates);
 			Array.from(field.options || []).forEach((option) => { option.selected = selected.has(option.value); });
 			return true;
 		}
@@ -92,10 +97,31 @@
 			return true;
 		}
 		if (typeof value !== 'string' && typeof value !== 'number') return false;
-		const limit = field.maxLength && field.maxLength > 0 ? Math.min(field.maxLength, 131072) : 131072;
-		field.value = String(value).slice(0, limit);
+		const candidate = String(value);
+		const limit = field.maxLength && field.maxLength > 0 ? Math.min(field.maxLength, MAX_FIELD_LENGTH) : MAX_FIELD_LENGTH;
+		if (candidate.length > limit) return false;
+		field.value = candidate;
 		if (field.matches('[data-supc-rte-source]') && editor) editor.textContent = field.value;
 		return true;
+	};
+
+	const remoteEnvelopeIsSafe = (fields) => {
+		if (!fields || typeof fields !== 'object' || Array.isArray(fields) || Object.keys(fields).length > MAX_PROVIDER_FIELDS) return false;
+		return Object.keys(fields).every((name) => {
+			const field = form.querySelector('[data-supc-field][name="' + CSS.escape(String(name)) + '"]');
+			if (!field || protectedField(field) || field.name === 'native_reference' || field.dataset.fieldType === 'opaque_reference') return false;
+			const value = fields[name];
+			if (field.dataset.fieldType === 'checkbox') return typeof value === 'boolean';
+			if (field.dataset.fieldType === 'multiselect') {
+				if (!Array.isArray(value) || value.length > 128) return false;
+				const allowed = new Set(Array.from(field.options || []).map((option) => option.value));
+				return value.every((item) => String(item).length <= 512 && allowed.has(String(item)));
+			}
+			if (field.tagName === 'SELECT') return Array.from(field.options || []).some((option) => option.value === String(value == null ? '' : value));
+			if (typeof value !== 'string' && typeof value !== 'number') return false;
+			const limit = field.maxLength && field.maxLength > 0 ? Math.min(field.maxLength, MAX_FIELD_LENGTH) : MAX_FIELD_LENGTH;
+			return String(value).length <= limit;
+		});
 	};
 
 	const diff = replaceButton('[data-tool="diff"]');
@@ -132,23 +158,34 @@
 		try {
 			const response = await invoke('collaboration', { action: 'pull', current: providerSnapshot() });
 			const result = resultPayload(response);
-			remoteFields = result.fields && typeof result.fields === 'object' && !Array.isArray(result.fields) ? result.fields : null;
+			const candidate = result.fields && typeof result.fields === 'object' && !Array.isArray(result.fields) ? result.fields : null;
+			remoteFields = remoteEnvelopeIsSafe(candidate) ? candidate : null;
 			if (apply) apply.disabled = !remoteFields;
-			setResult('collaboration', remoteFields ? 'Remote update is available. Authority, consent, privacy, moderation and opaque-reference fields are excluded from provider egress and remote application.' : 'No remote field update was returned.', 'ready');
+			setResult('collaboration', remoteFields ? 'A complete bounded remote update is available. Authority, identity, consent, privacy, moderation and opaque-reference fields are excluded from provider egress and remote application.' : 'No complete safe remote field update was returned; partial/truncated application is prohibited.', remoteFields ? 'ready' : 'warning');
 		} catch (error) { setResult('collaboration', error.message || 'Collaboration pull failed.', 'error'); }
 		finally { pull.disabled = false; }
 	});
 	if (apply) apply.addEventListener('click', () => {
-		if (!remoteFields) return;
-		let count = 0;
+		if (!remoteFields || !remoteEnvelopeIsSafe(remoteFields)) {
+			remoteFields = null;
+			apply.disabled = true;
+			return setResult('collaboration', 'Remote update no longer matches the current safe schema and was discarded.', 'blocked');
+		}
+		const assignments = [];
 		form.querySelectorAll('[data-supc-field]').forEach((field) => {
-			if (!Object.prototype.hasOwnProperty.call(remoteFields, field.name)) return;
-			if (safeAssign(field, remoteFields[field.name])) count += 1;
+			if (Object.prototype.hasOwnProperty.call(remoteFields, field.name)) assignments.push([field, remoteFields[field.name]]);
 		});
+		if (assignments.some(([field, value]) => !remoteEnvelopeIsSafe({ [field.name]: value }))) {
+			remoteFields = null;
+			apply.disabled = true;
+			return setResult('collaboration', 'Remote update failed final validation and was not partially applied.', 'blocked');
+		}
+		let count = 0;
+		assignments.forEach(([field, value]) => { if (safeAssign(field, value)) count += 1; });
 		remoteFields = null;
 		apply.disabled = true;
 		form.dispatchEvent(new Event('input', { bubbles: true }));
-		setResult('collaboration', count ? count + ' bounded remote field update(s) applied by explicit human action. Review and save to the native owner.' : 'No safe editable remote fields were applied.', count ? 'ready' : 'warning');
+		setResult('collaboration', count === assignments.length ? count + ' bounded remote field update(s) applied by explicit human action. Review and save to the native owner.' : 'Remote update could not be applied completely; review the current draft before saving.', count === assignments.length ? 'ready' : 'warning');
 	});
 
 	const inspect = replaceButton('[data-tool="conflict"]');
