@@ -29,14 +29,18 @@
 		return TOKEN_PATTERN.test(token) ? token : '';
 	};
 	const containsSensitiveText = (value) => {
-		const sample = String(value || '').slice(0, MAX_LOCAL_ANALYSIS_TEXT);
-		return /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(sample)
-			|| /(?:\+?\d[\d\s().-]{8,}\d)/.test(sample)
-			|| /\b\d{5}-?\d{7}-?\d\b/.test(sample)
-			|| /\b(?:passport|cnic|national\s+id|medical\s+record|mrn|patient\s+id|registration\s+number)\s*[:#-]?\s*[A-Z0-9-]{3,}\b/i.test(sample)
-			|| /\b(?:DOB|date of birth|تاریخ پیدائش)\s*[:\-]?\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/i.test(sample)
-			|| /\b-?\d{1,2}\.\d{4,}\s*,\s*-?\d{1,3}\.\d{4,}\b/.test(sample)
-			|| /\b(?:address|street|گھر\s*کا\s*پتہ|پتہ)\s*[:\-]\s*[^\n]{8,}/i.test(sample);
+		const raw = String(value || '');
+		// Recovery v3 refuses values beyond this ceiling. Treat an over-bound value
+		// as ineligible immediately so an older low-risk recovery cannot linger
+		// until the later debounced persistence attempt.
+		if (raw.length > MAX_LOCAL_ANALYSIS_TEXT) return true;
+		return /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(raw)
+			|| /(?:\+?\d[\d\s().-]{8,}\d)/.test(raw)
+			|| /\b\d{5}-?\d{7}-?\d\b/.test(raw)
+			|| /\b(?:passport|cnic|national\s+id|medical\s+record|mrn|patient\s+id|registration\s+number)\s*[:#-]?\s*[A-Z0-9-]{3,}\b/i.test(raw)
+			|| /\b(?:DOB|date of birth|تاریخ پیدائش)\s*[:\-]?\s*\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}\b/i.test(raw)
+			|| /\b-?\d{1,2}\.\d{4,}\s*,\s*-?\d{1,3}\.\d{4,}\b/.test(raw)
+			|| /\b(?:address|street|گھر\s*کا\s*پتہ|پتہ)\s*[:\-]\s*[^\n]{8,}/i.test(raw);
 	};
 	const workflowIsSensitiveNow = () => {
 		if (String(config.adapterPrivacyClassification || '').toLowerCase() === 'sensitive') return true;
