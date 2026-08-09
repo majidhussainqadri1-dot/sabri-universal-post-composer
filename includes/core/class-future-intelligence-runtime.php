@@ -89,14 +89,19 @@ final class Future_Intelligence_Runtime {
 		wp_enqueue_script( 'supc-future-intelligence', SUPC_URL . 'assets/js/future-intelligence.js', array( 'supc-future-intelligence-capability-broker' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-advanced', SUPC_URL . 'assets/js/future-intelligence-advanced.js', array( 'supc-future-intelligence' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-safety', SUPC_URL . 'assets/js/future-intelligence-safety.js', array( 'supc-future-intelligence-advanced' ), $version, true );
-		wp_enqueue_script( 'supc-future-intelligence-recovery-hardening', SUPC_URL . 'assets/js/future-intelligence-recovery-hardening.js', array( 'supc-future-intelligence-safety' ), $version, true );
-		wp_enqueue_script( 'supc-future-intelligence-recovery-retirement', SUPC_URL . 'assets/js/future-intelligence-recovery-retirement.js', array( 'supc-future-intelligence-recovery-hardening' ), $version, true );
+		// v2 remains in the repository only as forensic/regression evidence. The
+		// active path is v3, which binds recovery to a schema fingerprint and a
+		// session-alias lineage without silently truncating or partially restoring.
+		wp_enqueue_script( 'supc-future-intelligence-recovery-v3', SUPC_URL . 'assets/js/future-intelligence-recovery-v3.js', array( 'supc-future-intelligence-safety' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-recovery-retirement', SUPC_URL . 'assets/js/future-intelligence-recovery-retirement.js', array( 'supc-future-intelligence-recovery-v3' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-annotations-hardening', SUPC_URL . 'assets/js/future-intelligence-annotations-hardening.js', array( 'supc-future-intelligence-recovery-retirement' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-voice-hardening', SUPC_URL . 'assets/js/future-intelligence-voice-hardening.js', array( 'supc-future-intelligence-annotations-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-media-hardening', SUPC_URL . 'assets/js/future-intelligence-media-hardening.js', array( 'supc-future-intelligence-voice-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-accessibility-hardening', SUPC_URL . 'assets/js/future-intelligence-accessibility-hardening.js', array( 'supc-future-intelligence-media-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-template-hardening', SUPC_URL . 'assets/js/future-intelligence-template-hardening.js', array( 'supc-future-intelligence-accessibility-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-third-review-hardening', SUPC_URL . 'assets/js/future-intelligence-third-review-hardening.js', array( 'supc-future-intelligence-template-hardening' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-second-eighty-hardening', SUPC_URL . 'assets/js/future-intelligence-second-eighty-hardening.js', array( 'supc-future-intelligence-third-review-hardening' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-second-eighty-voice-final', SUPC_URL . 'assets/js/future-intelligence-second-eighty-voice-final.js', array( 'supc-future-intelligence-second-eighty-hardening' ), $version, true );
 		wp_localize_script(
 			'supc-future-intelligence',
 			'SUPCFuture',
@@ -110,7 +115,7 @@ final class Future_Intelligence_Runtime {
 				'locale'                       => function_exists( 'determine_locale' ) ? determine_locale() : get_locale(),
 				'isRtl'                        => is_rtl(),
 				'privacy'                      => array(
-					// The retired v1 path always stays disabled. The audited v2 path is
+					// The retired v1 path always stays disabled. The audited active path is
 					// additionally denied for an authoritative sensitive adapter.
 					'localEncryptedRecovery'   => false,
 					'auditedEncryptedRecovery' => 'sensitive' !== $privacy_class && (bool) apply_filters( 'supc_future_encrypted_recovery_allowed', true, get_current_user_id(), $adapter_key ),
@@ -138,12 +143,16 @@ final class Future_Intelligence_Runtime {
 		$required = array(
 			SUPC_PATH . 'includes/contracts/interface-future-capability-adapter.php',
 			SUPC_PATH . 'includes/core/class-future-intelligence-hardening.php',
+			SUPC_PATH . 'includes/core/class-future-intelligence-second-eighty-hardening.php',
 			SUPC_PATH . 'includes/http/class-future-rest-controller.php',
 			SUPC_PATH . 'assets/js/future-intelligence-capability-broker.js',
 			SUPC_PATH . 'assets/js/future-intelligence.js',
 			SUPC_PATH . 'assets/js/future-intelligence-advanced.js',
 			SUPC_PATH . 'assets/js/future-intelligence-safety.js',
+			// Retained inactive v2 file is still inventoried so an unexpected/missing
+			// legacy source mutation is visible to diagnostics and regression tests.
 			SUPC_PATH . 'assets/js/future-intelligence-recovery-hardening.js',
+			SUPC_PATH . 'assets/js/future-intelligence-recovery-v3.js',
 			SUPC_PATH . 'assets/js/future-intelligence-recovery-retirement.js',
 			SUPC_PATH . 'assets/js/future-intelligence-annotations-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-voice-hardening.js',
@@ -151,6 +160,8 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'assets/js/future-intelligence-accessibility-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-template-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-third-review-hardening.js',
+			SUPC_PATH . 'assets/js/future-intelligence-second-eighty-hardening.js',
+			SUPC_PATH . 'assets/js/future-intelligence-second-eighty-voice-final.js',
 			SUPC_PATH . 'assets/css/future-intelligence.css',
 		);
 		$missing = array();
