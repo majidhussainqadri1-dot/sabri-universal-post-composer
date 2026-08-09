@@ -131,7 +131,7 @@ final class Future_Rest_Controller {
 		if ( $authorization instanceof WP_Error ) {
 			return $authorization;
 		}
-		$bridge = $this->bridge_capabilities( get_current_user_id(), $adapter_key, $authorization );
+		$bridge  = $this->bridge_capabilities( get_current_user_id(), $adapter_key, $authorization );
 		$privacy = $this->adapter_privacy( $authorization );
 		$local   = self::LOCAL_CAPABILITIES;
 		if ( 'sensitive' === $privacy ) {
@@ -367,20 +367,32 @@ final class Future_Rest_Controller {
 	}
 
 	private function within_rate_limit( int $user_id ): bool {
-		if ( ! function_exists( 'get_transient' ) || ! function_exists( 'set_transient' ) ) {
+		if ( ! function_exists( 'get_transient' ) || ! function_exists( 'set_transient' ) || ! function_exists( 'add_option' ) || ! function_exists( 'delete_option' ) ) {
 			return false;
 		}
-		$key   = 'supc_future_rate_' . hash( 'sha256', (string) $user_id . '|' . (string) floor( time() / self::RATE_WINDOW ) );
-		$count = (int) get_transient( $key );
-		if ( $count >= self::RATE_LIMIT ) {
+		$bucket = (string) floor( time() / self::RATE_WINDOW );
+		$hash   = hash( 'sha256', (string) $user_id . '|' . $bucket );
+		$key    = 'supc_future_rate_' . $hash;
+		$lock   = 'supc_future_rate_lock_' . $hash;
+		// add_option is backed by a unique option_name and therefore acts as the
+		// cross-request mutex. Contention or storage uncertainty fails closed.
+		if ( ! add_option( $lock, time(), '', false ) ) {
 			return false;
 		}
-		return false !== set_transient( $key, $count + 1, self::RATE_WINDOW + 5 );
+		try {
+			$count = (int) get_transient( $key );
+			if ( $count >= self::RATE_LIMIT ) {
+				return false;
+			}
+			return false !== set_transient( $key, $count + 1, self::RATE_WINDOW + 5 );
+		} finally {
+			delete_option( $lock );
+		}
 	}
 
 	private function audit( string $capability, string $adapter_key, string $outcome, ?string $session_uuid, mixed $native_reference, string $correlation ): void {
-		$event = 'future.' . sanitize_key( $capability );
-		$native = is_string( $native_reference ) && '' !== $native_reference ? $native_reference : null;
+		$event   = 'future.' . sanitize_key( $capability );
+		$native  = is_string( $native_reference ) && '' !== $native_reference ? $native_reference : null;
 		$session = is_string( $session_uuid ) && 1 === preg_match( '/^[0-9a-f-]{36}$/D', strtolower( $session_uuid ) ) ? strtolower( $session_uuid ) : null;
 		try {
 			( new Audit_Store() )->record( get_current_user_id(), $adapter_key, $event, $outcome, $session, $native, $correlation );
@@ -412,10 +424,16 @@ final class Future_Rest_Controller {
 		$retryable = is_array( $data ) && isset( $data['retryable'] ) && is_bool( $data['retryable'] )
 			? $data['retryable']
 			: in_array( $status, array( 429, 502, 503, 504 ), true );
+		$message = __( 'The advisory request could not be completed. Your draft remains protected.', 'sabri-universal-post-composer' );
+		if ( null !== $field ) {
+			$message .= ' ' . sprintf( __( 'Field: %s.', 'sabri-universal-post-composer' ), $field );
+		}
+		$message .= ' ' . ( $retryable ? __( 'Retry is allowed.', 'sabri-universal-post-composer' ) : __( 'Retry is not advised until the issue is corrected.', 'sabri-universal-post-composer' ) );
+		$message .= ' ' . sprintf( __( 'Support reference: %s.', 'sabri-universal-post-composer' ), $reference );
 		do_action( 'supc_future_error', '' !== $code ? $code : 'future_provider_error', $status, get_current_user_id(), $reference );
 		return new WP_Error(
 			'' !== $code ? $code : 'future_provider_error',
-			$error->get_error_message(),
+			$message,
 			array(
 				'status'            => max( 400, min( 599, $status ) ),
 				'support_reference' => $reference,
@@ -438,14 +456,18 @@ final class Future_Rest_Controller {
 
 	private function error( string $code, int $status ): WP_Error {
 		$reference = $this->support_reference();
+		$retryable = in_array( $status, array( 429, 502, 503, 504 ), true );
+		$message   = __( 'The Future Composer Intelligence request could not be completed. Your draft remains protected.', 'sabri-universal-post-composer' );
+		$message  .= ' ' . ( $retryable ? __( 'Retry is allowed.', 'sabri-universal-post-composer' ) : __( 'Retry is not advised until the issue is corrected.', 'sabri-universal-post-composer' ) );
+		$message  .= ' ' . sprintf( __( 'Support reference: %s.', 'sabri-universal-post-composer' ), $reference );
 		do_action( 'supc_future_error', sanitize_key( $code ), $status, get_current_user_id(), $reference );
 		return new WP_Error(
 			'supc_' . sanitize_key( $code ),
-			__( 'The Future Composer Intelligence request could not be completed.', 'sabri-universal-post-composer' ),
+			$message,
 			array(
 				'status'            => $status,
 				'support_reference' => $reference,
-				'retryable'         => in_array( $status, array( 429, 502, 503, 504 ), true ),
+				'retryable'         => $retryable,
 				'draft_protected'   => true,
 			)
 		);
