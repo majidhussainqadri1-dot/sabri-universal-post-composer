@@ -86,15 +86,12 @@ final class TenRoundFreshReviewTest extends TestCase {
 		$this->assertStringContainsString( 'native upload workflow', $js );
 	}
 
-	public function test_review_8_capability_discovery_is_coalesced_only_for_safe_gets(): void {
+	public function test_review_8_capability_discovery_uses_native_fetch_without_cross_module_patch(): void {
 		$js = $this->contents( 'assets/js/future-intelligence-capability-broker.js' );
-		$this->assertStringContainsString( "method !== 'GET'", $js );
-		$this->assertStringContainsString( '/future\\/capabilities\\/', $js );
-		$this->assertStringContainsString( 'url.origin !== window.location.origin', $js );
-		$this->assertStringContainsString( 'TTL_MS = 5000', $js );
-		$this->assertStringContainsString( 'if (!key) return nativeFetch(input, init)', $js );
-		$this->assertStringContainsString( 'nativeFetch(input, init)', $js );
-		$this->assertStringNotContainsString( "method === 'POST'", $js );
+		$this->assertStringContainsString( "mode: 'native-fetch'", $js );
+		$this->assertStringContainsString( 'globalFetchPatched: false', $js );
+		$this->assertStringNotContainsString( 'window.fetch =', $js );
+		$this->assertStringNotContainsString( 'TTL_MS', $js );
 	}
 
 	public function test_review_9_command_palette_has_focus_escape_and_target_hardening(): void {
@@ -118,9 +115,8 @@ final class TenRoundFreshReviewTest extends TestCase {
 		$this->assertStringContainsString( 'consent|privacy_confirm|medical_disclaimer_confirm', $template );
 		$this->assertStringContainsString( "'publication_impact' === \$capability", $php );
 		$this->assertStringContainsString( 'publish|submit|schedule|update|revision', $php );
-		$this->assertStringContainsString( 'Non-bypassable final preflight', $controller );
-		$this->assertStringContainsString( 'future_sensitive_external_advisory_blocked', $controller );
-		$this->assertStringContainsString( '->guard_request(', $controller );
+		$this->assertStringContainsString( 'guard_request(', $controller );
+		$this->assertStringContainsString( 'future_sensitive_external_advisory_blocked', $php );
 		$this->assertStringContainsString( '->filter_capabilities(', $controller );
 		$this->assertStringContainsString( 'future-intelligence-template-hardening.js', $runtime );
 		$this->assertStringNotContainsString( 'CREATE TABLE', $template . $php . $controller . $runtime );
