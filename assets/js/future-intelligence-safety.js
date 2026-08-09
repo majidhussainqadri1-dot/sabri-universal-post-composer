@@ -49,9 +49,7 @@
 							if (src) {
 								child.setAttribute('src', src);
 								child.setAttribute('referrerpolicy', 'no-referrer');
-							} else {
-								child.removeAttribute('src');
-							}
+							} else child.removeAttribute('src');
 						}
 						return;
 					}
@@ -63,9 +61,6 @@
 		return template.innerHTML;
 	};
 
-	// Capture human paste before the older Composer bubble handler. External
-	// anchors remain usable, but remote image/resource loads are stripped so a
-	// private Composer session cannot be disclosed to a pasted tracking pixel.
 	editor.addEventListener('paste', (event) => {
 		const clipboard = event.clipboardData;
 		if (!clipboard) return;
@@ -83,16 +78,28 @@
 		editor.dispatchEvent(new Event('input', { bubbles: true }));
 	}, true);
 
-	// Provider-backed template/collaboration applications deliberately dispatch
-	// an input event on the form. Capture that event before the stable Composer
-	// sees it so no provider-returned raw rich text can bypass the same browser
-	// allowlist used for human paste/editing. Server-side validation remains the
-	// final authority. Remote image URLs are stripped to prevent tracking pixels
-	// or third-party resource disclosure inside private composer sessions.
 	form.addEventListener('input', (event) => {
 		if (event.target !== form) return;
 		const cleaned = sanitize(source.value);
 		source.value = cleaned;
 		editor.innerHTML = cleaned;
 	}, true);
+
+	// Native draft recovery is asynchronous and can write editor.innerHTML after
+	// all scripts have already loaded. Observe the rendered editor as a final
+	// browser-side privacy barrier so a restored third-party IMG cannot remain a
+	// tracking resource merely because no form-level input event was dispatched.
+	let sanitizing = false;
+	const sanitizeRenderedEditor = () => {
+		if (sanitizing) return;
+		const current = editor.innerHTML;
+		const cleaned = sanitize(current);
+		if (cleaned === current) return;
+		sanitizing = true;
+		editor.innerHTML = cleaned;
+		source.value = cleaned;
+		sanitizing = false;
+	};
+	new MutationObserver(sanitizeRenderedEditor).observe(editor, { childList: true, subtree: true, attributes: true, attributeFilter: ['src', 'href'] });
+	sanitizeRenderedEditor();
 }());
