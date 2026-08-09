@@ -67,7 +67,7 @@ final class Future_Intelligence_Second_Eighty_Hardening {
 		if ( null !== $current ) {
 			return $current;
 		}
-		$capability = sanitize_key( $capability );
+		$capability  = sanitize_key( $capability );
 		$adapter_key = sanitize_key( $adapter_key );
 		if ( $user_id <= 0 || ! Contract_Boundary::adapter_key( $adapter_key ) ) {
 			return $this->error( 'future_second_preflight_invalid_subject', 403 );
@@ -122,10 +122,10 @@ final class Future_Intelligence_Second_Eighty_Hardening {
 	}
 
 	/**
-	 * @param array<string,mixed> $payload
-	 * @return true|WP_Error
+	 * @param array<string,mixed> $payload Provider payload.
+	 * @return bool|WP_Error
 	 */
-	private function validate_server_context( int $user_id, string $adapter_key, array $payload ): true|WP_Error {
+	private function validate_server_context( int $user_id, string $adapter_key, array $payload ): bool|WP_Error {
 		$context = $payload['_supc_context'] ?? null;
 		if ( ! is_array( $context ) ) {
 			return $this->error( 'future_server_context_required', 409 );
@@ -144,12 +144,12 @@ final class Future_Intelligence_Second_Eighty_Hardening {
 			}
 		}
 
-		$session_uuid = isset( $context['session_uuid'] ) && is_string( $context['session_uuid'] ) ? strtolower( trim( $context['session_uuid'] ) ) : '';
-		$context_adapter = isset( $context['adapter_key'] ) && is_string( $context['adapter_key'] ) ? sanitize_key( $context['adapter_key'] ) : '';
-		$lock_version = isset( $context['lock_version'] ) && is_numeric( $context['lock_version'] ) ? (int) $context['lock_version'] : 0;
-		$sensitivity = isset( $context['sensitivity_class'] ) && is_string( $context['sensitivity_class'] ) ? strtolower( trim( $context['sensitivity_class'] ) ) : '';
+		$session_uuid     = isset( $context['session_uuid'] ) && is_string( $context['session_uuid'] ) ? strtolower( trim( $context['session_uuid'] ) ) : '';
+		$context_adapter  = isset( $context['adapter_key'] ) && is_string( $context['adapter_key'] ) ? sanitize_key( $context['adapter_key'] ) : '';
+		$lock_version     = isset( $context['lock_version'] ) && is_numeric( $context['lock_version'] ) ? (int) $context['lock_version'] : 0;
+		$sensitivity      = isset( $context['sensitivity_class'] ) && is_string( $context['sensitivity_class'] ) ? strtolower( trim( $context['sensitivity_class'] ) ) : '';
 		$native_reference = isset( $context['native_reference'] ) && is_string( $context['native_reference'] ) ? trim( $context['native_reference'] ) : '';
-		$correlation = isset( $context['correlation_id'] ) && is_string( $context['correlation_id'] ) ? trim( $context['correlation_id'] ) : '';
+		$correlation      = isset( $context['correlation_id'] ) && is_string( $context['correlation_id'] ) ? trim( $context['correlation_id'] ) : '';
 
 		if (
 			1 !== preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D', $session_uuid ) ||
