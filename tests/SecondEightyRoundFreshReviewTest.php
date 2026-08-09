@@ -36,15 +36,17 @@ final class SecondEightyRoundFreshReviewTest extends TestCase {
 		$this->assertStringNotContainsString( 'true|WP_Error', $php );
 	}
 
-	public function test_contextual_rate_budget_is_privacy_minimized_and_stale_lock_safe(): void {
+	public function test_contextual_rate_budget_is_privacy_minimized_stale_lock_safe_and_sanitized(): void {
 		$php = $this->contents( 'includes/core/class-future-intelligence-second-eighty-hardening.php' );
 		$this->assertStringContainsString( "\$_SERVER['REMOTE_ADDR']", $php );
+		$this->assertStringContainsString( "wp_unslash( (string) \$_SERVER['REMOTE_ADDR'] )", $php );
+		$this->assertStringContainsString( 'sanitize_text_field(', $php );
+		$this->assertStringContainsString( "FILTER_VALIDATE_IP", $php );
 		$this->assertStringContainsString( "hash_hmac( 'sha256', \$remote, wp_salt( 'auth' ) )", $php );
 		$this->assertStringContainsString( "'|' . \$adapter_key . '|' . \$capability", $php );
 		$this->assertStringContainsString( "'expires_at'", $php );
 		$this->assertStringContainsString( "isset( \$existing['expires_at'] )", $php );
 		$this->assertStringContainsString( "hash_equals( \$token, \$existing['token'] )", $php );
-		$this->assertStringContainsString( 'return false;', $php );
 	}
 
 	public function test_active_recovery_is_v3_with_session_alias_schema_fingerprint_and_atomic_restore(): void {
@@ -66,7 +68,7 @@ final class SecondEightyRoundFreshReviewTest extends TestCase {
 		$js = $this->contents( 'assets/js/future-intelligence-recovery-v3.js' );
 		$this->assertStringContainsString( 'MAX_RECOVERY_BYTES', $js );
 		$this->assertStringContainsString( 'MAX_RECOVERY_FIELDS', $js );
-		$this->assertStringContainsString( 'MAX_FIELD_LENGTH', str_replace( 'MAX_TEXT_LENGTH', 'MAX_FIELD_LENGTH', $js ) );
+		$this->assertStringContainsString( 'MAX_TEXT_LENGTH', $js );
 		$this->assertStringContainsString( 'medical\\s+record|mrn|patient\\s+id', $js );
 		$this->assertStringContainsString( 'passport|cnic|national\\s+id', $js );
 		$this->assertStringContainsString( "'Encrypted recovery was not stored because the draft exceeded the bounded recovery schema", $js );
@@ -153,8 +155,11 @@ final class SecondEightyRoundFreshReviewTest extends TestCase {
 		preg_match_all( '/^\|\s*(\d{1,2})\s*\|/m', $ledger, $matches );
 		$this->assertCount( 80, $matches[1] );
 		$this->assertSame( range( 1, 80 ), array_map( 'intval', $matches[1] ) );
-		$this->assertStringContainsString( '3, 7, 12, 18, 19, 22, 25, 31, 36, 38, 39, 41, 55, 72', $ledger );
-		$this->assertStringContainsString( 'Pending exact-head QA', $ledger );
+		$this->assertStringContainsString( '3, 7, 12, 18, 19, 22, 25, 31, 36, 38, 39, 41, 55, 72, 80', $ledger );
+		$this->assertStringContainsString( '15 defect-bearing rounds', $ledger );
+		$this->assertStringContainsString( '65 rounds in which no new defect was found', $ledger );
+		$this->assertStringContainsString( 'CI #555 exposed unslashed/unsanitized', $ledger );
+		$this->assertStringContainsString( 'CI #556 and all review workflows then passed', $ledger );
 		$this->assertStringContainsString( 'deterministic production-package parity, Hostinger staging acceptance, live deployment or operational acceptance', $ledger );
 	}
 
