@@ -78,11 +78,14 @@ final class FutureComposerIntelligenceTest extends TestCase {
 
 	public function test_future_layer_preserves_native_ownership_and_sensitive_boundaries(): void {
 		$rest      = (string) file_get_contents( $this->root() . '/includes/http/class-future-rest-controller.php' );
+		$hardening = (string) file_get_contents( $this->root() . '/includes/core/class-future-intelligence-hardening.php' );
 		$contract  = (string) file_get_contents( $this->root() . '/includes/contracts/interface-future-capability-adapter.php' );
 		$functions = (string) file_get_contents( $this->root() . '/includes/core/functions.php' );
 		$this->assertStringContainsString( 'ephemeral_bridge', $rest );
-		$this->assertStringContainsString( 'future_sensitive_external_advisory_blocked', $rest );
-		$this->assertStringContainsString( 'supc_future_sensitive_capability_allowed', $rest );
+		$this->assertStringContainsString( 'future_sensitive_external_advisory_blocked', $hardening );
+		$this->assertStringContainsString( 'supc_future_sensitive_capability_allowed', $hardening );
+		$this->assertStringContainsString( 'guard_request(', $rest );
+		$this->assertStringContainsString( 'filter_capabilities(', $rest );
 		$this->assertStringContainsString( 'must not persist the request or response body', $contract );
 		$this->assertStringContainsString( 'creates no competing', $functions );
 	}
