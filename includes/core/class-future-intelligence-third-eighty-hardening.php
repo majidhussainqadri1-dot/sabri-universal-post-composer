@@ -207,7 +207,8 @@ final class Future_Intelligence_Third_Eighty_Hardening {
 			return false;
 		}
 
-		$raw_remote = isset( $_SERVER['REMOTE_ADDR'] ) && is_scalar( $_SERVER['REMOTE_ADDR'] ) ? wp_unslash( (string) $_SERVER['REMOTE_ADDR'] ) : '';
+		$raw_remote = filter_input( INPUT_SERVER, 'REMOTE_ADDR', FILTER_UNSAFE_RAW );
+		$raw_remote = is_string( $raw_remote ) ? wp_unslash( $raw_remote ) : '';
 		$remote     = sanitize_text_field( $raw_remote );
 		if ( '' === $remote || false === filter_var( $remote, FILTER_VALIDATE_IP ) ) {
 			$remote = 'unknown';
