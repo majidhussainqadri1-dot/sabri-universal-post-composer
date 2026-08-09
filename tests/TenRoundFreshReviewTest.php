@@ -114,7 +114,10 @@ final class TenRoundFreshReviewTest extends TestCase {
 		$this->assertStringContainsString( 'native_reference|publication_action', $template );
 		$this->assertStringContainsString( 'consent|privacy_confirm|medical_disclaimer_confirm', $template );
 		$this->assertStringContainsString( "'publication_impact' === \$capability", $php );
-		$this->assertStringContainsString( 'publish|submit|schedule|update|revision', $php );
+		$this->assertStringContainsString( 'publication_action_is_allowed', $php );
+		$this->assertStringContainsString( 'schema_read_only', $php );
+		$this->assertStringContainsString( 'array_keys( $choices )', $php );
+		$this->assertStringContainsString( 'hash_equals( $action', $php );
 		$this->assertStringContainsString( 'guard_request(', $controller );
 		$this->assertStringContainsString( 'future_sensitive_external_advisory_blocked', $php );
 		$this->assertStringContainsString( '->filter_capabilities(', $controller );
