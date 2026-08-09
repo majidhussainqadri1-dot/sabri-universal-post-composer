@@ -20,14 +20,20 @@ final class Future_Intelligence_Runtime {
 	private bool $registered = false;
 	private Future_Rest_Controller $rest;
 	private Future_Intelligence_Hardening $hardening;
+	private Future_Intelligence_Third_Eighty_Hardening $third_hardening;
 
 	public function __construct() {
-		$hardening_file = __DIR__ . '/class-future-intelligence-hardening.php';
+		$hardening_file       = __DIR__ . '/class-future-intelligence-hardening.php';
+		$third_hardening_file = __DIR__ . '/class-future-intelligence-third-eighty-hardening.php';
 		if ( ! class_exists( Future_Intelligence_Hardening::class, false ) && is_readable( $hardening_file ) ) {
 			require_once $hardening_file;
 		}
-		$this->rest      = new Future_Rest_Controller();
-		$this->hardening = new Future_Intelligence_Hardening();
+		if ( ! class_exists( Future_Intelligence_Third_Eighty_Hardening::class, false ) && is_readable( $third_hardening_file ) ) {
+			require_once $third_hardening_file;
+		}
+		$this->rest            = new Future_Rest_Controller();
+		$this->hardening       = new Future_Intelligence_Hardening();
+		$this->third_hardening = new Future_Intelligence_Third_Eighty_Hardening();
 	}
 
 	public function register(): void {
@@ -36,6 +42,7 @@ final class Future_Intelligence_Runtime {
 		}
 		$this->registered = true;
 		$this->hardening->register();
+		$this->third_hardening->register();
 		$this->rest->register();
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ), 40 );
 		add_filter( 'supc_system_check_report', array( $this, 'append_system_check' ), 88 );
@@ -102,6 +109,7 @@ final class Future_Intelligence_Runtime {
 		wp_enqueue_script( 'supc-future-intelligence-third-review-hardening', SUPC_URL . 'assets/js/future-intelligence-third-review-hardening.js', array( 'supc-future-intelligence-template-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-second-eighty-hardening', SUPC_URL . 'assets/js/future-intelligence-second-eighty-hardening.js', array( 'supc-future-intelligence-third-review-hardening' ), $version, true );
 		wp_enqueue_script( 'supc-future-intelligence-second-eighty-voice-final', SUPC_URL . 'assets/js/future-intelligence-second-eighty-voice-final.js', array( 'supc-future-intelligence-second-eighty-hardening' ), $version, true );
+		wp_enqueue_script( 'supc-future-intelligence-third-eighty-final', SUPC_URL . 'assets/js/future-intelligence-third-eighty-final.js', array( 'supc-future-intelligence-second-eighty-voice-final' ), $version, true );
 		wp_localize_script(
 			'supc-future-intelligence',
 			'SUPCFuture',
@@ -144,6 +152,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'includes/contracts/interface-future-capability-adapter.php',
 			SUPC_PATH . 'includes/core/class-future-intelligence-hardening.php',
 			SUPC_PATH . 'includes/core/class-future-intelligence-second-eighty-hardening.php',
+			SUPC_PATH . 'includes/core/class-future-intelligence-third-eighty-hardening.php',
 			SUPC_PATH . 'includes/http/class-future-rest-controller.php',
 			SUPC_PATH . 'assets/js/future-intelligence-capability-broker.js',
 			SUPC_PATH . 'assets/js/future-intelligence.js',
@@ -162,6 +171,7 @@ final class Future_Intelligence_Runtime {
 			SUPC_PATH . 'assets/js/future-intelligence-third-review-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-second-eighty-hardening.js',
 			SUPC_PATH . 'assets/js/future-intelligence-second-eighty-voice-final.js',
+			SUPC_PATH . 'assets/js/future-intelligence-third-eighty-final.js',
 			SUPC_PATH . 'assets/css/future-intelligence.css',
 		);
 		$missing = array();
