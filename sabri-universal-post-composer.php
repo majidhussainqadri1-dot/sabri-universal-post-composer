@@ -26,6 +26,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'SUPC_ADAPTER_API_VERSION',
 		'SUPC_WORKFLOW_API_VERSION',
 		'SUPC_SUBJECT_SCHEMA_API_VERSION',
+		'SUPC_GOVERNANCE_API_VERSION',
+		'SUPC_LIFECYCLE_API_VERSION',
 		'SUPC_MIN_SMC_VERSION',
 		'SUPC_MIN_SMC_DB_VERSION',
 		'SUPC_MIN_SMC_CONTRACT_VERSION',
@@ -37,6 +39,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	$core_symbols = array(
 		'Sabri\UniversalComposer\Contracts\Adapter',
 		'Sabri\UniversalComposer\Contracts\Workflow_Adapter',
+		'Sabri\UniversalComposer\Contracts\Governed_Workflow_Adapter',
+		'Sabri\UniversalComposer\Contracts\Lifecycle_Adapter',
 		'Sabri\UniversalComposer\Contracts\Diagnostic_Adapter',
 		'Sabri\UniversalComposer\Core\Version',
 		'Sabri\UniversalComposer\Core\Contract_Boundary',
@@ -47,6 +51,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\UniversalComposer\Core\Registry',
 		'Sabri\UniversalComposer\Core\Workflow_Validator',
 		'Sabri\UniversalComposer\Core\Workflow_Coordinator',
+		'Sabri\UniversalComposer\Core\Governing_Plan_Runtime',
 		'Sabri\UniversalComposer\Core\Session_Store',
 		'Sabri\UniversalComposer\Core\Submission_Store',
 		'Sabri\UniversalComposer\Core\Reconciliation_Service',
@@ -60,6 +65,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\UniversalComposer\Integration\Core_Adapter_Requirements',
 		'Sabri\UniversalComposer\Admin\System_Check_Page',
 	);
+	$core_functions = array(
+		'supc_adapter_governance',
+		'supc_lifecycle_capabilities',
+		'supc_execute_lifecycle',
+	);
 	$core_constant_collisions = array_values( array_filter( $core_constants, 'defined' ) );
 	$core_symbol_collisions   = array_values(
 		array_filter(
@@ -69,8 +79,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 				|| trait_exists( $symbol, false )
 		)
 	);
+	$core_function_collisions = array_values( array_filter( $core_functions, 'function_exists' ) );
 
-	if ( array() !== $core_constant_collisions || array() !== $core_symbol_collisions ) {
+	if ( array() !== $core_constant_collisions || array() !== $core_symbol_collisions || array() !== $core_function_collisions ) {
 		add_action(
 			'admin_init',
 			static function (): void {
@@ -84,7 +95,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			'admin_notices',
 			static function (): void {
 				echo '<div class="notice notice-error"><p>'
-					. esc_html__( 'Sabri Universal Post Composer was disabled because another component preclaimed one or more File 22 core constants or runtime symbols.', 'sabri-universal-post-composer' )
+					. esc_html__( 'Sabri Universal Post Composer was disabled because another component preclaimed one or more File 22 core constants, runtime symbols, or governed API functions.', 'sabri-universal-post-composer' )
 					. '</p></div>';
 			}
 		);
@@ -96,16 +107,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'SUPC_ADAPTER_API_VERSION', '1.0.0' );
 	define( 'SUPC_WORKFLOW_API_VERSION', '1.0.0' );
 	define( 'SUPC_SUBJECT_SCHEMA_API_VERSION', '1.0.0' );
+	define( 'SUPC_GOVERNANCE_API_VERSION', '1.0.0' );
+	define( 'SUPC_LIFECYCLE_API_VERSION', '1.0.0' );
 	define( 'SUPC_MIN_SMC_VERSION', '1.2.3' );
 	define( 'SUPC_MIN_SMC_DB_VERSION', '1.2.0' );
 	define( 'SUPC_MIN_SMC_CONTRACT_VERSION', '1.1.2' );
-	define( 'SUPC_REST_API_VERSION', '1.1.0' );
+	define( 'SUPC_REST_API_VERSION', '1.2.0' );
 	define( 'SUPC_FILE', __FILE__ );
 	define( 'SUPC_PATH', plugin_dir_path( __FILE__ ) );
 	define( 'SUPC_URL', plugin_dir_url( __FILE__ ) );
 
 	require_once SUPC_PATH . 'includes/contracts/interface-adapter.php';
 	require_once SUPC_PATH . 'includes/contracts/interface-workflow-adapter.php';
+	require_once SUPC_PATH . 'includes/contracts/interface-governed-workflow-adapter.php';
+	require_once SUPC_PATH . 'includes/contracts/interface-lifecycle-adapter.php';
 	require_once SUPC_PATH . 'includes/contracts/interface-diagnostic-adapter.php';
 	require_once SUPC_PATH . 'includes/core/class-version.php';
 	require_once SUPC_PATH . 'includes/core/class-contract-boundary.php';
@@ -128,7 +143,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/integration/class-core-adapter-requirements.php';
 	require_once SUPC_PATH . 'includes/admin/class-system-check-page.php';
 	require_once SUPC_PATH . 'includes/core/class-plugin.php';
+	require_once SUPC_PATH . 'includes/core/class-governing-plan-runtime.php';
 	require_once SUPC_PATH . 'includes/core/functions.php';
+	require_once SUPC_PATH . 'includes/core/governing-plan-functions.php';
 
 	add_filter(
 		'cron_schedules',
@@ -204,6 +221,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 			\Sabri\UniversalComposer\Core\Plugin::instance()->boot();
 		},
 		20
+	);
+	add_action(
+		'plugins_loaded',
+		static function (): void {
+			\Sabri\UniversalComposer\Core\Governing_Plan_Runtime::instance()->boot();
+		},
+		22
 	);
 	add_action(
 		'plugins_loaded',
