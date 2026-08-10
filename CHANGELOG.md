@@ -15,10 +15,11 @@
 - Added authoritative RC3 release-truth/source-manifest documents and exact-head deterministic RC3 CI/package workflow.
 - Retired the obsolete 0.3.0 packaging workflow.
 - Preserved the truthful release boundary: staging, live deployment and operational acceptance remain separate unclaimed gates.
-- Completed the Founder-requested **80-pass review/correction cycle** against the current central plan and File 22 plan; confirmed defects were found and corrected in passes 01–08, with no additional confirmed source defect in passes 09–80 after those corrections.
+- Completed the Founder-requested **80-pass review/correction cycle** against the current central plan and File 22 plan; confirmed defects were found and corrected in passes **01–08 and 80**. Passes 09–79 found no additional confirmed source defect after the earlier corrections; Pass 80's final exact-head executable gate caught and corrected one stale accessibility regression.
 - Corrected active Create/Workflow CSS so Sabri Green is the effective fallback rather than a later orange override.
 - Corrected current numbering/ownership, Membership Core dependency, REST-runtime and File 21 integration documentation drift while retaining superseded statements only as explicit historical evidence.
 - Added privacy-safe `SUPC-...` support references to failed private Composer REST responses without exposing draft content or protected native identifiers.
+- Updated the accessibility contrast regression to validate the File-25-owned green token fallback while preserving the WCAG 4.5:1 normal-text threshold.
 - Added dedicated eighty-pass regression tests and exact-head CI evidence workflow.
 
 ### Historical review markers retained for exact-head evidence compatibility
