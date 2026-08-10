@@ -83,7 +83,8 @@ final class EightyPassReviewTest extends TestCase {
 			}
 			$this->assertStringContainsString( '| ' . sprintf( '%02d', $pass ) . ' |', $ledger );
 		}
-		$this->assertStringContainsString( 'Passes 01, 02, 03, 04, 05, 06, 07 and 08', $ledger );
-		$this->assertStringContainsString( 'Passes **09–80**', $ledger );
+		$this->assertStringContainsString( 'Passes 01, 02, 03, 04, 05, 06, 07, 08 and 80', $ledger );
+		$this->assertStringContainsString( 'Passes **09–79**', $ledger );
+		$this->assertStringContainsString( 'Pass 80 itself is the final exact-head executable gate', $ledger );
 	}
 }
