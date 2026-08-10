@@ -2,13 +2,13 @@
 
 .supc-create,
 .supc-create-notice {
-	--supc-orange: #ff8a1f;
-	--supc-orange-dark: #b94d00;
-	--supc-action-hover: #8a3600;
+	--supc-orange: var(--sabri-color-primary, #087a4e);
+	--supc-orange-dark: var(--sabri-color-primary-strong, #05623e);
+	--supc-action-hover: var(--sabri-color-primary-hover, #064e3b);
 	--supc-ink: #17202a;
 	--supc-muted: #5f6b76;
 	--supc-line: #e5e7eb;
-	--supc-soft: #fff7ed;
+	--supc-soft: var(--sabri-color-primary-soft, #eef9f3);
 	--supc-white: #fff;
 	--supc-focus: #0b57d0;
 	box-sizing: border-box;
@@ -29,7 +29,7 @@
 
 .supc-create__hero {
 	padding: clamp(24px, 4vw, 44px);
-	border: 1px solid #f3d7bf;
+	border: 1px solid var(--sabri-color-primary-border, #b9e4ca);
 	border-radius: 24px;
 	background: linear-gradient(135deg, var(--supc-white) 0%, var(--supc-soft) 100%);
 	box-shadow: 0 14px 36px rgba(23, 32, 42, 0.08);
@@ -120,7 +120,7 @@
 }
 
 .supc-create-card__link:hover {
-	border-color: #f4b77f;
+	border-color: var(--sabri-color-primary-border-strong, #7ac69c);
 	color: var(--supc-ink);
 	box-shadow: 0 14px 30px rgba(23, 32, 42, 0.09);
 	transform: translateY(-2px);
