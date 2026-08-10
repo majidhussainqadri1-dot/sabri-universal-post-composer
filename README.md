@@ -2,6 +2,8 @@
 
 Sabri Universal Post Composer is the role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform. It unifies authorized authoring workflows while preserving every native module as the canonical owner of its content, media, consent, moderation, publication state, durable draft and canonical URL.
 
+**One canonical native record; multiple authorized projections.** File 22 orchestrates creation and commands but never duplicates the native domain truth.
+
 ## Current repository candidate — 1.0.0-rc.3
 
 `1.0.0-rc.3` is the integrated source candidate for the **current consolidated central plan** and the **current File 22 plan**. It deliberately remains an RC identity: stable `1.0.0` is not claimed until staging acceptance, controlled deployment and live re-verification are complete.
