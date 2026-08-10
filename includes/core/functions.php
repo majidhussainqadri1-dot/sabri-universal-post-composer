@@ -209,23 +209,39 @@ if ( function_exists( 'add_filter' ) ) {
 			};
 
 			if ( $response instanceof \WP_Error ) {
-				$code    = (string) $response->get_error_code();
-				$data    = $response->get_error_data( $code );
+				if (
+					! is_callable( array( $response, 'get_error_code' ) )
+					|| ! is_callable( array( $response, 'get_error_data' ) )
+					|| ! is_callable( array( $response, 'add_data' ) )
+				) {
+					return $response;
+				}
+				$code    = (string) call_user_func( array( $response, 'get_error_code' ) );
+				$data    = call_user_func( array( $response, 'get_error_data' ), $code );
 				$data    = is_array( $data ) ? $data : array();
 				$details = isset( $data['details'] ) && is_array( $data['details'] ) ? $data['details'] : array();
 				if ( ! isset( $details['support_reference'] ) ) {
 					$details['support_reference'] = $reference();
 				}
 				$data['details'] = $details;
-				$response->add_data( $data, $code );
+				call_user_func( array( $response, 'add_data' ), $data, $code );
 				return $response;
 			}
 
-			if ( ! $response instanceof \WP_REST_Response || $response->get_status() < 400 ) {
+			if (
+				! $response instanceof \WP_REST_Response
+				|| ! is_callable( array( $response, 'get_status' ) )
+				|| ! is_callable( array( $response, 'get_data' ) )
+				|| ! is_callable( array( $response, 'set_data' ) )
+			) {
+				return $response;
+			}
+			$status = (int) call_user_func( array( $response, 'get_status' ) );
+			if ( $status < 400 ) {
 				return $response;
 			}
 
-			$data = $response->get_data();
+			$data = call_user_func( array( $response, 'get_data' ) );
 			if ( ! is_array( $data ) ) {
 				return $response;
 			}
@@ -236,7 +252,7 @@ if ( function_exists( 'add_filter' ) ) {
 			}
 			$error_data['details'] = $details;
 			$data['data']          = $error_data;
-			$response->set_data( $data );
+			call_user_func( array( $response, 'set_data' ), $data );
 			return $response;
 		},
 		20,
