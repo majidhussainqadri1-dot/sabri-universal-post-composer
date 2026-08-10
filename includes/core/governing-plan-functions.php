@@ -15,31 +15,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! function_exists( 'supc_adapter_governance' ) ) {
 	/**
-	 * Read the normalized governance contract for one adapter.
+	 * Read the normalized governance contract for the current authenticated subject.
+	 * Caller-supplied user IDs are deliberately unsupported to avoid confused-deputy use.
 	 *
 	 * @return array<string, mixed>|WP_Error
 	 */
-	function supc_adapter_governance( string $adapter_key, ?int $user_id = null ) {
-		$subject = null === $user_id ? get_current_user_id() : $user_id;
-		return Governing_Plan_Runtime::instance()->governance_profile( $subject, $adapter_key );
+	function supc_adapter_governance( string $adapter_key ) {
+		return Governing_Plan_Runtime::instance()->governance_profile( get_current_user_id(), $adapter_key );
 	}
 }
 
 if ( ! function_exists( 'supc_lifecycle_capabilities' ) ) {
 	/**
-	 * Read lifecycle commands currently authorized by the native owner.
+	 * Read lifecycle commands for the current authenticated subject only.
 	 *
 	 * @return array<string, mixed>|WP_Error
 	 */
-	function supc_lifecycle_capabilities( string $adapter_key, string $native_reference, ?int $user_id = null ) {
-		$subject = null === $user_id ? get_current_user_id() : $user_id;
-		return Governing_Plan_Runtime::instance()->lifecycle_capabilities( $subject, $adapter_key, $native_reference );
+	function supc_lifecycle_capabilities( string $adapter_key, string $native_reference ) {
+		return Governing_Plan_Runtime::instance()->lifecycle_capabilities(
+			get_current_user_id(),
+			$adapter_key,
+			$native_reference
+		);
 	}
 }
 
 if ( ! function_exists( 'supc_execute_lifecycle' ) ) {
 	/**
-	 * Execute one correction/revision/scheduling command through the native owner.
+	 * Execute one correction/revision/scheduling command for the current subject
+	 * through the native owner. File 22 never accepts an arbitrary authorization subject.
 	 *
 	 * @param array<string, mixed> $payload Native command payload.
 	 * @return array<string, mixed>|WP_Error
@@ -49,12 +53,10 @@ if ( ! function_exists( 'supc_execute_lifecycle' ) ) {
 		string $native_reference,
 		string $command,
 		string $idempotency_key,
-		array $payload = array(),
-		?int $user_id = null
+		array $payload = array()
 	) {
-		$subject = null === $user_id ? get_current_user_id() : $user_id;
 		return Governing_Plan_Runtime::instance()->execute_lifecycle(
-			$subject,
+			get_current_user_id(),
 			$adapter_key,
 			$native_reference,
 			$command,
