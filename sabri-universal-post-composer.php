@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Universal Post Composer
  * Plugin URI:  https://www.sabrihomeopathy.com/
  * Description: Role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform.
- * Version:     1.0.0-rc.2
+ * Version:     1.0.0-rc.3
  * Author:      Dr. Allamah Majid Hussain Sabri Muhaddith Mursheed
  * Text Domain: sabri-universal-post-composer
  * Requires at least: 6.5
@@ -26,6 +26,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'SUPC_ADAPTER_API_VERSION',
 		'SUPC_WORKFLOW_API_VERSION',
 		'SUPC_SUBJECT_SCHEMA_API_VERSION',
+		'SUPC_GOVERNANCE_API_VERSION',
+		'SUPC_LIFECYCLE_API_VERSION',
 		'SUPC_MIN_SMC_VERSION',
 		'SUPC_MIN_SMC_DB_VERSION',
 		'SUPC_MIN_SMC_CONTRACT_VERSION',
@@ -36,45 +38,53 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'SUPC_URL',
 	);
 	$core_symbols = array(
-		'Sabri\UniversalComposer\Contracts\Adapter',
-		'Sabri\UniversalComposer\Contracts\Workflow_Adapter',
-		'Sabri\UniversalComposer\Contracts\Diagnostic_Adapter',
-		'Sabri\UniversalComposer\Contracts\Draft_Lifecycle_Adapter',
-		'Sabri\UniversalComposer\Contracts\Draft_Recovery_Adapter',
-		'Sabri\UniversalComposer\Contracts\Upload_Token_Adapter',
-		'Sabri\UniversalComposer\Contracts\Revision_Adapter',
-		'Sabri\UniversalComposer\Core\Version',
-		'Sabri\UniversalComposer\Core\Contract_Boundary',
-		'Sabri\UniversalComposer\Core\Runtime_Trust',
-		'Sabri\UniversalComposer\Core\Safe_Mode',
-		'Sabri\UniversalComposer\Core\Migration_Manager',
-		'Sabri\UniversalComposer\Core\Permission_Resolver',
-		'Sabri\UniversalComposer\Core\Page_Resolver',
-		'Sabri\UniversalComposer\Core\Workspace_Page_Resolver',
-		'Sabri\UniversalComposer\Core\Registry',
-		'Sabri\UniversalComposer\Core\Workflow_Validator',
-		'Sabri\UniversalComposer\Core\Workflow_Coordinator',
-		'Sabri\UniversalComposer\Core\Policy_Engine',
-		'Sabri\UniversalComposer\Core\Audit_Store',
-		'Sabri\UniversalComposer\Core\Upload_Token_Store',
-		'Sabri\UniversalComposer\Core\Taxonomy_Map',
-		'Sabri\UniversalComposer\Core\Projection_Bus',
-		'Sabri\UniversalComposer\Core\Plan_Completion_Runtime',
-		'Sabri\UniversalComposer\Core\Session_Store',
-		'Sabri\UniversalComposer\Core\Submission_Store',
-		'Sabri\UniversalComposer\Core\Reconciliation_Service',
-		'Sabri\UniversalComposer\Core\Browser_Runtime',
-		'Sabri\UniversalComposer\Core\Plugin',
-		'Sabri\UniversalComposer\Presentation\Create_Surface',
-		'Sabri\UniversalComposer\Presentation\Workflow_Surface',
-		'Sabri\UniversalComposer\Presentation\My_Content_Workspace',
-		'Sabri\UniversalComposer\Http\Rest_Controller',
-		'Sabri\UniversalComposer\Http\Reconciliation_Rest_Controller',
-		'Sabri\UniversalComposer\Http\Plan_Rest_Controller',
-		'Sabri\UniversalComposer\Integration\Shell_Bridge',
-		'Sabri\UniversalComposer\Integration\Core_Adapter_Requirements',
-		'Sabri\UniversalComposer\Admin\System_Check_Page',
-		'Sabri\UniversalComposer\Admin\Activation_Wizard',
+		'Sabri\\UniversalComposer\\Contracts\\Adapter',
+		'Sabri\\UniversalComposer\\Contracts\\Workflow_Adapter',
+		'Sabri\\UniversalComposer\\Contracts\\Governed_Workflow_Adapter',
+		'Sabri\\UniversalComposer\\Contracts\\Lifecycle_Adapter',
+		'Sabri\\UniversalComposer\\Contracts\\Diagnostic_Adapter',
+		'Sabri\\UniversalComposer\\Contracts\\Draft_Lifecycle_Adapter',
+		'Sabri\\UniversalComposer\\Contracts\\Draft_Recovery_Adapter',
+		'Sabri\\UniversalComposer\\Contracts\\Upload_Token_Adapter',
+		'Sabri\\UniversalComposer\\Contracts\\Revision_Adapter',
+		'Sabri\\UniversalComposer\\Core\\Version',
+		'Sabri\\UniversalComposer\\Core\\Contract_Boundary',
+		'Sabri\\UniversalComposer\\Core\\Runtime_Trust',
+		'Sabri\\UniversalComposer\\Core\\Safe_Mode',
+		'Sabri\\UniversalComposer\\Core\\Migration_Manager',
+		'Sabri\\UniversalComposer\\Core\\Permission_Resolver',
+		'Sabri\\UniversalComposer\\Core\\Page_Resolver',
+		'Sabri\\UniversalComposer\\Core\\Workspace_Page_Resolver',
+		'Sabri\\UniversalComposer\\Core\\Registry',
+		'Sabri\\UniversalComposer\\Core\\Workflow_Validator',
+		'Sabri\\UniversalComposer\\Core\\Workflow_Coordinator',
+		'Sabri\\UniversalComposer\\Core\\Policy_Engine',
+		'Sabri\\UniversalComposer\\Core\\Audit_Store',
+		'Sabri\\UniversalComposer\\Core\\Upload_Token_Store',
+		'Sabri\\UniversalComposer\\Core\\Taxonomy_Map',
+		'Sabri\\UniversalComposer\\Core\\Projection_Bus',
+		'Sabri\\UniversalComposer\\Core\\Plan_Completion_Runtime',
+		'Sabri\\UniversalComposer\\Core\\Governing_Plan_Runtime',
+		'Sabri\\UniversalComposer\\Core\\Session_Store',
+		'Sabri\\UniversalComposer\\Core\\Submission_Store',
+		'Sabri\\UniversalComposer\\Core\\Reconciliation_Service',
+		'Sabri\\UniversalComposer\\Core\\Browser_Runtime',
+		'Sabri\\UniversalComposer\\Core\\Plugin',
+		'Sabri\\UniversalComposer\\Presentation\\Create_Surface',
+		'Sabri\\UniversalComposer\\Presentation\\Workflow_Surface',
+		'Sabri\\UniversalComposer\\Presentation\\My_Content_Workspace',
+		'Sabri\\UniversalComposer\\Http\\Rest_Controller',
+		'Sabri\\UniversalComposer\\Http\\Reconciliation_Rest_Controller',
+		'Sabri\\UniversalComposer\\Http\\Plan_Rest_Controller',
+		'Sabri\\UniversalComposer\\Integration\\Shell_Bridge',
+		'Sabri\\UniversalComposer\\Integration\\Core_Adapter_Requirements',
+		'Sabri\\UniversalComposer\\Admin\\System_Check_Page',
+		'Sabri\\UniversalComposer\\Admin\\Activation_Wizard',
+	);
+	$core_functions = array(
+		'supc_adapter_governance',
+		'supc_lifecycle_capabilities',
+		'supc_execute_lifecycle',
 	);
 	$core_constant_collisions = array_values( array_filter( $core_constants, 'defined' ) );
 	$core_symbol_collisions   = array_values(
@@ -85,8 +95,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 				|| trait_exists( $symbol, false )
 		)
 	);
+	$core_function_collisions = array_values( array_filter( $core_functions, 'function_exists' ) );
 
-	if ( array() !== $core_constant_collisions || array() !== $core_symbol_collisions ) {
+	if ( array() !== $core_constant_collisions || array() !== $core_symbol_collisions || array() !== $core_function_collisions ) {
 		add_action(
 			'admin_init',
 			static function (): void {
@@ -100,18 +111,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 			'admin_notices',
 			static function (): void {
 				echo '<div class="notice notice-error"><p>'
-					. esc_html__( 'Sabri Universal Post Composer was disabled because another component preclaimed one or more File 22 core constants or runtime symbols.', 'sabri-universal-post-composer' )
+					. esc_html__( 'Sabri Universal Post Composer was disabled because another component preclaimed one or more File 22 core constants, runtime symbols, or governed API functions.', 'sabri-universal-post-composer' )
 					. '</p></div>';
 			}
 		);
 		return;
 	}
 
-	define( 'SUPC_VERSION', '1.0.0-rc.2' );
+	define( 'SUPC_VERSION', '1.0.0-rc.3' );
 	define( 'SUPC_SCHEMA_VERSION', '1.0.0' );
 	define( 'SUPC_ADAPTER_API_VERSION', '1.0.0' );
 	define( 'SUPC_WORKFLOW_API_VERSION', '1.0.0' );
 	define( 'SUPC_SUBJECT_SCHEMA_API_VERSION', '1.0.0' );
+	define( 'SUPC_GOVERNANCE_API_VERSION', '1.0.0' );
+	define( 'SUPC_LIFECYCLE_API_VERSION', '1.0.0' );
 	define( 'SUPC_MIN_SMC_VERSION', '1.2.3' );
 	define( 'SUPC_MIN_SMC_DB_VERSION', '1.2.0' );
 	define( 'SUPC_MIN_SMC_CONTRACT_VERSION', '1.1.2' );
@@ -123,6 +136,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 	require_once SUPC_PATH . 'includes/contracts/interface-adapter.php';
 	require_once SUPC_PATH . 'includes/contracts/interface-workflow-adapter.php';
+	require_once SUPC_PATH . 'includes/contracts/interface-governed-workflow-adapter.php';
+	require_once SUPC_PATH . 'includes/contracts/interface-lifecycle-adapter.php';
 	require_once SUPC_PATH . 'includes/contracts/interface-diagnostic-adapter.php';
 	require_once SUPC_PATH . 'includes/contracts/interface-draft-lifecycle-adapter.php';
 	require_once SUPC_PATH . 'includes/contracts/interface-draft-recovery-adapter.php';
@@ -160,7 +175,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/admin/class-system-check-page.php';
 	require_once SUPC_PATH . 'includes/admin/class-activation-wizard.php';
 	require_once SUPC_PATH . 'includes/core/class-plugin.php';
+	require_once SUPC_PATH . 'includes/core/class-governing-plan-runtime.php';
 	require_once SUPC_PATH . 'includes/core/functions.php';
+	require_once SUPC_PATH . 'includes/core/governing-plan-functions.php';
 
 	add_filter(
 		'cron_schedules',
@@ -241,6 +258,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 			\Sabri\UniversalComposer\Core\Plugin::instance()->boot();
 		},
 		20
+	);
+	add_action(
+		'plugins_loaded',
+		static function (): void {
+			\Sabri\UniversalComposer\Core\Governing_Plan_Runtime::instance()->boot();
+		},
+		22
 	);
 	add_action(
 		'plugins_loaded',
