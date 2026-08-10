@@ -9,6 +9,7 @@ File 21 registers the release-critical `social_publication` adapter against File
 | Adapter key | `social_publication` |
 | Native owner | `sabri-complete-home-news-feed` |
 | Minimum and actual native version | `1.0.3` or later |
+| Integrated staging package identity | `1.0.3.2` or later |
 | Central create capability | `sabri_feed_create_posts` |
 | Group | `publishing` |
 | Privacy classification | `public` |
@@ -17,13 +18,13 @@ File 21 registers the release-critical `social_publication` adapter against File
 
 ## Ownership boundary
 
-File 22 discovers, authorizes centrally, orders, and presents the adapter. File 21 owns the native Composer, post records, drafts, validation, media, moderation, review, scheduling, publication, and canonical content URLs.
+File 22 discovers, authorizes centrally, orders, and presents the adapter. File 21 owns the native Composer implementation behind its adapter, post records, drafts, validation, media, moderation, review, scheduling, publication, and canonical content URLs.
 
-A File 22 selection opens File 21's native route. File 22 does not create a shadow post or copy the native payload.
+A File 22 selection delegates into File 21's native workflow. File 22 does not create a shadow post or copy the native payload.
 
 ## Permission composition
 
-File 22 first enforces Membership Core status and the canonical `sabri_feed_create_posts` capability. File 21 then applies `ComposerPermissions::user_can_create()`.
+File 22 first enforces current Membership Core status and the canonical `sabri_feed_create_posts` capability. File 21 then applies its native publication policy.
 
 Both decisions must allow access. File 21 may narrow the central decision; it cannot grant access that Membership Core denied. Patient, student, suspended, rejected, expired-document, logged-out, and other unauthorized accounts must not receive a Social Post choice.
 
@@ -51,16 +52,18 @@ A duplicate `social_publication` adapter key is not treated as successful File 2
 - `warning`: the exact compatible adapter is registered but the native Composer is temporarily unavailable or disabled;
 - `fail`: adapter missing, duplicate/foreign owner, wrong capability, wrong group/privacy class, declared or actual File 21 version below `1.0.3`, unreported runtime version, or diagnostic exception.
 
-A missing or incompatible adapter blocks File 22 Core 1.0 release acceptance. It does not fatal public reading or unrelated optional adapters.
+A missing or incompatible adapter blocks File 22 Core release acceptance. It does not fatal public reading or unrelated optional adapters.
 
-## Current phase boundary
+## Current source-candidate boundary
 
-The cumulative Draft integration requires File 21's complete base, diagnostic, workflow, native-draft, role-neutral schema, and subject-aware schema contracts. File 22 exposes guarded server-side orchestration only; File 21 continues to own durable autosave, preview authorization, validation policy, idempotency persistence and reconciliation, scheduling, moderation, publication, and canonical records. Neither Draft PR is staging-, merge-, or production-approved.
+The merged File 22 `1.0.0-rc.3` source contains the guarded base, diagnostic, workflow, draft-lifecycle/recovery, upload-token, revision, governance and lifecycle orchestration contracts. File 21 continues to own native draft bodies, preview authorization, validation policy, durable native idempotency binding, scheduling, moderation, publication and canonical records. File 22 retains only bounded orchestration/reconciliation metadata.
+
+Repository merge and green automated QA do **not** establish integrated File 21 staging acceptance. Exact deployed File 21 runtime/API/package identity, DB/schema/migration state, real-role workflows, rollback and live parity remain environment gates.
 
 ## Staging acceptance
 
-- Founder and Administrator see **Social Post** and reach `/create-post/`;
-- verified and policy-permitted unverified doctors follow File 21 review rules;
+- Founder and Administrator see **Social Post** and reach the active native/managed workflow destination;
+- verified doctors follow current File 00/File 21 authorization and review rules; no role label alone grants publication authority;
 - patient, student, suspended, rejected, expired-document, and logged-out accounts are denied as specified;
 - File 20 desktop and mobile Create entries resolve to the File 22 Create page;
 - File 21's duplicate fallback CTA is absent only when the complete gateway is operational;

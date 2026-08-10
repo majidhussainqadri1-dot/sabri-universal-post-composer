@@ -179,3 +179,83 @@ if ( is_readable( $bridge_file ) ) {
 		}
 	}
 }
+
+// Every private Composer REST error receives a non-sensitive support reference
+// so a user can report the exact failed request without exposing draft content,
+// native object identifiers, consent evidence, or other protected data. The hook
+// is registered only when WordPress' hook API is available so isolated collision
+// and provenance tests can safely load this file without a full WordPress runtime.
+if ( function_exists( 'add_filter' ) ) {
+	add_filter(
+		'rest_post_dispatch',
+		static function ( mixed $response, mixed $server, mixed $request ): mixed {
+			unset( $server );
+			if ( ! is_object( $request ) || ! is_callable( array( $request, 'get_route' ) ) ) {
+				return $response;
+			}
+
+			$route = (string) call_user_func( array( $request, 'get_route' ) );
+			if ( '/sabri-composer/v1' !== $route && 0 !== strpos( $route, '/sabri-composer/v1/' ) ) {
+				return $response;
+			}
+
+			$reference = static function (): string {
+				try {
+					return 'SUPC-' . strtoupper( bin2hex( random_bytes( 8 ) ) );
+				} catch ( \Throwable $error ) {
+					unset( $error );
+					return 'SUPC-' . strtoupper( substr( hash( 'sha256', microtime( true ) . '|' . uniqid( '', true ) ), 0, 16 ) );
+				}
+			};
+
+			if ( $response instanceof \WP_Error ) {
+				if (
+					! is_callable( array( $response, 'get_error_code' ) )
+					|| ! is_callable( array( $response, 'get_error_data' ) )
+					|| ! is_callable( array( $response, 'add_data' ) )
+				) {
+					return $response;
+				}
+				$code    = (string) call_user_func( array( $response, 'get_error_code' ) );
+				$data    = call_user_func( array( $response, 'get_error_data' ), $code );
+				$data    = is_array( $data ) ? $data : array();
+				$details = isset( $data['details'] ) && is_array( $data['details'] ) ? $data['details'] : array();
+				if ( ! isset( $details['support_reference'] ) ) {
+					$details['support_reference'] = $reference();
+				}
+				$data['details'] = $details;
+				call_user_func( array( $response, 'add_data' ), $data, $code );
+				return $response;
+			}
+
+			if (
+				! $response instanceof \WP_REST_Response
+				|| ! is_callable( array( $response, 'get_status' ) )
+				|| ! is_callable( array( $response, 'get_data' ) )
+				|| ! is_callable( array( $response, 'set_data' ) )
+			) {
+				return $response;
+			}
+			$status = (int) call_user_func( array( $response, 'get_status' ) );
+			if ( $status < 400 ) {
+				return $response;
+			}
+
+			$data = call_user_func( array( $response, 'get_data' ) );
+			if ( ! is_array( $data ) ) {
+				return $response;
+			}
+			$error_data = isset( $data['data'] ) && is_array( $data['data'] ) ? $data['data'] : array();
+			$details    = isset( $error_data['details'] ) && is_array( $error_data['details'] ) ? $error_data['details'] : array();
+			if ( ! isset( $details['support_reference'] ) ) {
+				$details['support_reference'] = $reference();
+			}
+			$error_data['details'] = $details;
+			$data['data']          = $error_data;
+			call_user_func( array( $response, 'set_data' ), $data );
+			return $response;
+		},
+		20,
+		3
+	);
+}

@@ -12,7 +12,7 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 | Global header and Create placement | File 20 — Unified Application Shell |
 | Social, Founder, doctor, News, Patient Case, Research Summary, and Poll publishing | File 21 — Complete Home and News Feed |
 | Universal type selection, shared creation UX, guarded invocation, temporary orchestration boundaries, and adapter health | File 22 |
-| Final public profile and timeline visual experience | File 23 |
+| Final public profile and timeline visual experience | File 25 — Complete Public UI, Profile Timeline and Visual Experience |
 | Learning lessons | File 05 |
 | Encyclopedia entries | File 06 |
 | Video records | File 10 |
@@ -45,7 +45,7 @@ Marker constants establish declared contract identity but do not prove executabl
 4. Required central WordPress capability.
 5. Adapter-specific restriction.
 
-An adapter may restrict access; it may never expand or bypass the central decision. Phase 22E repeats this permission order for every direct workflow operation and never trusts a prior page-render decision.
+An adapter may restrict access; it may never expand or bypass the central decision. Every direct workflow and REST mutation repeats this permission order and never trusts a prior page-render decision.
 
 ## Canonical record law
 
@@ -61,20 +61,23 @@ Create-page mapping repair snapshots the exact prior option state without a magi
 
 Native modules may call `supc_register_adapter()` after File 22 loads. The compatibility events `supc_register_adapters` and `supc_registry_ready` fire on `init`, but direct registration remains available to late-loading modules.
 
-## Workflow invocation boundary
+## Workflow and private REST invocation boundary
 
-Phase 22E adds an internal `Workflow_Coordinator` and public server-side PHP helper functions. It validates:
+The current RC3 runtime contains the internal `Workflow_Coordinator`, public server-side PHP helpers, and authenticated private REST controllers. They validate:
 
 - adapter and workflow-contract availability;
-- central and adapter-specific authorization;
+- current-subject identity and central plus adapter-specific authorization;
+- REST nonce and method-specific permission checks;
+- bounded request size and rate limits;
 - payload shape, nesting, finite values, and encoded size;
-- opaque native references;
+- opaque native references and upload tokens;
 - immutable idempotency keys;
 - schema and operation result envelopes;
 - same-origin HTTPS preview and canonical URLs;
-- controlled native statuses.
+- controlled native statuses;
+- private no-store/noindex response boundaries.
 
-It does not expose a public HTTP controller. Any future REST, AJAX, or form layer must separately enforce nonce, CSRF, method, rate-limit, upload, and request-origin controls.
+The REST layer is not a public-content API: draft/session/reviewer/consent data remains private and every mutating request is reauthorized server-side. Any future AJAX or form compatibility layer must preserve the same CSRF, authorization, rate-limit, upload and origin boundaries.
 
 ## Idempotency boundary
 
@@ -89,7 +92,7 @@ File 22 may generate a logical idempotency key and forwards it unchanged. The na
 
 Corrections and retractions are immutable editorial events, not overloaded composer states.
 
-Phase 22E exposes only controlled native operation statuses: `draft`, `pending_review`, `scheduled`, `published`, `rejected`, and `failed`. Richer review, publication, and safety dimensions remain native-module responsibilities until a separately versioned reconciliation contract is approved.
+The governance/lifecycle contracts expose normalized native operation statuses while richer review, publication and safety truth remains with the native domain owner.
 
 ## Core release boundary
 

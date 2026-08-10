@@ -1,0 +1,79 @@
+name: File 22 Eighty-Pass Review Evidence
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: file22-eighty-pass-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  eighty-pass-evidence:
+    name: Exact-head eighty-pass regressions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2.37.1
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install locked dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+
+      - name: Run cumulative repository QA
+        run: |
+          set -euo pipefail
+          composer lint
+          composer test
+          composer phpstan
+          composer phpcs
+          node --check assets/js/workflow-composer.js
+          git diff --check
+
+      - name: Verify eighty-pass corrections and ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
+          test -f tests/EightyPassReviewTest.php
+          grep -Fq 'Passes 01, 02, 03, 04, 05, 06, 07, 08 and 80' docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
+          grep -Fq 'Passes **09–79**' docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
+          grep -Fq 'Pass 80 itself is the final exact-head executable gate' docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
+          grep -Fq 'var(--sabri-color-primary, #087a4e)' assets/css/create-surface.css
+          grep -Fq 'var(--sabri-color-primary-strong, #05623e)' assets/css/create-surface.css
+          grep -Fq 'var(--sabri-color-primary,#087a4e)' assets/css/workflow-composer.css
+          ! grep -Fq -- '--supc-orange: #ff8a1f' assets/css/create-surface.css
+          ! grep -Fq 'var(--sabri-color-primary,#ff8a1f)' assets/css/workflow-composer.css
+          grep -Fq "'rest_post_dispatch'" includes/core/functions.php
+          grep -Fq "'support_reference'" includes/core/functions.php
+          grep -Fq 'File 25 — Complete Public UI, Profile Timeline and Visual Experience' docs/ARCHITECTURE.md
+          grep -Fq 'Plugin 1.2.3 / DB 1.2.0 / Contract 1.1.2' docs/COMPATIBILITY-MATRIX.md
+          grep -Fq 'Historical/superseded in part' docs/MASTER-PLAN-AMENDMENT-v2.1.md
+          grep -Fq 'merged File 22 `1.0.0-rc.3` source' docs/FILE21-INTEGRATION.md
+
+      - name: Verify source-truth boundary remains explicit
+        run: |
+          set -euo pipefail
+          grep -Fq '| Staging-Accepted | No |' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md
+          grep -Fq '| Live-Deployed | No |' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md
+          grep -Fq '| Operational | No |' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md

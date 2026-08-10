@@ -1,8 +1,16 @@
 # Decision Log
 
+## 2026-08-10 — Current File 00 dependency floor
+
+**Decision:** File 22 requires Sabri Membership Core plugin `1.2.3` or later, database schema `1.2.0` or later, and contract `1.1.2` or later, with canonical source provenance checks. Version presence alone is not authorization evidence.
+
+## 2026-08-06 — Current numbered-file ownership
+
+**Decision:** File 22 is Sabri Universal Post Composer; File 23 is Doctor and Founder Publishing Dashboard; File 24 is the Security, Privacy, Compliance and Resilience Center; File 25 is Complete Public UI, Profile Timeline and Visual Experience; File 26 owns Search, Discovery and Ranking projections. This later Founder-approved numbering supersedes conflicting earlier entries below.
+
 ## 2026-07-28 — File 22 identity
 
-**Decision:** File 22 is Sabri Universal Post Composer. The prior Complete Public UI, Profile Timeline and Visual Experience module moves to File 23.
+**Historical decision:** File 22 was assigned Sabri Universal Post Composer and the prior public UI module was temporarily mapped to File 23. **Current status:** superseded by the 2026-08-06 numbering above; the public UI/profile/timeline owner is File 25 and File 23 is the publishing dashboard.
 
 **Migration impact:** Documentation and future integration references change; runtime content does not. Existing hook names require compatibility aliases before any rename.
 
@@ -14,7 +22,7 @@
 
 ## 2026-07-28 — Mandatory permission authority
 
-**Decision:** Sabri Membership Core 1.0.1 or later is a hard dependency. File 22 checks account status and central capability before any adapter-specific decision.
+**Historical decision:** Sabri Membership Core 1.0.1 or later was the original hard dependency. **Current status:** superseded by the 2026-08-10 dependency floor above. File 22 checks current account state and central capability before any adapter-specific decision.
 
 **Security impact:** Rejected, suspended, and expired-document accounts are denied. Adapters may restrict but never expand access.
 

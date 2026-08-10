@@ -69,22 +69,25 @@ This manifest identifies the runtime and QA files that define the integrated `1.
 - `assets/css/governing-plan-brand.css`
 - `assets/js/workflow-composer.js`
 
-## New-plan evidence and QA
+## New-plan and eighty-pass evidence / QA
 
 - `docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md`
 - `docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md`
 - `docs/FILE22-RC3-TWO-FRESH-REVIEWS-AND-FINAL-SOURCE-CLOSURE-2026-08-10.md`
 - `docs/FILE22-NEW-GOVERNING-PLANS-CODING-CLOSURE-2026-08-10.md`
 - `docs/FILE22-NEW-PLANS-TWO-FRESH-REVIEW-CLOSURE-2026-08-10.md`
+- `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 - `tests/PlanCompletionCoreTest.php`
 - `tests/PlanCompleteExperienceTest.php`
 - `tests/GoverningPlanCompletionTest.php`
 - `tests/GoverningPlanReleaseIdentityTest.php`
 - `tests/NewCentralPlanIntegrationTest.php`
+- `tests/EightyPassReviewTest.php`
 - `tests/workflow-bootstrap.php`
 - `.github/workflows/ci.yml`
 - `.github/workflows/file22-new-plans-1.0.0-rc.3.yml`
+- `.github/workflows/file22-eighty-pass-review.yml`
 
 ## Production package boundary
 
-Development-only files, tests, GitHub workflows and review documentation are excluded from the installable production package according to `.distignore`. The RC3 workflow must build from the exact checked-out commit, verify package/source identity, produce SHA-256 evidence and explicitly report that staging/live/operational acceptance remains outside repository CI.
+Development-only files, tests and GitHub workflows are excluded from the installable production package according to `.distignore`. Public documentation/review evidence remains in the package unless explicitly excluded, so package checksum verification covers it as part of the exact source candidate. The RC3 workflow must build from the exact checked-out commit, verify package/source identity, produce SHA-256 evidence and explicitly report that staging/live/operational acceptance remains outside repository CI.
