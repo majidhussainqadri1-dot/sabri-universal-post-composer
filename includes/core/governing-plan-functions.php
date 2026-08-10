@@ -65,3 +65,35 @@ if ( ! function_exists( 'supc_execute_lifecycle' ) ) {
 		);
 	}
 }
+
+/*
+ * The later central plan makes Sabri Green the primary brand color while File
+ * 25 remains the canonical token owner. Load only a tiny fallback override;
+ * it does not create a second design system and selectors are File-22 scoped.
+ */
+add_action(
+	'wp_enqueue_scripts',
+	static function (): void {
+		wp_enqueue_style(
+			'supc-governing-plan-brand',
+			SUPC_URL . 'assets/css/governing-plan-brand.css',
+			array(),
+			SUPC_VERSION
+		);
+	},
+	100
+);
+
+/*
+ * Compatibility event from the plan-complete runtime is explicitly forwarded
+ * to File 26, the later central plan's canonical Search/Discovery/Ranking
+ * owner. File 22 never writes an index, ranking record, or search database.
+ */
+add_action(
+	'supc_search_seo_event',
+	static function ( string $event, array $metadata ): void {
+		do_action( 'supc_file26_search_projection_event', $event, $metadata );
+	},
+	10,
+	2
+);
