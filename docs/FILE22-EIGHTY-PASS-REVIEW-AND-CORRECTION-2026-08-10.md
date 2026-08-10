@@ -60,11 +60,15 @@ Review law: each pass is completed before moving to the next pass; any confirmed
 
 **Correction:** the document now states the merged RC3 source boundary, preserves File 21 native ownership, and keeps integrated staging/deployed parity explicitly unclaimed.
 
-### Pass 80 — Exact-head accessibility regression gate
+### Pass 80 — Final exact-head executable gate
 
-**Defect found.** After Pass 01 correctly changed the active Create action from an orange literal fallback to the File-25-owned Sabri Green token with a green fallback, the existing `AccessibilityContrastTest` still accepted only the former literal `--supc-orange-dark: #xxxxxx;` syntax. The final exact-head cumulative QA therefore rejected the corrected CSS even though its fallback contrast was valid.
+**Defects found and corrected.** The final executable gate deliberately reran cumulative PHPUnit, collision/provenance scripts, PHPStan, WPCS/security checks and deterministic RC3 packaging after the preceding corrections. It exposed three linked QA/integration defects:
 
-**Correction:** the accessibility regression now resolves and tests the fallback inside `var(--sabri-color-primary-strong, #05623e)`, explicitly requires the File 25 token form, and continues to enforce WCAG 4.5:1 contrast against white. The complete exact-head suite must be rerun after this correction.
+1. `AccessibilityContrastTest` still accepted only the former literal `--supc-orange-dark: #xxxxxx;` syntax after Pass 01 had correctly moved the active action to the File-25-owned green token with a green fallback.
+2. The new support-reference hook was initially registered unconditionally in `includes/core/functions.php`; isolated collision/provenance tests intentionally load this file without the full WordPress hook API, so `add_filter()` caused a fatal error in that reduced harness.
+3. After guarding hook registration, PHPStan's intentionally minimal WordPress stubs did not expose the full `WP_Error` / `WP_REST_Response` method surface used by the filter, so the implementation needed a callable-method boundary rather than an unverified direct method assumption in reduced/test contexts.
+
+**Corrections:** the contrast test now extracts and evaluates `var(--sabri-color-primary-strong, #05623e)` and still enforces WCAG 4.5:1; support-reference registration is guarded by `function_exists( 'add_filter' )`; and response mutation first verifies the required response methods are callable before invoking them. In a real WordPress REST runtime the normal methods are used, while isolated collision/provenance loads remain non-fatal. The exact corrected source then passed the cumulative repository QA, the dedicated eighty-pass workflow, File 22 CI, the current new-plans RC3 workflow and retained historical regression workflows before any merge decision.
 
 ## Passes 09–80
 
@@ -141,16 +145,16 @@ Review law: each pass is completed before moving to the next pass; any confirmed
 | 77 | rollback/staging/live truth separation | No defect found; staging/live/operational remain unclaimed |
 | 78 | manifest/checksum/package boundary | No defect found; deterministic packaging remains an exact-head CI gate |
 | 79 | adversarial negative paths: collision/foreign/mismatch/invalid/unauthorized | No defect found |
-| 80 | final cross-plan contradiction and exact-head release gate | **Defect found and corrected:** stale accessibility regression expected the pre-correction literal orange variable syntax instead of the current File 25 token + Sabri Green fallback; cumulative QA rerun required |
+| 80 | final cross-plan contradiction and exact-head executable release gate | **Defects found and corrected:** stale green-token accessibility regression; unguarded support-reference hook in reduced collision harness; and unguarded response-method assumptions under the minimal PHPStan/test surface |
 
 ## Defect-pass index
 
 Confirmed defects were found in **Passes 01, 02, 03, 04, 05, 06, 07, 08 and 80**.
 
-No additional confirmed defect was found in Passes **09–79** after the immediate corrections above. Some automated probes intentionally produced candidate warnings during review (for example internal user-ID parameters, reserved-type ownership, native scheduling and audit storage), but manual source-boundary inspection showed those were not defects because authority remains current-subject/native-owner controlled. Pass 80 itself is the final exact-head executable gate and therefore legitimately reopened the review when it exposed the stale accessibility regression.
+No additional confirmed defect was found in Passes **09–79** after the immediate corrections above. Some automated probes intentionally produced candidate warnings during review (for example internal user-ID parameters, reserved-type ownership, native scheduling and audit storage), but manual source-boundary inspection showed those were not defects because authority remains current-subject/native-owner controlled. Pass 80 itself is the final exact-head executable gate and therefore legitimately reopened the review until all newly exposed QA/integration defects were corrected and the cumulative exact-head gates returned green.
 
 ## Final truth boundary
 
-This eighty-pass record can establish **repository/source review closure** only when the exact final branch head passes the cumulative repository QA and deterministic RC3 package workflow. It does not establish Hostinger staging acceptance, deployed database/schema state, live deployment or operational acceptance.
+This eighty-pass record establishes **repository/source review closure** only for the exact source head on which the cumulative repository QA and deterministic RC3 package workflow are green. It does not establish Hostinger staging acceptance, deployed database/schema state, live deployment or operational acceptance.
 
 Required environment sequence remains: exact package → staging install/upgrade → companion/deployed-version parity → DB/schema/migration verification → real-role workflows → browser/accessibility/RTL/weak-network acceptance → backup/restore → rollback rehearsal → Founder acceptance → production deployment → live smoke test → deployed-artifact parity → post-deployment monitoring.
