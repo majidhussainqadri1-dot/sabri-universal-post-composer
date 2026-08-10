@@ -11,11 +11,14 @@ final class PlanCompletionCoreTest extends TestCase {
 	public function test_plan_contract_and_rest_contract_are_explicit(): void {
 		$bootstrap = file_get_contents( dirname( __DIR__ ) . '/sabri-universal-post-composer.php' );
 		$this->assertIsString( $bootstrap );
-		$this->assertStringContainsString( "SUPC_VERSION', '1.0.0-rc.2", $bootstrap );
+		$this->assertStringContainsString( "SUPC_VERSION', '1.0.0-rc.3", $bootstrap );
 		$this->assertStringContainsString( "SUPC_SCHEMA_VERSION', '1.0.0", $bootstrap );
 		$this->assertStringContainsString( "SUPC_PLAN_CONTRACT_VERSION', '1.0.0", $bootstrap );
 		$this->assertStringContainsString( "SUPC_REST_API_VERSION', '1.2.0", $bootstrap );
+		$this->assertStringContainsString( "SUPC_GOVERNANCE_API_VERSION', '1.0.0", $bootstrap );
+		$this->assertStringContainsString( "SUPC_LIFECYCLE_API_VERSION', '1.0.0", $bootstrap );
 		$this->assertStringContainsString( 'class-plan-rest-controller.php', $bootstrap );
+		$this->assertStringContainsString( 'class-governing-plan-runtime.php', $bootstrap );
 		$this->assertStringContainsString( 'class-policy-engine.php', $bootstrap );
 		$this->assertStringContainsString( 'class-audit-store.php', $bootstrap );
 		$this->assertStringContainsString( 'class-upload-token-store.php', $bootstrap );
@@ -88,15 +91,21 @@ final class PlanCompletionCoreTest extends TestCase {
 	public function test_native_ownership_is_preserved_and_optional_adapter_packs_fail_soft(): void {
 		$runtime = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-plan-completion-runtime.php' );
 		$bus     = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-projection-bus.php' );
+		$govern  = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-governing-plan-runtime.php' );
 		$this->assertIsString( $runtime );
 		$this->assertIsString( $bus );
+		$this->assertIsString( $govern );
 		$this->assertStringContainsString( "array( 'learning', 'encyclopedia', 'video', 'reel', 'pdf', 'marketplace' )", $runtime );
 		$this->assertStringContainsString( "'status' => \$present ? 'pass' : 'warning'", $runtime );
+		$this->assertStringContainsString( "'learning_lesson'", $govern );
+		$this->assertStringContainsString( "'encyclopedia_entry'", $govern );
+		$this->assertStringContainsString( "'pdf_document'", $govern );
+		$this->assertStringContainsString( "'marketplace_listing'", $govern );
 		$this->assertStringContainsString( 'supc_file23_projection_event', $bus );
 		$this->assertStringContainsString( 'supc_file24_assurance_event', $bus );
 		$this->assertStringContainsString( 'supc_file25_timeline_event', $bus );
 		$this->assertStringContainsString( 'supc_file19_notification_event', $bus );
-		$this->assertStringNotContainsString( 'register_post_type', $runtime . $bus );
+		$this->assertStringNotContainsString( 'register_post_type', $runtime . $bus . $govern );
 	}
 
 	public function test_plaintext_browser_storage_and_duplicate_native_backend_remain_absent(): void {
