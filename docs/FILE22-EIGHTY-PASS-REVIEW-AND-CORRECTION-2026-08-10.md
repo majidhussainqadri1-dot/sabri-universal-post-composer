@@ -60,6 +60,12 @@ Review law: each pass is completed before moving to the next pass; any confirmed
 
 **Correction:** the document now states the merged RC3 source boundary, preserves File 21 native ownership, and keeps integrated staging/deployed parity explicitly unclaimed.
 
+### Pass 80 — Exact-head accessibility regression gate
+
+**Defect found.** After Pass 01 correctly changed the active Create action from an orange literal fallback to the File-25-owned Sabri Green token with a green fallback, the existing `AccessibilityContrastTest` still accepted only the former literal `--supc-orange-dark: #xxxxxx;` syntax. The final exact-head cumulative QA therefore rejected the corrected CSS even though its fallback contrast was valid.
+
+**Correction:** the accessibility regression now resolves and tests the fallback inside `var(--sabri-color-primary-strong, #05623e)`, explicitly requires the File 25 token form, and continues to enforce WCAG 4.5:1 contrast against white. The complete exact-head suite must be rerun after this correction.
+
 ## Passes 09–80
 
 | Pass | Review focus | Result after immediate prior corrections |
@@ -135,13 +141,13 @@ Review law: each pass is completed before moving to the next pass; any confirmed
 | 77 | rollback/staging/live truth separation | No defect found; staging/live/operational remain unclaimed |
 | 78 | manifest/checksum/package boundary | No defect found; deterministic packaging remains an exact-head CI gate |
 | 79 | adversarial negative paths: collision/foreign/mismatch/invalid/unauthorized | No defect found |
-| 80 | final cross-plan contradiction and exact-head release gate | No additional source defect found; final disposition is conditional on exact final-head CI/package verification |
+| 80 | final cross-plan contradiction and exact-head release gate | **Defect found and corrected:** stale accessibility regression expected the pre-correction literal orange variable syntax instead of the current File 25 token + Sabri Green fallback; cumulative QA rerun required |
 
 ## Defect-pass index
 
-Confirmed defects were found in **Passes 01, 02, 03, 04, 05, 06, 07 and 08**.
+Confirmed defects were found in **Passes 01, 02, 03, 04, 05, 06, 07, 08 and 80**.
 
-No additional confirmed defect was found in Passes **09–80** after the immediate corrections above. Some automated probes intentionally produced candidate warnings during review (for example internal user-ID parameters, reserved-type ownership, native scheduling and audit storage), but manual source-boundary inspection showed those were not defects because authority remains current-subject/native-owner controlled.
+No additional confirmed defect was found in Passes **09–79** after the immediate corrections above. Some automated probes intentionally produced candidate warnings during review (for example internal user-ID parameters, reserved-type ownership, native scheduling and audit storage), but manual source-boundary inspection showed those were not defects because authority remains current-subject/native-owner controlled. Pass 80 itself is the final exact-head executable gate and therefore legitimately reopened the review when it exposed the stale accessibility regression.
 
 ## Final truth boundary
 
