@@ -73,6 +73,7 @@ This manifest identifies the runtime and QA files that define the integrated `1.
 
 - `docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md`
 - `docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md`
+- `docs/FILE22-RC3-TWO-FRESH-REVIEWS-AND-FINAL-SOURCE-CLOSURE-2026-08-10.md`
 - `docs/FILE22-NEW-GOVERNING-PLANS-CODING-CLOSURE-2026-08-10.md`
 - `docs/FILE22-NEW-PLANS-TWO-FRESH-REVIEW-CLOSURE-2026-08-10.md`
 - `tests/PlanCompletionCoreTest.php`
