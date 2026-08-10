@@ -1,18 +1,19 @@
-# Source Manifest — File 22 Governing-Plans Candidate 0.4.0
+# Source Manifest — File 22 1.0.0-rc.3 Two-New-Plans Candidate
 
-This manifest describes the repository/source candidate after reconciliation with the newly rewritten File 22 plan and consolidated central governing plan. Historical review records remain valid only for their exact historical source heads.
+This manifest describes the current repository/source candidate after reconciliation with the newly supplied File 22 plan and consolidated central governing plan. Historical review records remain valid only for the exact historical source heads they tested and are retained below so their evidence workflows remain verifiable.
 
 ## Candidate identity
 
-- Software candidate: `0.4.0`
-- Database schema: `0.3.0`
+- Software candidate: `1.0.0-rc.3`
+- Database schema: `1.0.0`
 - Adapter API: `1.0.0`
 - Workflow API: `1.0.0`
 - Subject-schema API: `1.0.0`
 - Governance API: `1.0.0`
 - Lifecycle API: `1.0.0`
-- REST compatibility marker: `1.1.0`
-- Final production `1.0.0`: reserved until complete staging/release Definition of Done
+- REST API: `1.2.0`
+- Plan contract: `1.0.0`
+- Stable production `1.0.0`: reserved until staging/release/live Definition of Done
 
 ## Runtime
 
@@ -23,32 +24,51 @@ This manifest describes the repository/source candidate after reconciliation wit
 - `includes/contracts/interface-governed-workflow-adapter.php`
 - `includes/contracts/interface-lifecycle-adapter.php`
 - `includes/contracts/interface-diagnostic-adapter.php`
+- `includes/contracts/interface-draft-lifecycle-adapter.php`
+- `includes/contracts/interface-draft-recovery-adapter.php`
+- `includes/contracts/interface-upload-token-adapter.php`
+- `includes/contracts/interface-revision-adapter.php`
 - `includes/core/class-version.php`
 - `includes/core/class-contract-boundary.php`
 - `includes/core/class-runtime-trust.php`
 - `includes/core/class-safe-mode.php`
+- `includes/core/class-migration-manager.php`
 - `includes/core/class-permission-resolver.php`
 - `includes/core/class-page-resolver.php`
+- `includes/core/class-workspace-page-resolver.php`
 - `includes/core/class-registry.php`
 - `includes/core/class-workflow-validator.php`
 - `includes/core/class-workflow-coordinator.php`
-- `includes/core/class-governing-plan-runtime.php`
 - `includes/core/class-session-store.php`
 - `includes/core/class-submission-store.php`
 - `includes/core/class-reconciliation-service.php`
+- `includes/core/class-policy-engine.php`
+- `includes/core/class-audit-store.php`
+- `includes/core/class-upload-token-store.php`
+- `includes/core/class-taxonomy-map.php`
+- `includes/core/class-projection-bus.php`
+- `includes/core/class-plan-completion-runtime.php`
+- `includes/core/class-governing-plan-runtime.php`
 - `includes/core/class-browser-runtime.php`
 - `includes/core/class-plugin.php`
 - `includes/core/functions.php`
 - `includes/core/governing-plan-functions.php`
 - `includes/http/class-rest-controller.php`
 - `includes/http/class-reconciliation-rest-controller.php`
+- `includes/http/class-plan-rest-controller.php`
 - `includes/integration/class-shell-bridge.php`
 - `includes/integration/class-core-adapter-requirements.php`
+- `includes/integration/class-file23-dashboard-bridge.php`
+- `includes/integration/class-file23-dashboard-adapter-runtime.php`
 - `includes/presentation/class-create-surface.php`
 - `includes/presentation/class-workflow-surface.php`
+- `includes/presentation/class-my-content-workspace.php`
 - `includes/admin/class-system-check-page.php`
+- `includes/admin/class-activation-wizard.php`
 - `assets/css/create-surface.css`
 - `assets/css/workflow-composer.css`
+- `assets/css/my-content.css`
+- `assets/css/governing-plan-brand.css`
 - `assets/js/workflow-composer.js`
 
 ## Public documentation and current release evidence
@@ -73,6 +93,8 @@ This manifest describes the repository/source candidate after reconciliation wit
 - `docs/SYSTEM-CHECK.md`
 - `docs/FILE22-NEW-GOVERNING-PLANS-CODING-CLOSURE-2026-08-10.md`
 - `docs/FILE22-NEW-PLANS-TWO-FRESH-REVIEW-CLOSURE-2026-08-10.md`
+- `docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md`
+- `docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md`
 
 ## Historical exact-head review documents retained
 
@@ -109,7 +131,8 @@ This manifest describes the repository/source candidate after reconciliation wit
 ## Development and QA
 
 - `.github/workflows/ci.yml`
-- `.github/workflows/file22-governing-plans-0.4.0.yml`
+- `.github/workflows/file22-new-plans-1.0.0-rc.3.yml`
+- `.github/workflows/file22-plan-complete-core.yml`
 - `.github/workflows/cumulative-review-evidence.yml`
 - `.github/workflows/fifth-review-evidence.yml`
 - `.github/workflows/sixth-review-evidence.yml`
@@ -130,6 +153,10 @@ This manifest describes the repository/source candidate after reconciliation wit
 - `tests/workflow-bootstrap.php`
 - `tests/GoverningPlanCompletionTest.php`
 - `tests/GoverningPlanReleaseIdentityTest.php`
+- `tests/NewCentralPlanIntegrationTest.php`
+- `tests/PlanCompletionCoreTest.php`
+- `tests/PlanCompleteExperienceTest.php`
+- `tests/FortyPassReviewTest.php`
 - `tests/AccessibilityContrastTest.php`
 - `tests/AdminSystemCheckTest.php`
 - `tests/CoreAdapterRequirementsTest.php`
@@ -180,12 +207,12 @@ This manifest describes the repository/source candidate after reconciliation wit
 - `tests/run-untrusted-shell-safe-mode-test.php`
 - `tests/phpstan-wordpress-stubs.php`
 
-Development files are excluded from the production-style candidate ZIP according to `.distignore`. The committed Composer lock freezes development-tool resolution for exact-head QA.
+Development files are excluded from the production-style candidate ZIP according to `.distignore`. The committed Composer lock freezes development-tool resolution for exact-head QA. Historical evidence workflows are retained so prior exact-head claims can still be validated; they do not define the current candidate identity.
 
 ## Canonical ownership boundary
 
-File 22 is a creation and command-orchestration facade. It does not become the canonical owner of permanent social/news content, Learning, Encyclopedia, Video, Reels, PDFs, Marketplace listings, profile data, notification delivery, search indexes, patient consent/evidence, or domain moderation databases. File 00 is the sole hard runtime authority; File 20 and native domain providers integrate through explicit contracts.
+File 22 is a creation and command-orchestration facade. It does not become the canonical owner of permanent social/news content, Learning, Encyclopedia, Video, Reels, PDFs, Marketplace listings, profile data, notification delivery, File 26 search indexes/ranking, patient consent/evidence or domain moderation databases. File 00 remains the hard identity/capability authority; File 20 and native domain providers integrate through explicit contracts.
 
 ## Release boundary
 
-A merged source candidate, deterministic ZIP, or green automated QA does not prove staging or live deployment. Promotion still requires the exact deployed artifact/checksum, companion/native adapter versions, DB/schema/migration state, real-role and native-domain workflows, browser/accessibility/RTL/no-JS/weak-network acceptance, backup/restore proof, rollback rehearsal, explicit release approval, live smoke testing, and post-deployment monitoring.
+A source candidate, deterministic ZIP or green automated QA does not prove staging or live deployment. Promotion still requires exact deployed artifact/checksum, companion/native adapter versions, DB/schema/migration state, real-role and native-domain workflows, browser/accessibility/RTL/no-JS/weak-network acceptance, backup/restore proof, rollback rehearsal, explicit Founder release approval, live smoke testing and post-deployment monitoring/parity confirmation.

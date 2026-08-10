@@ -1,52 +1,67 @@
 # Sabri Universal Post Composer — File 22
 
-Sabri Universal Post Composer is the role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform. It unifies authorized creation workflows while preserving every native module as the canonical owner of its permanent content, media, consent, moderation, publication state, durable native draft, and canonical URL.
+Sabri Universal Post Composer is the role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform. It unifies authorized authoring workflows while preserving every native module as the canonical owner of its content, media, consent, moderation, publication state, durable draft and canonical URL.
 
-## Governing law
+**One canonical native record; multiple authorized projections.** File 22 orchestrates creation and commands but never duplicates the native domain truth.
 
-- One creation gateway; multiple authorized native content systems.
-- One canonical native record; multiple projections.
-- File 00 remains the sole hard runtime authority for membership, verification, suspension, eligibility, and capabilities. File 22 fails closed when that authority is unavailable or incompatible.
-- File 20 remains the application-shell and global Create-placement owner. It is a production-expected integration, not a substitute identity or publishing backend.
-- File 21 remains the social/news publishing owner. It is the native dependency of the `social_publication` adapter; its absence must not disable unrelated certified adapters.
-- Files 05, 06, 10, 11, 12, and 18 remain the native owners for Learning, Encyclopedia, Video, Reels, PDF, and Marketplace workflows. Those domains integrate through separately certified adapters and are hidden when their native provider is unavailable.
-- File 19 remains notification projection/delivery owner; File 22 may emit or expose native event declarations but never duplicates delivery truth.
-- File 23 remains the private publishing operations dashboard; File 24 the cross-platform security/privacy assurance center; File 25 the public profile/timeline/visual-experience owner.
-- Search/discovery remains with its canonical platform owner; File 22 exposes only native indexing policy/projection metadata.
-- Missing or incompatible adapters fail independently. File 22 never creates substitute domain backends.
+## Current repository candidate — 1.0.0-rc.3
 
-## Version 0.4.0 — new governing-plan coding candidate
+`1.0.0-rc.3` is the integrated source candidate for the **current consolidated central plan** and the **current File 22 plan**. It deliberately remains an RC identity: stable `1.0.0` is not claimed until staging acceptance, controlled deployment and live re-verification are complete.
 
-Version `0.4.0` is the repository candidate that reconciles the previous 0.3.0 browser/reconciliation core with the newly rewritten File 22 plan and consolidated central governing plan. The database schema remains `0.3.0`; no new universal content database or post type is introduced.
+### Governing ownership
 
-In addition to the 0.3.0 reconciliation core, this candidate adds:
+- File 00: identity, verification, suspension and capabilities.
+- File 05: Learning content truth.
+- File 06: Encyclopedia content truth.
+- File 10: Video truth.
+- File 11: Reel truth/relationship under its native owner contract.
+- File 12: PDF secure storage and document truth.
+- File 18: Marketplace record/transaction truth.
+- File 19: notification delivery.
+- File 20: global shell and Create placement.
+- File 21: social/Founder/Doctor/News/Poll/Patient Case publication lifecycle and canonical records.
+- File 22: universal authoring surface and command orchestration only.
+- File 23: private Founder/Doctor publishing operations dashboard.
+- File 24: security/privacy/compliance assurance.
+- File 25: public profile/timeline visual experience and canonical visual-token ownership.
+- File 26: Search/Discovery/Ranking.
 
-- `Governed_Workflow_Adapter` for explicit rights/license, accessibility-authoring, translation, correction/revision, scheduling, Patient Case/medical safety, source/evidence, preview, search-projection, and notification-event declarations;
-- `Lifecycle_Adapter` for native-owner edit, revision, correction, schedule/unschedule, withdrawal, archive, and restore orchestration;
-- current-subject-only PHP helpers: `supc_adapter_governance()`, `supc_lifecycle_capabilities()`, and `supc_execute_lifecycle()`;
-- current File 00 eligibility/capability revalidation before protected lifecycle commands;
-- separation of existing-object edit/correction authority from new-create authority;
-- native-reference binding so a lifecycle response cannot silently substitute another object;
-- private REST governance/lifecycle endpoints under `sabri-composer/v1` with authentication, REST nonce, request-size limits, per-user rate limiting, bounded payloads, no-cache/noindex responses, and rejection of unexpected top-level command fields;
-- System Check gates for the governed social-publication contract and optional-adapter coverage;
-- plan-derived adapter catalog keys and canonical owner file numbers without guessed provider slugs;
-- explicit prohibition on File 22 duplicate permanent content, media, moderation, search, notification, or domain databases;
-- fresh regression coverage for subject spoofing, capability revocation, lifecycle/create separation, Patient Case governance, governance-profile consistency, REST boundaries, and native ownership.
+File 22 does **not** create a duplicate publishing backend, permanent universal post type, search index, notification store, consent vault, media vault, profile backend or moderation ledger.
 
-The established browser Composer remains schema-driven and accessible, with native-owner draft creation, bounded autosave, validation, same-origin private preview, payload-bound idempotency, durable submission identity, request-time/scheduled reconciliation, bounded retry/dead-letter handling, no persistent browser draft storage, and metadata-only File 22 orchestration tables.
+## RC3 source-complete scope
 
-## Technical baseline and contract versions
+The candidate includes:
+
+- one role/capability-aware Create gateway;
+- native-owner adapter registry and no duplicate content database;
+- File 00 fail-closed authorization and current-subject binding;
+- File 20 Create/shell integration boundary;
+- File 21 social publication provider integration and diagnostics;
+- Quick and Advanced composer modes with a seven-stage authoring flow;
+- native drafts, bounded autosave, recovery, conflict handling, idempotency and partial-failure reconciliation;
+- four independent state dimensions: Composer, Review, Publication and Safety/Hold;
+- schema-driven fields, validation, private preview and native upload-token orchestration;
+- Patient Case anonymization/opaque-consent-reference controls;
+- medical-safety, source/evidence and copyright/rights common policy holds;
+- native correction/revision/scheduling lifecycle delegation without a duplicate editorial ledger;
+- metadata-only projection events to Files 19/23/24/25 and explicit File 26 search/discovery handoff;
+- fail-soft Learning, Encyclopedia, Video, Reel, PDF and Marketplace adapter-pack coverage;
+- activation wizard, migration/compatibility, rollback, Safe Mode, audit/observability and non-destructive uninstall boundaries;
+- no plaintext draft persistence in `localStorage`, `sessionStorage` or `IndexedDB`;
+- a File 22-scoped Sabri Green fallback (`#087A4E`) while File 25 remains the canonical token owner.
+
+## Current central-plan business boundary
+
+File 22 contains no Free/Pro/Premium split, PKR 400 core paywall, paid-AI entitlement, donor ranking, donor reach or donor feature/support advantage. Optional donation policy and any finance truth remain outside File 22's authoring authority.
+
+## Institutional AI Teacher boundary
+
+The later central plan assigns generation policy to File 16, composer bridge/orchestration to File 22, publication lifecycle to File 21, notification delivery to File 19, operational oversight to File 23, assurance to File 24 and discovery/classification to File 26. File 22 supplies only the authorized adapter/orchestration path; it does not become an AI generation engine, verified-doctor authority or autonomous clinical system.
+
+## Technical baseline
 
 - WordPress 6.5 or later
 - PHP 8.1–8.3
-- File 22 software candidate: `0.4.0`
-- File 22 database schema: `0.3.0`
-- Adapter API: `1.0.0`
-- Workflow API: `1.0.0`
-- Subject-schema API: `1.0.0`
-- Governance API: `1.0.0`
-- Lifecycle API: `1.0.0`
-- REST compatibility marker: `1.1.0`
 - Sabri Membership Core plugin `1.2.3` or later
 - File 00 database schema `1.2.0` or later
 - File 00 contract `1.1.2` or later
@@ -54,35 +69,36 @@ The established browser Composer remains schema-driven and accessible, with nati
 - American English interface baseline with Urdu/Arabic/RTL readiness
 - No external runtime CDN or remote fonts
 
+Candidate contract versions:
+
+- plugin `1.0.0-rc.3`
+- schema `1.0.0`
+- adapter API `1.0.0`
+- workflow API `1.0.0`
+- subject-schema API `1.0.0`
+- governance API `1.0.0`
+- lifecycle API `1.0.0`
+- REST API `1.2.0`
+- plan contract `1.0.0`
+
 ## Public PHP integration
 
-Native modules register their adapter after File 22 loads:
-
-```php
-$result = supc_register_adapter( $adapter );
-```
-
-Base adapters implement `Sabri\UniversalComposer\Contracts\Adapter`. Full native-draft/browser orchestration implements `Workflow_Adapter`. Adapters that certify the current governing-plan authoring contract implement `Governed_Workflow_Adapter`; native owners that expose edit/revision/correction/scheduling commands through File 22 additionally implement `Lifecycle_Adapter`.
-
-File 22 validates contract versions and public-safe declarations, but native modules retain object/state/ownership checks and all domain-specific field, media, consent, review, correction, and publishing rules.
+Native modules register through the existing public adapter API. Full authoring workflows use the versioned workflow contract; optional governance/lifecycle providers add normalized rights/accessibility/translation/correction/scheduling and native lifecycle capabilities. All write authorization is revalidated server-side against the current subject and native owner.
 
 ## Data and privacy boundary
 
-File 22 stores only bounded orchestration metadata: session and attempt UUIDs, user ID, adapter identity/version, opaque native reference, workflow/reconciliation state, lock version, payload/response hashes, idempotency key, retry counters, controlled error codes, and timestamps. It does not duplicate permanent content, secure files, Patient Case consent/evidence, identity evidence, clinical data, reviewer notes, notification delivery truth, search indexes, or native publication history.
+File 22 stores only bounded orchestration metadata such as session/attempt UUIDs, user ID, adapter identity/version, opaque native reference, state dimensions, lock version, hashes, idempotency identity, retry counters, error codes and timestamps. It does not store draft bodies, patient consent evidence, identity documents, media bytes, clinical records, reviewer notes or native publication history.
 
-Patient Case plaintext is not persisted in `localStorage`, `sessionStorage`, or `IndexedDB`. Private Create/REST surfaces are authenticated, nonce-protected, owner-scoped, no-store, noindex, bounded, and reauthorized on protected actions.
+Private Create and REST surfaces are authenticated, nonce-protected, owner-scoped, no-store, noindex, bounded and reauthorized on each operation. If the required private response boundary cannot be guaranteed, the browser workflow fails closed.
 
-## Review and release discipline
+## Current release truth
 
-Each coding batch is subject to implementation review, correction/retest, a separate fresh/adversarial review, second correction/retest where needed, and exact-head deterministic packaging. The 10 August 2026 governing-plan batch records these reviews in:
+The authoritative current source-candidate record is:
 
-- `docs/FILE22-NEW-GOVERNING-PLANS-CODING-CLOSURE-2026-08-10.md`
-- `docs/FILE22-NEW-PLANS-TWO-FRESH-REVIEW-CLOSURE-2026-08-10.md`
+`docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md`
 
-`0.4.0` is intentionally a pre-staging repository candidate. The plan-reserved `1.0.0` production identity must not be used until the full Definition of Done, staging acceptance, rollback/restore evidence, and release approval are satisfied.
+The current source manifest is:
 
-## Truthful status
+`docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md`
 
-Current repository status: **Coded / exact-head automated-QA candidate**. It is **not** thereby Staging-Accepted, Live-Deployed, or Operational.
-
-Remaining environment gates include the actual deployed package and checksum, installed native adapter versions, live/staging DB and migration state, real Founder/doctor/suspended-role workflows, native Patient Case/rights/translation/correction/scheduling flows, browser/device/RTL/LTR/400% zoom/no-JS/weak-network acceptance, active theme/cache compatibility, backup restoration, rollback rehearsal, explicit Founder acceptance, approved live smoke testing, and post-deployment monitoring.
+Repository source completion does **not** equal production completion. Exact-head CI/package evidence, Hostinger staging fresh-install/upgrade, real companion/database migration verification, real-role workflows, browser/device/accessibility acceptance, backup/restore, rollback rehearsal, Founder acceptance, controlled production deployment, live smoke tests and parity verification remain separate gates.

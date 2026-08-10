@@ -14,8 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 final class Version {
-	private const MAX_LENGTH = 255;
-	private const PATTERN    = '/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/D';
+	private const MAX_LENGTH      = 255;
+	private const PATTERN         = '/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-((?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$/D';
+	private const PACKAGE_PATTERN = '/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:\.(0|[1-9][0-9]*))?$/D';
 
 	public static function valid( string $version ): bool {
 		return null !== self::parse( $version );
@@ -53,6 +54,45 @@ final class Version {
 	}
 
 	/**
+	 * Validate the numeric three- or four-part package identities used by the
+	 * WordPress distribution layer. Runtime/API versions remain strict SemVer.
+	 */
+	public static function valid_wordpress_package( string $version ): bool {
+		return null !== self::parse_wordpress_package( $version );
+	}
+
+	/**
+	 * Compare WordPress package identities after normalizing a missing fourth
+	 * component to zero. This comparison is intentionally separate from SemVer.
+	 *
+	 * @return int Negative when left is lower, zero when equal, positive when higher.
+	 */
+	public static function compare_wordpress_package( string $left, string $right ): int {
+		$left_version  = self::parse_wordpress_package( $left );
+		$right_version = self::parse_wordpress_package( $right );
+		if ( null === $left_version || null === $right_version ) {
+			throw new \InvalidArgumentException( 'WordPress package comparison requires valid numeric package versions.' );
+		}
+
+		foreach ( array_keys( $left_version ) as $identifier ) {
+			$comparison = self::compare_numeric_identifier( $left_version[ $identifier ], $right_version[ $identifier ] );
+			if ( 0 !== $comparison ) {
+				return $comparison;
+			}
+		}
+		return 0;
+	}
+
+	public static function wordpress_package_at_least( string $actual, string $minimum ): bool {
+		try {
+			return self::compare_wordpress_package( $actual, $minimum ) >= 0;
+		} catch ( \InvalidArgumentException $error ) {
+			unset( $error );
+			return false;
+		}
+	}
+
+	/**
 	 * @return array{major:string,minor:string,patch:string,prerelease:array<int,string>|null}|null
 	 */
 	private static function parse( string $version ): ?array {
@@ -73,6 +113,22 @@ final class Version {
 			'minor'      => $matches[2],
 			'patch'      => $matches[3],
 			'prerelease' => $prerelease,
+		);
+	}
+
+	/** @return array{major:string,minor:string,patch:string,package:string}|null */
+	private static function parse_wordpress_package( string $version ): ?array {
+		if ( '' === $version || $version !== trim( $version ) || strlen( $version ) > self::MAX_LENGTH ) {
+			return null;
+		}
+		if ( 1 !== preg_match( self::PACKAGE_PATTERN, $version, $matches ) ) {
+			return null;
+		}
+		return array(
+			'major'   => $matches[1],
+			'minor'   => $matches[2],
+			'patch'   => $matches[3],
+			'package' => isset( $matches[4] ) && '' !== $matches[4] ? $matches[4] : '0',
 		);
 	}
 

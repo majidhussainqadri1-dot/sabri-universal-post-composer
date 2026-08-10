@@ -34,7 +34,11 @@ final class System_Check_Page {
 	private const SYSTEM_KEYS = array(
 		'membership_core', 'create_page', 'adapter_errors', 'public_api_contract', 'file20_create_contract',
 		'current_user_authorization', 'create_surface_diagnostics', 'social_publication_adapter', 'unrecognized_check',
-		'system_check_pipeline',
+		'system_check_pipeline', 'session_store', 'submission_outbox_store', 'reconciliation_queue',
+		'reconciliation_cron', 'file21_package_identity', 'audit_store', 'upload_token_store', 'taxonomy_map',
+		'plan_metadata_cleanup', 'workspace_page', 'plan_contract', 'composer_feature_flag',
+		'adapter_pack_learning', 'adapter_pack_encyclopedia', 'adapter_pack_video', 'adapter_pack_reel',
+		'adapter_pack_pdf', 'adapter_pack_marketplace',
 	);
 	private const SAFE_CODES = array(
 		'membership_core_unavailable', 'authorization_subject_missing', 'supc_safe_mode_active',
@@ -69,7 +73,12 @@ final class System_Check_Page {
 		'configuration_missing', 'route_missing', 'dependency_missing', 'dependency_incompatible', 'safe_mode', 'contract_mismatch',
 		'temporarily_unavailable', 'schema_invalid', 'permission_configuration_invalid', 'diagnostic_reason_missing',
 		'diagnostic_contract_invalid', 'duplicate_system_check', 'system_check_filter_invalid', 'system_check_filter_exception',
-		'unrecognized_diagnostic',
+		'unrecognized_diagnostic', 'session_store_missing', 'submission_outbox_store_missing',
+		'reconciliation_dead_letter_present', 'reconciliation_queue_pending', 'reconciliation_cron_missing',
+		'file21_package_identity_missing', 'file21_package_identity_invalid', 'file21_package_identity_too_low', 'audit_store_missing',
+		'upload_token_store_missing', 'taxonomy_map_invalid', 'plan_metadata_cleanup_missing',
+		'workspace_page_ready', 'workspace_page_repairable', 'workspace_page_ambiguous', 'workspace_page_missing',
+		'plan_contract_invalid', 'composer_feature_disabled', 'optional_adapter_pack_absent',
 	);
 
 	public function __construct( private Registry $registry ) {

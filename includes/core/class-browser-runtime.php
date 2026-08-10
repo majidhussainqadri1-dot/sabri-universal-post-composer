@@ -10,9 +10,11 @@ declare(strict_types=1);
 namespace Sabri\UniversalComposer\Core;
 
 use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
+use Sabri\UniversalComposer\Http\Plan_Rest_Controller;
 use Sabri\UniversalComposer\Http\Reconciliation_Rest_Controller;
 use Sabri\UniversalComposer\Http\Rest_Controller;
 use Sabri\UniversalComposer\Presentation\Create_Surface;
+use Sabri\UniversalComposer\Presentation\My_Content_Workspace;
 use Sabri\UniversalComposer\Presentation\Workflow_Surface;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -23,31 +25,42 @@ final class Browser_Runtime {
 	private Registry $registry;
 	private Workflow_Coordinator $coordinator;
 	private Workflow_Surface $workflow_surface;
+	private My_Content_Workspace $my_content_workspace;
+	private Session_Store $sessions;
 	private Submission_Store $submission_store;
 	private Reconciliation_Service $reconciliation;
 	private Rest_Controller $rest_controller;
 	private Reconciliation_Rest_Controller $reconciliation_rest_controller;
+	private Plan_Rest_Controller $plan_rest_controller;
 	private bool $booted = false;
 
 	public function __construct() {
 		$plugin                  = Plugin::instance();
 		$this->registry          = $plugin->registry();
 		$this->coordinator       = $plugin->workflow_coordinator();
-		$sessions                = new Session_Store();
+		$this->sessions          = new Session_Store();
 		$this->submission_store  = new Submission_Store();
-		$this->reconciliation    = new Reconciliation_Service( $this->coordinator, $sessions, $this->submission_store );
+		$this->reconciliation    = new Reconciliation_Service( $this->coordinator, $this->sessions, $this->submission_store );
 		$this->workflow_surface  = new Workflow_Surface( $this->registry, $this->coordinator );
+		$this->my_content_workspace = new My_Content_Workspace( $this->registry, $this->coordinator, $this->sessions );
 		$this->rest_controller = new Rest_Controller(
 			$this->registry,
 			$this->coordinator,
-			$sessions
+			$this->sessions
 		);
 		$this->reconciliation_rest_controller = new Reconciliation_Rest_Controller(
 			$this->registry,
 			$this->coordinator,
-			$sessions,
+			$this->sessions,
 			$this->submission_store,
 			$this->reconciliation
+		);
+		$this->plan_rest_controller = new Plan_Rest_Controller(
+			$this->registry,
+			$this->coordinator,
+			$this->sessions,
+			new Upload_Token_Store(),
+			new Audit_Store()
 		);
 	}
 
@@ -58,9 +71,13 @@ final class Browser_Runtime {
 		$this->booted = true;
 		add_action( 'admin_init', array( Session_Store::class, 'maybe_install' ) );
 		add_action( 'admin_init', array( Submission_Store::class, 'maybe_install' ) );
+		add_action( 'admin_init', array( Upload_Token_Store::class, 'maybe_install' ) );
+		add_action( 'admin_init', array( Audit_Store::class, 'maybe_install' ) );
 		add_shortcode( 'sabri_universal_composer', array( $this, 'render_shortcode' ) );
+		add_shortcode( 'sabri_composer_my_content', array( $this->my_content_workspace, 'render' ) );
 		$this->rest_controller->register();
 		$this->reconciliation_rest_controller->register();
+		$this->plan_rest_controller->register();
 		add_action( 'supc_cleanup_expired_sessions', array( Submission_Store::class, 'cleanup_expired' ), 5 );
 		add_action( 'supc_cleanup_expired_sessions', array( Session_Store::class, 'cleanup_expired' ), 10 );
 		add_action( 'supc_process_reconciliation_queue', array( $this->reconciliation, 'process_due' ) );
@@ -142,7 +159,9 @@ final class Browser_Runtime {
 					'errorHeading'             => __( 'Please correct the following problems.', 'sabri-universal-post-composer' ),
 					'genericError'             => __( 'The request could not be completed. Your native draft was not duplicated.', 'sabri-universal-post-composer' ),
 					'requestBusy'              => __( 'Another draft operation is still running. Wait for it to finish and try again.', 'sabri-universal-post-composer' ),
-					'sessionRecovered'         => __( 'The workflow session was reconnected. Last update: %s. Draft field recovery remains with the native owner.', 'sabri-universal-post-composer' ),
+					'sessionRecovered'         => __( 'The workflow session was reconnected. Last update: %s.', 'sabri-universal-post-composer' ),
+					'draftRecovered'           => __( 'The native draft was recovered safely. Last update: %s.', 'sabri-universal-post-composer' ),
+					'draftRecoveryUnsupported' => __( 'This native adapter cannot safely restore draft fields yet. Editing is disabled to prevent a blank overwrite; open the native owner or start a new draft.', 'sabri-universal-post-composer' ),
 					'sessionNotRecovered'      => __( 'The previous workflow session could not be reconnected.', 'sabri-universal-post-composer' ),
 					'saving'                   => __( 'Saving draft…', 'sabri-universal-post-composer' ),
 					'saved'                    => __( 'Draft saved by the native content owner.', 'sabri-universal-post-composer' ),
@@ -216,18 +235,41 @@ final class Browser_Runtime {
 			'codes'  => $cron_ready ? array() : array( 'reconciliation_cron_missing' ),
 		);
 
-		$package = $this->file21_package_version();
-		$status  = null === $package ? 'warning' : ( Version::valid( $package ) && version_compare( $package, '1.0.3.2', '>=' ) ? 'pass' : 'fail' );
-		$rows[]  = array(
+		$package_identity = $this->file21_package_identity();
+		$status           = match ( $package_identity['state'] ) {
+			'current' => 'pass',
+			'missing' => 'warning',
+			default   => 'fail',
+		};
+		$code             = match ( $package_identity['state'] ) {
+			'missing' => 'file21_package_identity_missing',
+			'invalid' => 'file21_package_identity_invalid',
+			'too_low' => 'file21_package_identity_too_low',
+			default   => '',
+		};
+		$rows[]           = array(
 			'key'    => 'file21_package_identity',
 			'status' => $status,
 			'count'  => 'pass' === $status ? 0 : 1,
-			'codes'  => 'pass' === $status ? array() : array( null === $package ? 'file21_package_identity_unknown' : 'file21_package_identity_too_low' ),
+			'codes'  => 'pass' === $status ? array() : array( $code ),
 		);
 		return $rows;
 	}
 
-	private function file21_package_version(): ?string {
+	/** @return array{state:string,version:?string,source:?string} */
+	private function file21_package_identity(): array {
+		if ( defined( 'SABRI_HNF_PACKAGE_VERSION' ) ) {
+			$value = constant( 'SABRI_HNF_PACKAGE_VERSION' );
+			if ( ! is_string( $value ) || ! Version::valid_wordpress_package( $value ) ) {
+				return array( 'state' => 'invalid', 'version' => null, 'source' => 'constant' );
+			}
+			return array(
+				'state'   => Version::wordpress_package_at_least( $value, '1.0.3.2' ) ? 'current' : 'too_low',
+				'version' => $value,
+				'source'  => 'constant',
+			);
+		}
+
 		if ( ! function_exists( 'get_plugins' ) && defined( 'ABSPATH' ) ) {
 			$plugin_api = ABSPATH . 'wp-admin/includes/plugin.php';
 			if ( is_readable( $plugin_api ) ) {
@@ -235,24 +277,43 @@ final class Browser_Runtime {
 			}
 		}
 		if ( ! function_exists( 'get_plugins' ) ) {
-			return null;
+			return array( 'state' => 'missing', 'version' => null, 'source' => null );
 		}
-		$versions = array();
+
+		$matched         = false;
+		$invalid_version = false;
+		$versions        = array();
 		foreach ( get_plugins() as $basename => $headers ) {
 			$name   = isset( $headers['Name'] ) ? (string) $headers['Name'] : '';
 			$domain = isset( $headers['TextDomain'] ) ? (string) $headers['TextDomain'] : '';
 			if ( 'sabri-complete-home-news-feed' !== $domain && 'Sabri Complete Home and News Feed' !== $name && ! str_ends_with( (string) $basename, '/sabri-complete-home-news-feed.php' ) ) {
 				continue;
 			}
-			$version = isset( $headers['Version'] ) ? trim( (string) $headers['Version'] ) : '';
-			if ( Version::valid( $version ) ) {
-				$versions[] = $version;
+			$matched = true;
+			$version = isset( $headers['Version'] ) ? (string) $headers['Version'] : '';
+			if ( '' === $version ) {
+				continue;
 			}
+			if ( ! Version::valid_wordpress_package( $version ) ) {
+				$invalid_version = true;
+				continue;
+			}
+			$versions[] = $version;
 		}
+
 		if ( array() === $versions ) {
-			return null;
+			return array(
+				'state'   => $invalid_version ? 'invalid' : 'missing',
+				'version' => null,
+				'source'  => $matched ? 'plugin_header' : null,
+			);
 		}
-		usort( $versions, static fn ( string $left, string $right ): int => Version::compare( $right, $left ) );
-		return $versions[0];
+		usort( $versions, static fn ( string $left, string $right ): int => Version::compare_wordpress_package( $right, $left ) );
+		$version = $versions[0];
+		return array(
+			'state'   => Version::wordpress_package_at_least( $version, '1.0.3.2' ) ? 'current' : 'too_low',
+			'version' => $version,
+			'source'  => 'plugin_header',
+		);
 	}
 }

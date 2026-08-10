@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Sabri\UniversalComposer\Http;
 
 use Sabri\UniversalComposer\Contracts\Workflow_Adapter;
+use Sabri\UniversalComposer\Core\Permission_Resolver;
 use Sabri\UniversalComposer\Core\Contract_Boundary;
 use Sabri\UniversalComposer\Core\Reconciliation_Service;
 use Sabri\UniversalComposer\Core\Registry;
@@ -80,7 +81,9 @@ final class Reconciliation_Rest_Controller {
 			}
 		}
 		do_action( 'litespeed_control_set_nocache', 'sabri-universal-post-composer-rest' );
-		if ( Safe_Mode::disabled() ) {
+		$method = strtoupper( (string) $request->get_method() );
+		$read_only = in_array( $method, array( 'GET', 'HEAD' ), true );
+		if ( Safe_Mode::disabled() && ( ! $read_only || ! Safe_Mode::read_only_recovery_allowed() ) ) {
 			return $this->error( 'safe_mode', 503 );
 		}
 		$user_id = get_current_user_id();
@@ -90,6 +93,9 @@ final class Reconciliation_Rest_Controller {
 		$nonce = (string) $request->get_header( 'X-WP-Nonce' );
 		if ( '' === $nonce || ! function_exists( 'wp_verify_nonce' ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
 			return $this->error( 'invalid_rest_nonce', 403 );
+		}
+		if ( ! ( new Permission_Resolver() )->account_is_eligible( $user_id ) ) {
+			return $this->error( 'account_not_eligible', 403 );
 		}
 		return $this->within_rate_limit( $user_id ) ? true : $this->error( 'rate_limited', 429 );
 	}
@@ -122,13 +128,15 @@ final class Reconciliation_Rest_Controller {
 		if ( $session instanceof WP_Error ) {
 			return $session;
 		}
-		$authorized = $this->coordinator->schema( get_current_user_id(), (string) $session['adapter_key'] );
+		$authorized = $this->coordinator->schema_read_only( get_current_user_id(), (string) $session['adapter_key'] );
 		if ( $authorized instanceof WP_Error ) {
 			return $this->normalize_error( $authorized );
 		}
-		$status = null;
+		$status         = null;
+		$draft_payload  = null;
+		$draft_recovery = 'not_applicable';
 		if ( is_string( $session['native_reference'] ) && '' !== $session['native_reference'] ) {
-			$status = $this->coordinator->status( get_current_user_id(), (string) $session['adapter_key'], (string) $session['native_reference'] );
+			$status = $this->coordinator->status_read_only( get_current_user_id(), (string) $session['adapter_key'], (string) $session['native_reference'] );
 			if ( $status instanceof WP_Error ) {
 				return $this->normalize_error(
 					$status,
@@ -139,7 +147,20 @@ final class Reconciliation_Rest_Controller {
 				);
 			}
 		}
-		return $this->response( array( 'session' => $this->public_session( $session ), 'native_status' => $status ) );
+		if ( is_string( $session['native_reference'] ) && '' !== $session['native_reference'] ) {
+			$recovered = $this->coordinator->load_draft( get_current_user_id(), (string) $session['adapter_key'], (string) $session['native_reference'] );
+			if ( $recovered instanceof WP_Error ) {
+				$code = is_callable( array( $recovered, 'get_error_code' ) ) ? (string) $recovered->get_error_code() : '';
+				if ( 'supc_draft_recovery_unsupported' !== $code ) {
+					return $this->normalize_error( $recovered, array( 'session' => $this->public_session( $session, false ) ) );
+				}
+				$draft_recovery = 'unsupported';
+			} else {
+				$draft_payload  = $recovered;
+				$draft_recovery = 'recovered';
+			}
+		}
+		return $this->response( array( 'session' => $this->public_session( $session ), 'native_status' => $status, 'draft_payload' => $draft_payload, 'draft_recovery' => $draft_recovery ) );
 	}
 
 	public function submit( WP_REST_Request $request ): WP_REST_Response|WP_Error {
@@ -159,7 +180,8 @@ final class Reconciliation_Rest_Controller {
 			}
 			$validation = $this->coordinator->validate( get_current_user_id(), (string) $context['session']['adapter_key'], $context['payload'] );
 			if ( $validation instanceof WP_Error ) {
-				return $this->normalize_error( $validation );
+				$held = $this->sessions->apply_policy_error( $context['session'], $validation );
+				return $this->normalize_error( $validation, array( 'session' => $this->public_session( $held ) ) );
 			}
 			if ( empty( $validation['valid'] ) ) {
 				return $this->error( 'validation_failed', 422, array( 'errors' => $validation['errors'] ?? array(), 'warnings' => $validation['warnings'] ?? array() ) );
@@ -193,6 +215,27 @@ final class Reconciliation_Rest_Controller {
 			$payload['native_reference'] = $native_reference;
 			$result                      = $this->coordinator->submit( get_current_user_id(), (string) $session['adapter_key'], $key, $payload );
 			if ( $result instanceof WP_Error ) {
+				$raw_code = is_callable( array( $result, 'get_error_code' ) ) ? (string) $result->get_error_code() : '';
+				$pre_dispatch = in_array(
+					$raw_code,
+					array(
+						'supc_policy_violation', 'supc_workflow_disabled', 'supc_invalid_adapter_key',
+						'supc_workflow_adapter_not_registered', 'supc_workflow_adapter_unavailable',
+						'supc_workflow_api_mismatch', 'supc_native_workflow_unavailable',
+						'supc_workflow_permission_denied', 'supc_invalid_native_reference',
+						'supc_invalid_workflow_payload', 'supc_workflow_payload_too_large',
+						'supc_workflow_payload_unknown_field', 'supc_workflow_payload_field_invalid',
+						'supc_workflow_payload_required_field_missing', 'supc_invalid_idempotency_key',
+					),
+					true
+				);
+				if ( $pre_dispatch && $this->submissions->release_pre_dispatch( (string) $submission['attempt_uuid'] ) ) {
+					$code     = $this->safe_error_code( $result );
+					$restored = $this->sessions->reset_pre_dispatch( $uuid, get_current_user_id(), (int) $session['lock_version'], $code );
+					$base     = $restored instanceof WP_Error ? $session : $restored;
+					$held     = $this->sessions->apply_policy_error( $base, $result );
+					return $this->normalize_error( $result, array( 'session' => $this->public_session( $held ), 'reconciliation_required' => false ) );
+				}
 				$error_code = $this->safe_error_code( $result );
 				$this->submissions->mark_uncertain( (string) $submission['attempt_uuid'], $error_code );
 				$marked = $this->sessions->mark_reconciliation( $uuid, get_current_user_id(), (int) $session['lock_version'], $error_code );
@@ -324,6 +367,10 @@ final class Reconciliation_Rest_Controller {
 			'adapter_version'         => (string) $session['adapter_version'],
 			'native_reference'        => $include_native_reference ? $session['native_reference'] : null,
 			'state'                   => (string) $session['state'],
+			'composer_state'          => (string) ( $session['composer_state'] ?? 'new' ),
+			'review_state'            => (string) ( $session['review_state'] ?? 'draft' ),
+			'publication_state'       => (string) ( $session['publication_state'] ?? 'unpublished' ),
+			'hold_state'              => (string) ( $session['hold_state'] ?? 'clear' ),
 			'sensitivity_class'       => (string) ( $session['sensitivity_class'] ?? 'private' ),
 			'lock_version'            => (int) $session['lock_version'],
 			'submit_attempts'         => (int) ( $session['submit_attempts'] ?? 0 ),

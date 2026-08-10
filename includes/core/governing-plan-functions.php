@@ -65,3 +65,17 @@ if ( ! function_exists( 'supc_execute_lifecycle' ) ) {
 		);
 	}
 }
+
+/*
+ * Compatibility event from the plan-complete runtime is explicitly forwarded
+ * to File 26, the later central plan's canonical Search/Discovery/Ranking
+ * owner. File 22 never writes an index, ranking record, or search database.
+ */
+add_action(
+	'supc_search_seo_event',
+	static function ( string $event, array $metadata ): void {
+		do_action( 'supc_file26_search_projection_event', $event, $metadata );
+	},
+	10,
+	2
+);

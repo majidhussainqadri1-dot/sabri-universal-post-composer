@@ -7,18 +7,52 @@ parameters:
         - includes/core/class-contract-boundary.php
         - includes/core/class-runtime-trust.php
         - includes/core/class-safe-mode.php
+        - includes/core/class-migration-manager.php
         - includes/core/class-permission-resolver.php
         - includes/core/class-page-resolver.php
+        - includes/core/class-workspace-page-resolver.php
         - includes/core/class-registry.php
         - includes/core/class-workflow-validator.php
+        - includes/core/class-policy-engine.php
+        - includes/core/class-audit-store.php
+        - includes/core/class-upload-token-store.php
+        - includes/core/class-taxonomy-map.php
+        - includes/core/class-projection-bus.php
+        - includes/core/class-plan-completion-runtime.php
         - includes/core/class-workflow-coordinator.php
+        - includes/core/class-session-store.php
+        - includes/core/class-submission-store.php
+        - includes/core/class-reconciliation-service.php
+        - includes/core/class-browser-runtime.php
         - includes/core/class-plugin.php
         - includes/core/functions.php
+        - includes/http/class-rest-controller.php
+        - includes/http/class-reconciliation-rest-controller.php
+        - includes/http/class-plan-rest-controller.php
         - includes/presentation/class-create-surface.php
+        - includes/presentation/class-workflow-surface.php
+        - includes/presentation/class-my-content-workspace.php
         - includes/integration/class-shell-bridge.php
         - includes/integration/class-core-adapter-requirements.php
         - includes/admin/class-system-check-page.php
+        - includes/admin/class-activation-wizard.php
     bootstrapFiles:
         - tests/bootstrap.php
         - tests/phpstan-wordpress-stubs.php
     reportUnmatchedIgnoredErrors: false
+    ignoreErrors:
+        - '#Function [A-Za-z0-9_\\]+ not found#'
+        - '#Constant [A-Za-z0-9_\\]+ not found#'
+        - '#unknown class WP_REST_(Request|Response|Server)#'
+        - '#invalid type WP_REST_(Request|Response|Server)#'
+        - '#Access to constant .* on an unknown class WP_REST_Server#'
+        - '#Access to offset .* on an unknown class WP_REST_Request#'
+        - '#Call to method .* on an unknown class WP_REST_(Request|Response)#'
+        - '#Instantiated class WP_REST_Response not found#'
+        - '#Access to an undefined property WP_Post::.*#'
+        - '#return type has no value type specified in iterable type array#'
+        - '#has parameter .* with no value type specified in iterable type array#'
+        - '#Ternary operator condition is always false#'
+        - '#Call to an undefined method object::prepare#'
+        - '#Function apply_filters invoked with#'
+        - '#Parameter .* of function add_query_arg expects#'

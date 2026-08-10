@@ -275,6 +275,40 @@ final class Submission_Store {
 		return $this->error( 'submission_dispatch_record_failed' );
 	}
 
+
+	/**
+	 * Release an attempt only when File 22 can prove the native adapter was not
+	 * invoked. This is used for local policy/authority failures returned before
+	 * the coordinator crosses the native dispatch boundary.
+	 */
+	public function release_pre_dispatch( string $attempt_uuid ): bool {
+		if ( ! $this->valid_uuid( $attempt_uuid ) ) {
+			return false;
+		}
+		$submission = $this->get_by_attempt( $attempt_uuid );
+		if ( $submission instanceof WP_Error || 'dispatched' !== (string) $submission['state'] || null !== $submission['native_status'] ) {
+			return false;
+		}
+		$existing = $this->get_outbox_for_attempt( $attempt_uuid );
+		if ( ! $existing instanceof WP_Error ) {
+			return false;
+		}
+		if ( 'supc_outbox_not_found' !== $this->error_code( $existing ) ) {
+			return false;
+		}
+		global $wpdb;
+		$deleted = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+			? $wpdb->query(
+				$wpdb->prepare(
+					"DELETE FROM %i WHERE attempt_uuid = %s AND state = 'dispatched' AND native_status IS NULL LIMIT 1",
+					self::submission_table_name(),
+					strtolower( $attempt_uuid )
+				)
+			)
+			: false;
+		return 1 === $deleted;
+	}
+
 	public function mark_uncertain( string $attempt_uuid, string $error_code, bool $enqueue = true ): bool {
 		$submission = $this->get_by_attempt( $attempt_uuid );
 		if ( $submission instanceof WP_Error || ! Contract_Boundary::code( $error_code ) ) {
@@ -316,7 +350,7 @@ final class Submission_Store {
 	}
 
 	public function mark_reconciled( string $attempt_uuid, string $native_status, string $response_hash ): bool {
-		if ( ! in_array( $native_status, array( 'draft', 'pending_review', 'scheduled', 'published', 'rejected', 'failed' ), true ) || 1 !== preg_match( self::HASH_PATTERN, $response_hash ) ) {
+		if ( ! in_array( $native_status, array( 'draft', 'pending_review', 'under_review', 'changes_requested', 'approved', 'withdrawn', 'scheduled', 'published', 'hidden', 'archived', 'deleted', 'rejected', 'failed' ), true ) || 1 !== preg_match( self::HASH_PATTERN, $response_hash ) ) {
 			return false;
 		}
 		$current = $this->get_by_attempt( $attempt_uuid );

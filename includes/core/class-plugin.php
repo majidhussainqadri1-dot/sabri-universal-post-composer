@@ -211,7 +211,7 @@ final class Plugin {
 			return true;
 		}
 		global $post;
-		return $post instanceof \WP_Post && has_shortcode( (string) $post->post_content, 'sabri_universal_composer' );
+		return $post instanceof \WP_Post && ( has_shortcode( (string) $post->post_content, 'sabri_universal_composer' ) || has_shortcode( (string) $post->post_content, 'sabri_composer_my_content' ) );
 	}
 
 	/**

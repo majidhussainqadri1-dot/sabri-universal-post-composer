@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Session_Store {
 	private const TABLE_SUFFIX        = 'supc_sessions';
 	private const SCHEMA_OPTION       = 'supc_session_schema_version';
-	private const SCHEMA_VERSION      = '1.1.0';
+	private const SCHEMA_VERSION      = '1.2.0';
 	private const ORDINARY_TTL        = 15552000; // 180 days.
 	private const SENSITIVE_TTL       = 2592000;  // 30 days.
 	private const COMPLETED_TTL       = 2592000;  // 30 days.
@@ -32,8 +32,12 @@ final class Session_Store {
 	private const MAX_REFERENCE_BYTES = 255;
 	private const SESSION_PATTERN     = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/D';
 	private const HASH_PATTERN        = '/^[0-9a-f]{64}$/D';
-	private const STATES              = array( 'new', 'draft', 'valid', 'submitting', 'reconcile', 'submitted', 'scheduled', 'published', 'rejected', 'failed' );
+	private const STATES              = array( 'new', 'draft', 'valid', 'submitting', 'reconcile', 'submitted', 'under_review', 'changes_requested', 'approved', 'withdrawn', 'scheduled', 'published', 'hidden', 'archived', 'deleted', 'rejected', 'failed' );
 	private const SENSITIVITY         = array( 'public', 'private', 'sensitive' );
+	private const COMPOSER_STATES      = array( 'new', 'editing', 'autosaved', 'offline_pending', 'conflicted', 'abandoned', 'completed' );
+	private const REVIEW_STATES        = array( 'not_required', 'draft', 'submitted', 'under_review', 'changes_requested', 'approved', 'rejected', 'withdrawn' );
+	private const PUBLICATION_STATES   = array( 'unpublished', 'scheduled', 'published', 'hidden', 'archived', 'deleted' );
+	private const HOLD_STATES          = array( 'clear', 'privacy_hold', 'medical_hold', 'copyright_hold', 'security_hold', 'suspended' );
 
 	public static function install(): bool {
 		global $wpdb;
@@ -50,6 +54,10 @@ final class Session_Store {
 			adapter_version varchar(32) NOT NULL,
 			native_reference varchar(255) NULL,
 			state varchar(32) NOT NULL DEFAULT 'new',
+			composer_state varchar(32) NOT NULL DEFAULT 'new',
+			review_state varchar(32) NOT NULL DEFAULT 'draft',
+			publication_state varchar(32) NOT NULL DEFAULT 'unpublished',
+			hold_state varchar(32) NOT NULL DEFAULT 'clear',
 			sensitivity_class varchar(16) NOT NULL DEFAULT 'private',
 			lock_version bigint(20) unsigned NOT NULL DEFAULT 1,
 			idempotency_key varchar(80) NULL,
@@ -64,6 +72,7 @@ final class Session_Store {
 			UNIQUE KEY session_uuid (session_uuid),
 			KEY user_adapter (user_id,adapter_key),
 			KEY state_reconcile (state,reconciliation_required),
+			KEY workflow_dimensions (composer_state,review_state,publication_state,hold_state),
 			KEY expires_at (expires_at)
 		) {$charset};";
 		if ( defined( 'ABSPATH' ) ) {
@@ -128,6 +137,10 @@ final class Session_Store {
 				'adapter_key'             => $adapter_key,
 				'adapter_version'         => $adapter_version,
 				'state'                   => 'new',
+				'composer_state'          => 'new',
+				'review_state'            => 'draft',
+				'publication_state'       => 'unpublished',
+				'hold_state'              => 'clear',
 				'sensitivity_class'       => $sensitivity_class,
 				'lock_version'           => 1,
 				'submit_attempts'         => 0,
@@ -136,7 +149,7 @@ final class Session_Store {
 				'updated_at'              => gmdate( 'Y-m-d H:i:s', $now ),
 				'expires_at'              => gmdate( 'Y-m-d H:i:s', $now + $this->ttl_for_sensitivity( $sensitivity_class ) ),
 			),
-			array( '%s', '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s' )
+			array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%s' )
 		);
 		if ( 1 !== $created ) {
 			return $this->error( 'session_create_failed' );
@@ -155,7 +168,7 @@ final class Session_Store {
 		}
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT session_uuid,user_id,adapter_key,adapter_version,native_reference,state,sensitivity_class,lock_version,idempotency_key,payload_hash,submit_attempts,reconciliation_required,last_error,created_at,updated_at,expires_at FROM %i WHERE session_uuid = %s AND user_id = %d LIMIT 1',
+				'SELECT session_uuid,user_id,adapter_key,adapter_version,native_reference,state,composer_state,review_state,publication_state,hold_state,sensitivity_class,lock_version,idempotency_key,payload_hash,submit_attempts,reconciliation_required,last_error,created_at,updated_at,expires_at FROM %i WHERE session_uuid = %s AND user_id = %d LIMIT 1',
 				self::table_name(),
 				strtolower( $uuid ),
 				$user_id
@@ -201,8 +214,9 @@ final class Session_Store {
 		if ( $current instanceof WP_Error ) {
 			return $current;
 		}
+		$dimensions = $this->dimensions_for_state( $state, $current );
 		$now = time();
-		$ttl = in_array( $state, array( 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true )
+		$ttl = in_array( $state, array( 'submitted', 'under_review', 'approved', 'withdrawn', 'scheduled', 'published', 'hidden', 'archived', 'deleted', 'rejected', 'failed' ), true )
 			? self::COMPLETED_TTL
 			: $this->ttl_for_sensitivity( (string) $current['sensitivity_class'] );
 		global $wpdb;
@@ -211,9 +225,13 @@ final class Session_Store {
 		}
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				'UPDATE %i SET state = %s, native_reference = %s, idempotency_key = %s, last_error = %s, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d',
+				'UPDATE %i SET state = %s, composer_state = %s, review_state = %s, publication_state = %s, hold_state = %s, native_reference = %s, idempotency_key = %s, last_error = %s, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d',
 				self::table_name(),
 				$state,
+				$dimensions['composer_state'],
+				$dimensions['review_state'],
+				$dimensions['publication_state'],
+				$dimensions['hold_state'],
 				$native_reference,
 				null !== $idempotency_key ? $idempotency_key : (string) ( $current['idempotency_key'] ?? '' ),
 				$last_error,
@@ -227,6 +245,46 @@ final class Session_Store {
 		if ( 1 !== $updated ) {
 			$current = $this->get_owned( $uuid, $user_id );
 			return $current instanceof WP_Error ? $current : $this->error( 'session_conflict', array( 'current' => $current ) );
+		}
+		return $this->get_owned( $uuid, $user_id );
+	}
+
+
+	/** @return array<string,mixed>|WP_Error */
+	public function ensure_idempotency_key( string $uuid, int $user_id, string $idempotency_key ): array|WP_Error {
+		if ( ! $this->valid_uuid( $uuid ) || $user_id <= 0 || ! ( new Workflow_Validator() )->valid_idempotency_key( $idempotency_key ) ) {
+			return $this->error( 'invalid_submission_identity' );
+		}
+		$current = $this->get_owned( $uuid, $user_id );
+		if ( $current instanceof WP_Error ) {
+			return $current;
+		}
+		if ( is_string( $current['idempotency_key'] ) && '' !== $current['idempotency_key'] ) {
+			return hash_equals( $current['idempotency_key'], $idempotency_key )
+				? $current
+				: $this->error( 'idempotency_key_conflict' );
+		}
+		global $wpdb;
+		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+			? $wpdb->query(
+				$wpdb->prepare(
+					'UPDATE %i SET idempotency_key = %s, lock_version = lock_version + 1, updated_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d AND (idempotency_key IS NULL OR idempotency_key = %s)',
+					self::table_name(),
+					$idempotency_key,
+					gmdate( 'Y-m-d H:i:s' ),
+					strtolower( $uuid ),
+					$user_id,
+					(int) $current['lock_version'],
+					''
+				)
+			)
+			: false;
+		if ( 1 !== $updated ) {
+			$latest = $this->get_owned( $uuid, $user_id );
+			if ( ! $latest instanceof WP_Error && is_string( $latest['idempotency_key'] ) && hash_equals( $latest['idempotency_key'], $idempotency_key ) ) {
+				return $latest;
+			}
+			return $latest instanceof WP_Error ? $latest : $this->error( 'session_conflict', array( 'current' => $latest ) );
 		}
 		return $this->get_owned( $uuid, $user_id );
 	}
@@ -252,7 +310,7 @@ final class Session_Store {
 		if ( $current instanceof WP_Error ) {
 			return $current;
 		}
-		if ( in_array( (string) $current['state'], array( 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true ) ) {
+		if ( in_array( (string) $current['state'], array( 'submitted', 'under_review', 'approved', 'withdrawn', 'scheduled', 'published', 'hidden', 'archived', 'deleted', 'rejected', 'failed' ), true ) ) {
 			return $this->error( 'submission_already_final' );
 		}
 		if ( ! empty( $current['reconciliation_required'] ) || in_array( (string) $current['state'], array( 'submitting', 'reconcile' ), true ) ) {
@@ -271,7 +329,7 @@ final class Session_Store {
 		$now     = time();
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				"UPDATE %i SET state = 'submitting', idempotency_key = %s, payload_hash = %s, submit_attempts = submit_attempts + 1, reconciliation_required = 0, last_error = NULL, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d",
+				"UPDATE %i SET state = 'submitting', composer_state = 'autosaved', review_state = 'draft', publication_state = 'unpublished', idempotency_key = %s, payload_hash = %s, submit_attempts = submit_attempts + 1, reconciliation_required = 0, last_error = NULL, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d",
 				self::table_name(),
 				$idempotency_key,
 				$payload_hash,
@@ -287,6 +345,43 @@ final class Session_Store {
 			return $current instanceof WP_Error ? $current : $this->error( 'session_conflict', array( 'current' => $current ) );
 		}
 		return $this->get_owned( $uuid, $user_id );
+	}
+
+
+	/**
+	 * Reset a submission identity after a provable pre-native local failure.
+	 * This method must never be used after an adapter invocation or uncertain
+	 * network outcome.
+	 *
+	 * @return array<string,mixed>|WP_Error
+	 */
+	public function reset_pre_dispatch( string $uuid, int $user_id, int $expected_lock_version, string $error_code ): array|WP_Error {
+		if ( ! Contract_Boundary::code( $error_code ) ) {
+			$error_code = 'pre_dispatch_blocked';
+		}
+		$current = $this->get_owned( $uuid, $user_id );
+		if ( $current instanceof WP_Error ) {
+			return $current;
+		}
+		if ( 'submitting' !== (string) $current['state'] || ! empty( $current['reconciliation_required'] ) ) {
+			return $this->error( 'pre_dispatch_reset_not_allowed' );
+		}
+		global $wpdb;
+		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+			? $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET state = 'draft', composer_state = 'autosaved', review_state = 'draft', publication_state = 'unpublished', idempotency_key = NULL, payload_hash = NULL, reconciliation_required = 0, last_error = %s, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d AND state = 'submitting'",
+					self::table_name(),
+					$error_code,
+					gmdate( 'Y-m-d H:i:s' ),
+					gmdate( 'Y-m-d H:i:s', time() + $this->ttl_for_sensitivity( (string) $current['sensitivity_class'] ) ),
+					strtolower( $uuid ),
+					$user_id,
+					$expected_lock_version
+				)
+			)
+			: false;
+		return 1 === $updated ? $this->get_owned( $uuid, $user_id ) : $this->error( 'session_conflict', array( 'current' => $current ) );
 	}
 
 	/** @return array<string,mixed>|WP_Error */
@@ -305,7 +400,7 @@ final class Session_Store {
 		$now     = time();
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				"UPDATE %i SET state = 'reconcile', reconciliation_required = 1, last_error = %s, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d",
+				"UPDATE %i SET state = 'reconcile', composer_state = 'conflicted', reconciliation_required = 1, last_error = %s, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d",
 				self::table_name(),
 				$error_code,
 				gmdate( 'Y-m-d H:i:s', $now ),
@@ -389,15 +484,20 @@ final class Session_Store {
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) || ! method_exists( $wpdb, 'prepare' ) ) {
 			return $this->error( 'session_store_unavailable' );
 		}
+		$dimensions = $this->dimensions_for_native_status( $native_status, $current );
 		$now = time();
 		$ttl = 'draft' === $state
 			? $this->ttl_for_sensitivity( (string) $current['sensitivity_class'] )
 			: self::COMPLETED_TTL;
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				'UPDATE %i SET state = %s, reconciliation_required = 0, last_error = NULL, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d',
+				'UPDATE %i SET state = %s, composer_state = %s, review_state = %s, publication_state = %s, hold_state = %s, reconciliation_required = 0, last_error = NULL, lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d',
 				self::table_name(),
 				$state,
+				$dimensions['composer_state'],
+				$dimensions['review_state'],
+				$dimensions['publication_state'],
+				$dimensions['hold_state'],
 				gmdate( 'Y-m-d H:i:s', $now ),
 				gmdate( 'Y-m-d H:i:s', $now + $ttl ),
 				strtolower( $uuid ),
@@ -410,6 +510,109 @@ final class Session_Store {
 			return $current instanceof WP_Error ? $current : $this->error( 'session_conflict', array( 'current' => $current ) );
 		}
 		return $this->get_owned( $uuid, $user_id );
+	}
+
+
+	/** @return array<int,array<string,mixed>> */
+	public function list_owned( int $user_id, int $limit = 50 ): array {
+		$limit = max( 1, min( 100, $limit ) );
+		if ( $user_id <= 0 ) {
+			return array();
+		}
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'get_results' ) || ! method_exists( $wpdb, 'prepare' ) ) {
+			return array();
+		}
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT session_uuid,user_id,adapter_key,adapter_version,native_reference,state,composer_state,review_state,publication_state,hold_state,sensitivity_class,lock_version,idempotency_key,payload_hash,submit_attempts,reconciliation_required,last_error,created_at,updated_at,expires_at FROM %i WHERE user_id = %d AND expires_at >= %s ORDER BY updated_at DESC,id DESC LIMIT %d',
+				self::table_name(),
+				$user_id,
+				gmdate( 'Y-m-d H:i:s' ),
+				$limit
+			),
+			ARRAY_A
+		);
+		return is_array( $rows ) ? array_map( array( $this, 'normalize_row' ), $rows ) : array();
+	}
+
+
+	/**
+	 * Persist a controlled policy hold without storing policy payload details.
+	 *
+	 * @param array<string,mixed> $session Current owned session.
+	 * @return array<string,mixed>
+	 */
+	public function apply_policy_error( array $session, WP_Error $error ): array {
+		$code = is_callable( array( $error, 'get_error_code' ) ) ? (string) $error->get_error_code() : '';
+		if ( 'supc_policy_violation' !== $code ) {
+			return $session;
+		}
+		$data = is_callable( array( $error, 'get_error_data' ) ) ? $error->get_error_data( $code ) : null;
+		$hold = is_array( $data ) && isset( $data['hold_state'] ) && is_string( $data['hold_state'] ) ? sanitize_key( $data['hold_state'] ) : 'security_hold';
+		$codes = is_array( $data ) && isset( $data['codes'] ) && is_array( $data['codes'] ) ? $data['codes'] : array();
+		$last = isset( $codes[0] ) && is_string( $codes[0] ) && Contract_Boundary::code( $codes[0] ) ? $codes[0] : 'policy_violation';
+		$result = $this->update_hold_state(
+			(string) $session['session_uuid'],
+			(int) $session['user_id'],
+			(int) $session['lock_version'],
+			$hold,
+			$last
+		);
+		return $result instanceof WP_Error ? $session : $result;
+	}
+
+	/** @return array<string,mixed>|WP_Error */
+	public function update_hold_state( string $uuid, int $user_id, int $expected_lock_version, string $hold_state, ?string $last_error = null ): array|WP_Error {
+		if ( ! in_array( $hold_state, self::HOLD_STATES, true ) || ( null !== $last_error && ! Contract_Boundary::code( $last_error ) ) ) {
+			return $this->error( 'invalid_hold_state' );
+		}
+		$current = $this->get_owned( $uuid, $user_id );
+		if ( $current instanceof WP_Error ) {
+			return $current;
+		}
+		global $wpdb;
+		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+			? $wpdb->query(
+				$wpdb->prepare(
+					'UPDATE %i SET hold_state = %s, last_error = %s, lock_version = lock_version + 1, updated_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d',
+					self::table_name(),
+					$hold_state,
+					$last_error,
+					gmdate( 'Y-m-d H:i:s' ),
+					strtolower( $uuid ),
+					$user_id,
+					$expected_lock_version
+				)
+			)
+			: false;
+		return 1 === $updated ? $this->get_owned( $uuid, $user_id ) : $this->error( 'session_conflict', array( 'current' => $current ) );
+	}
+
+	/** @return array<string,mixed>|WP_Error */
+	public function mark_abandoned( string $uuid, int $user_id, int $expected_lock_version ): array|WP_Error {
+		$current = $this->get_owned( $uuid, $user_id );
+		if ( $current instanceof WP_Error ) {
+			return $current;
+		}
+		if ( ! empty( $current['reconciliation_required'] ) || in_array( (string) $current['state'], array( 'submitting', 'reconcile' ), true ) ) {
+			return $this->error( 'reconciliation_pending' );
+		}
+		global $wpdb;
+		$updated = is_object( $wpdb ) && method_exists( $wpdb, 'query' ) && method_exists( $wpdb, 'prepare' )
+			? $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE %i SET composer_state = 'abandoned', review_state = 'withdrawn', publication_state = 'unpublished', lock_version = lock_version + 1, updated_at = %s, expires_at = %s WHERE session_uuid = %s AND user_id = %d AND lock_version = %d",
+					self::table_name(),
+					gmdate( 'Y-m-d H:i:s' ),
+					gmdate( 'Y-m-d H:i:s', time() + self::COMPLETED_TTL ),
+					strtolower( $uuid ),
+					$user_id,
+					$expected_lock_version
+				)
+			)
+			: false;
+		return 1 === $updated ? $this->get_owned( $uuid, $user_id ) : $this->error( 'session_conflict', array( 'current' => $current ) );
 	}
 
 	public function delete_owned( string $uuid, int $user_id ): bool {
@@ -457,12 +660,19 @@ final class Session_Store {
 
 	private function transition_allows( string $current, string $target ): bool {
 		return match ( $current ) {
-			'published' => 'published' === $target,
-			'scheduled' => in_array( $target, array( 'scheduled', 'published', 'rejected', 'failed' ), true ),
-			'submitted' => in_array( $target, array( 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true ),
-			'rejected'  => 'rejected' === $target,
-			'failed'    => 'failed' === $target,
-			'draft'     => in_array( $target, array( 'draft', 'submitted', 'scheduled', 'published', 'rejected', 'failed' ), true ),
+			'published'         => in_array( $target, array( 'published', 'hidden', 'archived', 'deleted' ), true ),
+			'hidden'            => in_array( $target, array( 'hidden', 'published', 'archived', 'deleted' ), true ),
+			'archived'          => in_array( $target, array( 'archived', 'deleted' ), true ),
+			'deleted'           => 'deleted' === $target,
+			'scheduled'         => in_array( $target, array( 'scheduled', 'published', 'hidden', 'archived', 'deleted', 'rejected', 'failed' ), true ),
+			'approved'          => in_array( $target, array( 'approved', 'scheduled', 'published', 'hidden', 'archived', 'rejected', 'failed' ), true ),
+			'under_review'      => in_array( $target, array( 'under_review', 'changes_requested', 'approved', 'rejected', 'withdrawn', 'scheduled', 'published', 'failed' ), true ),
+			'changes_requested' => in_array( $target, array( 'changes_requested', 'draft', 'submitted', 'under_review', 'withdrawn', 'failed' ), true ),
+			'withdrawn'         => in_array( $target, array( 'withdrawn', 'draft', 'submitted' ), true ),
+			'submitted'         => in_array( $target, array( 'submitted', 'under_review', 'changes_requested', 'approved', 'withdrawn', 'scheduled', 'published', 'rejected', 'failed' ), true ),
+			'rejected'          => in_array( $target, array( 'rejected', 'draft', 'submitted' ), true ),
+			'failed'            => in_array( $target, array( 'failed', 'draft', 'submitted' ), true ),
+			'draft'             => in_array( $target, array( 'draft', 'submitted', 'under_review', 'changes_requested', 'approved', 'withdrawn', 'scheduled', 'published', 'rejected', 'failed' ), true ),
 			'new', 'valid', 'submitting', 'reconcile' => true,
 			default => false,
 		};
@@ -470,19 +680,66 @@ final class Session_Store {
 
 	private function session_state_for_native( string $native_status ): string {
 		return match ( $native_status ) {
-			'draft'          => 'draft',
-			'pending_review' => 'submitted',
-			'scheduled'      => 'scheduled',
-			'published'      => 'published',
-			'rejected'       => 'rejected',
-			'failed'         => 'failed',
-			default          => '',
+			'draft'             => 'draft',
+			'pending_review'    => 'submitted',
+			'under_review'      => 'under_review',
+			'changes_requested' => 'changes_requested',
+			'approved'          => 'approved',
+			'withdrawn'         => 'withdrawn',
+			'scheduled'         => 'scheduled',
+			'published'         => 'published',
+			'hidden'            => 'hidden',
+			'archived'          => 'archived',
+			'deleted'           => 'deleted',
+			'rejected'          => 'rejected',
+			'failed'            => 'failed',
+			default             => '',
 		};
+	}
+
+
+	/** @param array<string,mixed> $current @return array{composer_state:string,review_state:string,publication_state:string,hold_state:string} */
+	private function dimensions_for_state( string $state, array $current ): array {
+		$base = array(
+			'composer_state'    => (string) ( $current['composer_state'] ?? 'new' ),
+			'review_state'      => (string) ( $current['review_state'] ?? 'draft' ),
+			'publication_state' => (string) ( $current['publication_state'] ?? 'unpublished' ),
+			'hold_state'        => (string) ( $current['hold_state'] ?? 'clear' ),
+		);
+		return match ( $state ) {
+			'new'        => array_merge( $base, array( 'composer_state' => 'new', 'review_state' => 'draft', 'publication_state' => 'unpublished' ) ),
+			'draft', 'valid' => array_merge( $base, array( 'composer_state' => 'autosaved', 'review_state' => 'draft', 'publication_state' => 'unpublished', 'hold_state' => 'clear' ) ),
+			'submitting', 'reconcile' => array_merge( $base, array( 'composer_state' => 'conflicted' ) ),
+			'submitted'         => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'submitted', 'publication_state' => 'unpublished' ) ),
+			'under_review'      => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'under_review', 'publication_state' => 'unpublished' ) ),
+			'changes_requested' => array_merge( $base, array( 'composer_state' => 'editing', 'review_state' => 'changes_requested', 'publication_state' => 'unpublished' ) ),
+			'approved'          => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'approved', 'publication_state' => 'unpublished' ) ),
+			'withdrawn'         => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'withdrawn', 'publication_state' => 'unpublished' ) ),
+			'scheduled'         => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'approved', 'publication_state' => 'scheduled' ) ),
+			'published'         => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'approved', 'publication_state' => 'published' ) ),
+			'hidden'            => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'approved', 'publication_state' => 'hidden' ) ),
+			'archived'          => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'approved', 'publication_state' => 'archived' ) ),
+			'deleted'           => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'approved', 'publication_state' => 'deleted' ) ),
+			'rejected'          => array_merge( $base, array( 'composer_state' => 'completed', 'review_state' => 'rejected', 'publication_state' => 'unpublished' ) ),
+			'failed'     => array_merge( $base, array( 'composer_state' => 'conflicted', 'publication_state' => 'unpublished' ) ),
+			default      => $base,
+		};
+	}
+
+	/** @param array<string,mixed> $current @return array{composer_state:string,review_state:string,publication_state:string,hold_state:string} */
+	private function dimensions_for_native_status( string $native_status, array $current ): array {
+		$dimensions = $this->dimensions_for_state( $this->session_state_for_native( $native_status ), $current );
+		$dimensions['hold_state'] = 'clear';
+		return $dimensions;
 	}
 
 	/** @param array<string,mixed> $row @return array<string,mixed> */
 	private function normalize_row( array $row ): array {
 		$state       = sanitize_key( (string) $row['state'] );
+		$composer    = sanitize_key( (string) ( $row['composer_state'] ?? 'new' ) );
+		$review      = sanitize_key( (string) ( $row['review_state'] ?? 'draft' ) );
+		$publication = sanitize_key( (string) ( $row['publication_state'] ?? 'unpublished' ) );
+		$hold        = sanitize_key( (string) ( $row['hold_state'] ?? 'clear' ) );
 		$sensitivity = sanitize_key( (string) $row['sensitivity_class'] );
 		return array(
 			'session_uuid'           => strtolower( (string) $row['session_uuid'] ),
@@ -491,6 +748,10 @@ final class Session_Store {
 			'adapter_version'         => (string) $row['adapter_version'],
 			'native_reference'       => null === $row['native_reference'] ? null : (string) $row['native_reference'],
 			'state'                   => in_array( $state, self::STATES, true ) ? $state : 'failed',
+			'composer_state'          => in_array( $composer, self::COMPOSER_STATES, true ) ? $composer : 'conflicted',
+			'review_state'            => in_array( $review, self::REVIEW_STATES, true ) ? $review : 'draft',
+			'publication_state'       => in_array( $publication, self::PUBLICATION_STATES, true ) ? $publication : 'unpublished',
+			'hold_state'              => in_array( $hold, self::HOLD_STATES, true ) ? $hold : 'security_hold',
 			'sensitivity_class'       => in_array( $sensitivity, self::SENSITIVITY, true ) ? $sensitivity : 'sensitive',
 			'lock_version'           => (int) $row['lock_version'],
 			'idempotency_key'        => null === $row['idempotency_key'] || '' === (string) $row['idempotency_key'] ? null : (string) $row['idempotency_key'],
