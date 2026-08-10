@@ -95,12 +95,11 @@ final class PlanCompletionCoreTest extends TestCase {
 		$this->assertIsString( $runtime );
 		$this->assertIsString( $bus );
 		$this->assertIsString( $govern );
-		$this->assertStringContainsString( "array( 'learning', 'encyclopedia', 'video', 'reel', 'pdf', 'marketplace' )", $runtime );
+		$this->assertStringContainsString( "array( 'learning_lesson', 'encyclopedia_entry', 'video', 'reel', 'pdf_document', 'marketplace_listing' )", $runtime );
 		$this->assertStringContainsString( "'status' => \$present ? 'pass' : 'warning'", $runtime );
-		$this->assertStringContainsString( "'learning_lesson'", $govern );
-		$this->assertStringContainsString( "'encyclopedia_entry'", $govern );
-		$this->assertStringContainsString( "'pdf_document'", $govern );
-		$this->assertStringContainsString( "'marketplace_listing'", $govern );
+		foreach ( array( 'learning_lesson', 'encyclopedia_entry', 'video', 'reel', 'pdf_document', 'marketplace_listing' ) as $adapter_key ) {
+			$this->assertStringContainsString( "'" . $adapter_key . "'", $govern );
+		}
 		$this->assertStringContainsString( 'supc_file23_projection_event', $bus );
 		$this->assertStringContainsString( 'supc_file24_assurance_event', $bus );
 		$this->assertStringContainsString( 'supc_file25_timeline_event', $bus );
