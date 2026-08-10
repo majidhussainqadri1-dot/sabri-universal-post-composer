@@ -29,11 +29,14 @@ final class Governing_Plan_Runtime {
 	private const REST_NAMESPACE = 'sabri-composer/v1';
 	private const MAX_PROFILE_BYTES = 65536;
 	private const MAX_COMMAND_PAYLOAD_BYTES = 1048576;
+	private const MAX_REQUEST_BYTES = 1048576;
 	private const MAX_NOTIFICATION_EVENTS = 50;
 	private const MAX_FEATURES = 32;
 	private const MAX_COMMANDS = 16;
 	private const MAX_DEPTH = 12;
 	private const MAX_NODES = 10000;
+	private const RATE_LIMIT = 90;
+	private const RATE_WINDOW = 60;
 
 	private const ALLOWED_FEATURES = array(
 		'rights_license',
@@ -57,6 +60,7 @@ final class Governing_Plan_Runtime {
 		'corrections',
 		'revision_history',
 		'scheduling',
+		'patient_case_safety',
 		'medical_safety',
 		'source_evidence',
 		'preview_matrix',
@@ -151,9 +155,16 @@ final class Governing_Plan_Runtime {
 		if ( $user_id <= 0 ) {
 			return $this->error( 'authentication_required', 401 );
 		}
+		$length = trim( (string) $request->get_header( 'Content-Length' ) );
+		if ( '' !== $length && ( ! ctype_digit( $length ) || (int) $length > self::MAX_REQUEST_BYTES ) ) {
+			return $this->error( 'request_too_large', 413 );
+		}
 		$nonce = (string) $request->get_header( 'X-WP-Nonce' );
 		if ( '' === $nonce || ! function_exists( 'wp_verify_nonce' ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
 			return $this->error( 'invalid_rest_nonce', 403 );
+		}
+		if ( ! $this->within_rate_limit( $user_id ) ) {
+			return $this->error( 'rate_limited', 429 );
 		}
 		return true;
 	}
@@ -180,6 +191,9 @@ final class Governing_Plan_Runtime {
 		if ( ! is_array( $body ) ) {
 			return $this->error( 'invalid_request_body', 400 );
 		}
+		if ( ! $this->allowed_top_level_keys( $body, array( 'command', 'idempotency_key', 'payload' ) ) ) {
+			return $this->error( 'unexpected_request_field', 400 );
+		}
 		$result = $this->execute_lifecycle(
 			get_current_user_id(),
 			sanitize_key( (string) $request['adapter'] ),
@@ -193,7 +207,7 @@ final class Governing_Plan_Runtime {
 
 	/**
 	 * Return a normalized public-safe governance contract after current File 00
-	 * authority and the adapter's central capability are revalidated.
+	 * authority and the adapter's central create capability are revalidated.
 	 *
 	 * @return array<string, mixed>|WP_Error
 	 */
@@ -256,6 +270,9 @@ final class Governing_Plan_Runtime {
 		string $idempotency_key,
 		array $payload
 	): array|WP_Error {
+		if ( ! $this->current_subject_matches( $user_id ) ) {
+			return $this->error( 'authorization_subject_mismatch', 403, $adapter_key );
+		}
 		if ( ! in_array( $command, self::ALLOWED_COMMANDS, true ) ) {
 			return $this->error( 'unsupported_lifecycle_command', 400, $adapter_key );
 		}
@@ -286,7 +303,7 @@ final class Governing_Plan_Runtime {
 		if ( ! in_array( $command, $capabilities['commands'], true ) ) {
 			return $this->error( 'lifecycle_permission_denied', 403, $adapter_key );
 		}
-		if ( ! $this->central_authority_allows( $user_id, $adapter_key, (string) $profile['edit_capability'] ) ) {
+		if ( ! $this->central_authority_allows( $user_id, (string) $profile['edit_capability'] ) ) {
 			return $this->error( 'lifecycle_permission_denied', 403, $adapter_key );
 		}
 
@@ -369,23 +386,13 @@ final class Governing_Plan_Runtime {
 
 	/** @return array<string, mixed> */
 	private function adapter_coverage_row(): array {
-		$catalog = $this->approved_adapter_catalog();
-		$present = array();
-		foreach ( $this->registry->all() as $adapter ) {
-			try {
-				$present[] = $adapter->native_module();
-			} catch ( Throwable $error ) {
-				unset( $error );
-			}
-		}
-		$present = array_values( array_unique( $present ) );
 		$missing = array();
-		foreach ( $catalog as $key => $definition ) {
+		foreach ( $this->approved_adapter_catalog() as $adapter_key => $definition ) {
 			if ( 'core' === $definition['tier'] ) {
 				continue;
 			}
-			if ( ! in_array( $definition['native_module'], $present, true ) ) {
-				$missing[] = 'optional_adapter_unavailable_' . $key;
+			if ( null === $this->registry->get( $adapter_key ) ) {
+				$missing[] = 'optional_adapter_unavailable_' . $adapter_key;
 			}
 		}
 		return array(
@@ -397,23 +404,30 @@ final class Governing_Plan_Runtime {
 	}
 
 	/**
-	 * @return array<string, array{native_module:string,tier:string}>
+	 * Plan-derived adapter keys and owner file numbers. Native plugin slugs are
+	 * intentionally not guessed; registration-time contracts remain authoritative.
+	 *
+	 * @return array<string, array{owner_file:string,tier:string}>
 	 */
 	public function approved_adapter_catalog(): array {
 		return array(
-			'social_publication' => array( 'native_module' => 'sabri-complete-home-news-feed', 'tier' => 'core' ),
-			'learning'           => array( 'native_module' => 'learn-sabri-classical-homeopathy', 'tier' => 'adapter' ),
-			'encyclopedia'       => array( 'native_module' => 'homeopathy-encyclopedia', 'tier' => 'adapter' ),
-			'video'              => array( 'native_module' => 'sabri-video-wall', 'tier' => 'adapter' ),
-			'reel'               => array( 'native_module' => 'sabri-reels', 'tier' => 'adapter' ),
-			'pdf'                => array( 'native_module' => 'sabri-pdf-library', 'tier' => 'adapter' ),
-			'marketplace'        => array( 'native_module' => 'sabri-marketplace', 'tier' => 'adapter' ),
+			'social_publication'   => array( 'owner_file' => '21', 'tier' => 'core' ),
+			'learning_lesson'      => array( 'owner_file' => '05', 'tier' => 'adapter' ),
+			'encyclopedia_entry'   => array( 'owner_file' => '06', 'tier' => 'adapter' ),
+			'video'                => array( 'owner_file' => '10', 'tier' => 'adapter' ),
+			'reel'                 => array( 'owner_file' => '11', 'tier' => 'adapter' ),
+			'pdf_document'         => array( 'owner_file' => '12', 'tier' => 'adapter' ),
+			'marketplace_listing'  => array( 'owner_file' => '18', 'tier' => 'adapter' ),
 		);
 	}
 
 	/** @return Governed_Workflow_Adapter|WP_Error */
 	private function resolve_governed_adapter( int $user_id, string $adapter_key ): Governed_Workflow_Adapter|WP_Error {
-		if ( Safe_Mode::disabled() || $user_id <= 0 || ! Contract_Boundary::adapter_key( $adapter_key ) ) {
+		if (
+			! $this->current_subject_matches( $user_id ) ||
+			Safe_Mode::disabled() ||
+			! Contract_Boundary::adapter_key( $adapter_key )
+		) {
 			return $this->error( 'governance_request_denied', 403, $adapter_key );
 		}
 		$adapter  = $this->registry->get( $adapter_key );
@@ -421,11 +435,11 @@ final class Governing_Plan_Runtime {
 		if ( ! $adapter instanceof Governed_Workflow_Adapter || null === $contract ) {
 			return $this->error( 'governance_contract_unavailable', 409, $adapter_key );
 		}
-		if ( ! $this->central_authority_allows( $user_id, $adapter_key, $contract['required_capability'] ) ) {
+		if ( ! $this->central_authority_allows( $user_id, $contract['required_capability'] ) ) {
 			return $this->error( 'governance_request_denied', 403, $adapter_key );
 		}
 		try {
-			if ( ! $adapter->is_available() ) {
+			if ( ! $adapter->is_available() || ! $adapter->can_create( $user_id ) ) {
 				return $this->error( 'native_workflow_unavailable', 503, $adapter_key );
 			}
 		} catch ( Throwable $error ) {
@@ -435,26 +449,43 @@ final class Governing_Plan_Runtime {
 		return $adapter;
 	}
 
-	/** @return Lifecycle_Adapter|WP_Error */
+	/**
+	 * Resolve lifecycle independently from create authorization. Existing-object
+	 * correction/edit authority may legitimately differ from new-create authority.
+	 *
+	 * @return Lifecycle_Adapter|WP_Error
+	 */
 	private function resolve_lifecycle_adapter( int $user_id, string $adapter_key, string $native_reference ): Lifecycle_Adapter|WP_Error {
-		if ( ! $this->validator->valid_reference( $native_reference ) ) {
-			return $this->error( 'invalid_native_reference', 400, $adapter_key );
+		if (
+			! $this->current_subject_matches( $user_id ) ||
+			Safe_Mode::disabled() ||
+			! Contract_Boundary::adapter_key( $adapter_key ) ||
+			! $this->validator->valid_reference( $native_reference ) ||
+			! $this->permissions->account_is_eligible( $user_id )
+		) {
+			return $this->error( 'lifecycle_permission_denied', 403, $adapter_key );
 		}
-		$adapter = $this->resolve_governed_adapter( $user_id, $adapter_key );
-		if ( $adapter instanceof WP_Error ) {
-			return $adapter;
-		}
-		if ( ! $adapter instanceof Lifecycle_Adapter ) {
+		$adapter  = $this->registry->get( $adapter_key );
+		$contract = $this->registry->adapter_contract( $adapter_key );
+		if ( ! $adapter instanceof Lifecycle_Adapter || null === $contract ) {
 			return $this->error( 'lifecycle_contract_unavailable', 409, $adapter_key );
 		}
 		if ( SUPC_LIFECYCLE_API_VERSION !== $adapter->lifecycle_api_version() ) {
 			return $this->error( 'lifecycle_api_mismatch', 409, $adapter_key );
 		}
+		try {
+			if ( ! $adapter->is_available() ) {
+				return $this->error( 'native_workflow_unavailable', 503, $adapter_key );
+			}
+		} catch ( Throwable $error ) {
+			unset( $error );
+			return $this->error( 'lifecycle_adapter_exception', 502, $adapter_key );
+		}
 		$profile = $this->profile_for_adapter( $adapter, $adapter_key );
 		if ( $profile instanceof WP_Error ) {
 			return $profile;
 		}
-		if ( ! $this->central_authority_allows( $user_id, $adapter_key, (string) $profile['edit_capability'] ) ) {
+		if ( ! $this->central_authority_allows( $user_id, (string) $profile['edit_capability'] ) ) {
 			return $this->error( 'lifecycle_permission_denied', 403, $adapter_key );
 		}
 		return $adapter;
@@ -466,8 +497,7 @@ final class Governing_Plan_Runtime {
 			if ( SUPC_GOVERNANCE_API_VERSION !== $adapter->governance_api_version() ) {
 				return $this->error( 'governance_api_mismatch', 409, $adapter_key );
 			}
-			$profile = $adapter->governance_profile();
-			return $this->normalize_profile( $profile, $adapter_key );
+			return $this->normalize_profile( $adapter->governance_profile(), $adapter_key );
 		} catch ( Throwable $error ) {
 			unset( $error );
 			return $this->error( 'governance_adapter_exception', 502, $adapter_key );
@@ -476,6 +506,17 @@ final class Governing_Plan_Runtime {
 
 	/** @param array<string, mixed> $profile */
 	private function normalize_profile( array $profile, string $adapter_key ): array|WP_Error {
+		$allowed_keys = array(
+			'authoring_features',
+			'media_rules',
+			'edit_capability',
+			'cleanup_policy',
+			'search_indexing_policy',
+			'notification_events',
+		);
+		if ( ! $this->allowed_top_level_keys( $profile, $allowed_keys ) || count( $profile ) !== count( $allowed_keys ) ) {
+			return $this->error( 'governance_profile_invalid', 502, $adapter_key );
+		}
 		$encoded = wp_json_encode( $profile );
 		if ( ! is_string( $encoded ) || strlen( $encoded ) > self::MAX_PROFILE_BYTES ) {
 			return $this->error( 'governance_profile_invalid', 502, $adapter_key );
@@ -494,6 +535,13 @@ final class Governing_Plan_Runtime {
 			! is_string( $search ) || ! in_array( $search, array( 'native_canonical', 'conditional_native', 'noindex' ), true )
 		) {
 			return $this->error( 'governance_profile_invalid', 502, $adapter_key );
+		}
+		$declares_notifications = in_array( 'notification_events', $features, true );
+		if ( $declares_notifications !== ( array() !== $events ) ) {
+			return $this->error( 'governance_profile_notification_mismatch', 502, $adapter_key );
+		}
+		if ( in_array( 'search_projection', $features, true ) && 'noindex' === $search ) {
+			return $this->error( 'governance_profile_search_mismatch', 502, $adapter_key );
 		}
 		return array(
 			'authoring_features'     => $features,
@@ -550,8 +598,12 @@ final class Governing_Plan_Runtime {
 		return array_values( $normalized );
 	}
 
-	private function central_authority_allows( int $user_id, string $adapter_key, string $capability ): bool {
-		if ( $user_id <= 0 || ! Contract_Boundary::adapter_key( $adapter_key ) || ! Contract_Boundary::capability( $capability ) ) {
+	private function current_subject_matches( int $user_id ): bool {
+		return $user_id > 0 && get_current_user_id() === $user_id;
+	}
+
+	private function central_authority_allows( int $user_id, string $capability ): bool {
+		if ( ! $this->current_subject_matches( $user_id ) || ! Contract_Boundary::capability( $capability ) ) {
 			return false;
 		}
 		return ! Safe_Mode::disabled()
@@ -597,6 +649,29 @@ final class Governing_Plan_Runtime {
 				return false;
 			}
 		}
+		return true;
+	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 * @param array<int, string>   $allowed
+	 */
+	private function allowed_top_level_keys( array $data, array $allowed ): bool {
+		foreach ( array_keys( $data ) as $key ) {
+			if ( ! is_string( $key ) || ! in_array( $key, $allowed, true ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private function within_rate_limit( int $user_id ): bool {
+		$bucket = 'supc_governed_rest_' . md5( $user_id . '|' . floor( time() / self::RATE_WINDOW ) );
+		$count  = (int) get_transient( $bucket );
+		if ( $count >= self::RATE_LIMIT ) {
+			return false;
+		}
+		set_transient( $bucket, $count + 1, self::RATE_WINDOW + 5 );
 		return true;
 	}
 
