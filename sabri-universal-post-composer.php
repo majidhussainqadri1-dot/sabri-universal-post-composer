@@ -3,7 +3,7 @@
  * Plugin Name: Sabri Universal Post Composer
  * Plugin URI:  https://www.sabrihomeopathy.com/
  * Description: Role-aware, adapter-driven creation gateway for the Sabri Social Homeopathy Platform.
- * Version:     0.3.0
+ * Version:     0.4.0
  * Author:      Dr. Allamah Majid Hussain Sabri Muhaddith Mursheed
  * Text Domain: sabri-universal-post-composer
  * Requires at least: 6.5
@@ -102,7 +102,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		return;
 	}
 
-	define( 'SUPC_VERSION', '0.3.0' );
+	define( 'SUPC_VERSION', '0.4.0' );
 	define( 'SUPC_SCHEMA_VERSION', '0.3.0' );
 	define( 'SUPC_ADAPTER_API_VERSION', '1.0.0' );
 	define( 'SUPC_WORKFLOW_API_VERSION', '1.0.0' );
