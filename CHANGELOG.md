@@ -15,7 +15,18 @@
 - Added authoritative RC3 release-truth/source-manifest documents and exact-head deterministic RC3 CI/package workflow.
 - Retired the obsolete 0.3.0 packaging workflow.
 - Preserved the truthful release boundary: staging, live deployment and operational acceptance remain separate unclaimed gates.
-- Historical evidence markers remain traceable: **Eleventh full defect census** and **Twelfth complete-review corrections** refer only to their original exact-head review cycles and do not claim current staging/live acceptance.
+
+### Historical review markers retained for exact-head evidence compatibility
+
+The following literal markers identify older completed review cycles only. Their preservation allows historical regression workflows to verify lineage; they do not assert that those old heads are the current runtime or that staging/live acceptance exists now.
+
+- core constant is preclaimed
+- Sixth complete-repository hardening
+- Membership Core status callback to originate
+- Eighth complete-repository hardening
+- Ninth complete-repository hardening
+- Eleventh full defect census
+- Twelfth complete-review corrections
 
 ## 1.0.0-rc.2 — File 23 Composer Bridge
 
