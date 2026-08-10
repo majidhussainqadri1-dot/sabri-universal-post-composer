@@ -8,14 +8,17 @@ final class AccessibilityContrastTest extends TestCase {
 	public function test_sign_in_action_contrast_meets_wcag_normal_text_threshold(): void {
 		$css = file_get_contents( dirname( __DIR__ ) . '/assets/css/create-surface.css' );
 		$this->assertIsString( $css );
-		$this->assertMatchesRegularExpression( '/--supc-orange-dark:\s*(#[0-9a-fA-F]{6})\s*;/', $css );
-		preg_match( '/--supc-orange-dark:\s*(#[0-9a-fA-F]{6})\s*;/', $css, $matches );
+
+		$pattern = '/--supc-orange-dark:\s*(?:var\(--sabri-color-primary-strong,\s*)?(#[0-9a-fA-F]{6})\)?\s*;/';
+		$this->assertMatchesRegularExpression( $pattern, $css );
+		preg_match( $pattern, $css, $matches );
 
 		$this->assertGreaterThanOrEqual(
 			4.5,
 			$this->contrast_ratio( $matches[1], '#ffffff' ),
-			'The Sign In action must provide at least 4.5:1 contrast for normal text.'
+			'The Sign In action fallback must provide at least 4.5:1 contrast for normal text.'
 		);
+		$this->assertStringContainsString( 'var(--sabri-color-primary-strong, #05623e)', strtolower( $css ) );
 		$this->assertStringContainsString( 'background: var(--supc-orange-dark);', $css );
 		$this->assertStringContainsString( '.supc-create-notice__action:visited', $css );
 	}
