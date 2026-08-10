@@ -95,6 +95,8 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-NEW-PLANS-TWO-FRESH-REVIEW-CLOSURE-2026-08-10.md`
 - `docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md`
 - `docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md`
+- `docs/FILE22-RC3-TWO-FRESH-REVIEWS-AND-FINAL-SOURCE-CLOSURE-2026-08-10.md`
+- `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 
 ## Historical exact-head review documents retained
 
@@ -132,6 +134,7 @@ This manifest describes the current repository/source candidate after reconcilia
 
 - `.github/workflows/ci.yml`
 - `.github/workflows/file22-new-plans-1.0.0-rc.3.yml`
+- `.github/workflows/file22-eighty-pass-review.yml`
 - `.github/workflows/file22-plan-complete-core.yml`
 - `.github/workflows/cumulative-review-evidence.yml`
 - `.github/workflows/fifth-review-evidence.yml`
@@ -154,6 +157,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/GoverningPlanCompletionTest.php`
 - `tests/GoverningPlanReleaseIdentityTest.php`
 - `tests/NewCentralPlanIntegrationTest.php`
+- `tests/EightyPassReviewTest.php`
 - `tests/PlanCompletionCoreTest.php`
 - `tests/PlanCompleteExperienceTest.php`
 - `tests/FortyPassReviewTest.php`
