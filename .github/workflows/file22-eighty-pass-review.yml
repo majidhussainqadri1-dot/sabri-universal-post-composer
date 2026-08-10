@@ -56,9 +56,11 @@ jobs:
           set -euo pipefail
           test -f docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
           test -f tests/EightyPassReviewTest.php
-          grep -Fq 'Passes 01, 02, 03, 04, 05, 06, 07 and 08' docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
-          grep -Fq 'Passes **09–80**' docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
+          grep -Fq 'Passes 01, 02, 03, 04, 05, 06, 07, 08 and 80' docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
+          grep -Fq 'Passes **09–79**' docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
+          grep -Fq 'Pass 80 itself is the final exact-head executable gate' docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md
           grep -Fq 'var(--sabri-color-primary, #087a4e)' assets/css/create-surface.css
+          grep -Fq 'var(--sabri-color-primary-strong, #05623e)' assets/css/create-surface.css
           grep -Fq 'var(--sabri-color-primary,#087a4e)' assets/css/workflow-composer.css
           ! grep -Fq -- '--supc-orange: #ff8a1f' assets/css/create-surface.css
           ! grep -Fq 'var(--sabri-color-primary,#ff8a1f)' assets/css/workflow-composer.css
