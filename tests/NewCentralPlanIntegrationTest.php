@@ -41,6 +41,15 @@ final class NewCentralPlanIntegrationTest extends TestCase {
 		$this->assertStringContainsString( 'Sabri Green `#087A4E`', $truth );
 	}
 
+	public function test_private_rest_errors_receive_privacy_safe_support_references(): void {
+		$functions = (string) file_get_contents( $this->root . '/includes/core/functions.php' );
+		$this->assertStringContainsString( "'rest_post_dispatch'", $functions );
+		$this->assertStringContainsString( "'/sabri-composer/v1'", $functions );
+		$this->assertStringContainsString( "'support_reference'", $functions );
+		$this->assertStringContainsString( "'SUPC-'", $functions );
+		$this->assertStringContainsString( 'random_bytes( 8 )', $functions );
+	}
+
 	public function test_file22_runtime_contains_no_new_paid_or_donor_advantage_gate(): void {
 		$runtime = '';
 		$roots   = array( 'includes', 'sabri-universal-post-composer.php', 'uninstall.php' );
