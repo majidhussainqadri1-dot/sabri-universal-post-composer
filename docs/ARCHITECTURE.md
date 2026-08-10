@@ -12,7 +12,7 @@ Sabri Universal Post Composer is a role-aware, adapter-driven creation facade an
 | Global header and Create placement | File 20 — Unified Application Shell |
 | Social, Founder, doctor, News, Patient Case, Research Summary, and Poll publishing | File 21 — Complete Home and News Feed |
 | Universal type selection, shared creation UX, guarded invocation, temporary orchestration boundaries, and adapter health | File 22 |
-| Final public profile and timeline visual experience | File 23 |
+| Final public profile and timeline visual experience | File 25 — Complete Public UI, Profile Timeline and Visual Experience |
 | Learning lessons | File 05 |
 | Encyclopedia entries | File 06 |
 | Video records | File 10 |
