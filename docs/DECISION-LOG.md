@@ -1,8 +1,12 @@
 # Decision Log
 
+## 2026-08-06 — Current numbered-file ownership
+
+**Decision:** File 22 is Sabri Universal Post Composer; File 23 is Doctor and Founder Publishing Dashboard; File 24 is the Security, Privacy, Compliance and Resilience Center; File 25 is Complete Public UI, Profile Timeline and Visual Experience; File 26 owns Search, Discovery and Ranking projections. This later Founder-approved numbering supersedes conflicting earlier entries below.
+
 ## 2026-07-28 — File 22 identity
 
-**Decision:** File 22 is Sabri Universal Post Composer. The prior Complete Public UI, Profile Timeline and Visual Experience module moves to File 23.
+**Historical decision:** File 22 was assigned Sabri Universal Post Composer and the prior public UI module was temporarily mapped to File 23. **Current status:** superseded by the 2026-08-06 numbering above; the public UI/profile/timeline owner is File 25 and File 23 is the publishing dashboard.
 
 **Migration impact:** Documentation and future integration references change; runtime content does not. Existing hook names require compatibility aliases before any rename.
 
