@@ -1,0 +1,24 @@
+/*
+ * File 22 central-plan brand fallback.
+ * File 25 remains the canonical visual-token owner. This stylesheet only
+ * prevents legacy orange defaults from becoming the primary action color
+ * when the shared token provider is temporarily unavailable.
+ */
+.supc-create,
+.supc-create-notice {
+	--supc-orange: var(--sabri-color-primary, #087a4e);
+	--supc-orange-dark: var(--sabri-color-primary-strong, #05623e);
+	--supc-action-hover: var(--sabri-color-primary-hover, #064e3b);
+	--supc-soft: var(--sabri-color-primary-soft, #eef9f3);
+}
+
+.supc-workflow {
+	--supc-accent: var(--sabri-color-primary, #087a4e);
+}
+
+.supc-workflow__field input:focus,
+.supc-workflow__field textarea:focus,
+.supc-workflow__field select:focus,
+.supc-rte__editor:focus {
+	border-color: var(--supc-accent);
+}
