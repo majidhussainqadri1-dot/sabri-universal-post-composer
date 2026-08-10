@@ -112,7 +112,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'SUPC_MIN_SMC_VERSION', '1.2.3' );
 	define( 'SUPC_MIN_SMC_DB_VERSION', '1.2.0' );
 	define( 'SUPC_MIN_SMC_CONTRACT_VERSION', '1.1.2' );
-	define( 'SUPC_REST_API_VERSION', '1.2.0' );
+	define( 'SUPC_REST_API_VERSION', '1.1.0' );
 	define( 'SUPC_FILE', __FILE__ );
 	define( 'SUPC_PATH', plugin_dir_path( __FILE__ ) );
 	define( 'SUPC_URL', plugin_dir_url( __FILE__ ) );
