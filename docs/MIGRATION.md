@@ -14,4 +14,4 @@ Activation resolves an already configured published page, then a published page 
 
 ## Numbering migration
 
-File 22 now denotes Universal Post Composer. The prior public-UI/profile-timeline module moves to File 23. Existing public hook names are not silently renamed; compatibility aliases require regression tests.
+File 22 now denotes Universal Post Composer. The prior public-UI/profile-timeline module is canonically File 25. File 23 is the Doctor and Founder Publishing Dashboard. Existing public hook names are not silently renamed; compatibility aliases require regression tests.
