@@ -159,6 +159,21 @@ final class GoverningPlanCompletionTest extends TestCase {
 		$this->assertSame( 'published', $result['status'] );
 	}
 
+	public function test_lifecycle_edit_authority_is_independent_from_new_create_authority(): void {
+		$GLOBALS['supc_test_capabilities'][1]['publish_posts'] = false;
+		$GLOBALS['supc_test_capabilities'][1]['edit_posts'] = true;
+		$result = Governing_Plan_Runtime::instance()->execute_lifecycle(
+			1,
+			'governed_runtime',
+			'native:governed:1',
+			'correct',
+			'123e4567-e89b-42d3-a456-426614174000:123e4567-e89b-42d3-a456-426614174001',
+			array( 'reason' => 'Existing-object correction remains separately authorized.' )
+		);
+		$this->assertIsArray( $result );
+		$this->assertSame( 'published', $result['status'] );
+	}
+
 	public function test_lifecycle_write_fails_closed_when_edit_capability_changes(): void {
 		$GLOBALS['supc_test_capabilities'][1]['edit_posts'] = false;
 		$result = Governing_Plan_Runtime::instance()->execute_lifecycle(
@@ -173,15 +188,37 @@ final class GoverningPlanCompletionTest extends TestCase {
 		$this->assertSame( 'supc_lifecycle_permission_denied', $result->code );
 	}
 
-	public function test_approved_adapter_catalog_preserves_native_ownership(): void {
+	public function test_internal_runtime_rejects_authorization_subject_spoofing(): void {
+		$result = Governing_Plan_Runtime::instance()->lifecycle_capabilities( 2, 'governed_runtime', 'native:governed:1' );
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'supc_lifecycle_permission_denied', $result->code );
+	}
+
+	public function test_public_governed_helpers_do_not_accept_arbitrary_user_ids(): void {
+		$this->assertSame( 1, ( new ReflectionFunction( 'supc_adapter_governance' ) )->getNumberOfParameters() );
+		$this->assertSame( 2, ( new ReflectionFunction( 'supc_lifecycle_capabilities' ) )->getNumberOfParameters() );
+		$this->assertSame( 5, ( new ReflectionFunction( 'supc_execute_lifecycle' ) )->getNumberOfParameters() );
+	}
+
+	public function test_approved_adapter_catalog_uses_plan_keys_and_file_owners_without_guessed_slugs(): void {
 		$catalog = Governing_Plan_Runtime::instance()->approved_adapter_catalog();
-		$this->assertSame( 'sabri-complete-home-news-feed', $catalog['social_publication']['native_module'] );
-		$this->assertSame( 'learn-sabri-classical-homeopathy', $catalog['learning']['native_module'] );
-		$this->assertSame( 'homeopathy-encyclopedia', $catalog['encyclopedia']['native_module'] );
-		$this->assertSame( 'sabri-video-wall', $catalog['video']['native_module'] );
-		$this->assertSame( 'sabri-reels', $catalog['reel']['native_module'] );
-		$this->assertSame( 'sabri-pdf-library', $catalog['pdf']['native_module'] );
-		$this->assertSame( 'sabri-marketplace', $catalog['marketplace']['native_module'] );
+		$this->assertSame( '21', $catalog['social_publication']['owner_file'] );
+		$this->assertSame( '05', $catalog['learning_lesson']['owner_file'] );
+		$this->assertSame( '06', $catalog['encyclopedia_entry']['owner_file'] );
+		$this->assertSame( '10', $catalog['video']['owner_file'] );
+		$this->assertSame( '11', $catalog['reel']['owner_file'] );
+		$this->assertSame( '12', $catalog['pdf_document']['owner_file'] );
+		$this->assertSame( '18', $catalog['marketplace_listing']['owner_file'] );
+		$this->assertArrayNotHasKey( 'native_module', $catalog['learning_lesson'] );
+	}
+
+	public function test_governed_rest_and_payload_controls_are_present(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/core/class-governing-plan-runtime.php' );
+		$this->assertIsString( $source );
+		$this->assertStringContainsString( 'MAX_REQUEST_BYTES', $source );
+		$this->assertStringContainsString( 'within_rate_limit', $source );
+		$this->assertStringContainsString( 'unexpected_request_field', $source );
+		$this->assertStringContainsString( 'MAX_COMMAND_PAYLOAD_BYTES', $source );
 	}
 
 	public function test_new_runtime_does_not_create_duplicate_native_content_storage(): void {
