@@ -15,6 +15,7 @@
 - Added authoritative RC3 release-truth/source-manifest documents and exact-head deterministic RC3 CI/package workflow.
 - Retired the obsolete 0.3.0 packaging workflow.
 - Preserved the truthful release boundary: staging, live deployment and operational acceptance remain separate unclaimed gates.
+- Historical evidence markers remain traceable: **Eleventh full defect census** and **Twelfth complete-review corrections** refer only to their original exact-head review cycles and do not claim current staging/live acceptance.
 
 ## 1.0.0-rc.2 — File 23 Composer Bridge
 
