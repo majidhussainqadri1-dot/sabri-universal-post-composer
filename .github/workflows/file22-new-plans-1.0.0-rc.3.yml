@@ -1,0 +1,210 @@
+name: File 22 New Plans 1.0.0-rc.3
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+      - feat/file22-new-plans-final-completion-2026-08-10
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: file22-new-plans-rc3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-package:
+    name: Verify both new plans and package RC3
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install locked dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist --quiet
+
+      - name: Run official repository QA
+        run: |
+          set -euo pipefail
+          composer lint
+          composer test
+          composer phpstan
+          composer phpcs
+          node --check assets/js/workflow-composer.js
+          git diff --check
+
+      - name: Verify integrated central-plan and File-22-plan contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F 'Version:     1.0.0-rc.3' sabri-universal-post-composer.php
+          grep -F "SUPC_VERSION', '1.0.0-rc.3" sabri-universal-post-composer.php
+          grep -F "SUPC_SCHEMA_VERSION', '1.0.0" sabri-universal-post-composer.php
+          grep -F "SUPC_REST_API_VERSION', '1.2.0" sabri-universal-post-composer.php
+          grep -F "SUPC_PLAN_CONTRACT_VERSION', '1.0.0" sabri-universal-post-composer.php
+          grep -F "SUPC_GOVERNANCE_API_VERSION', '1.0.0" sabri-universal-post-composer.php
+          grep -F "SUPC_LIFECYCLE_API_VERSION', '1.0.0" sabri-universal-post-composer.php
+          grep -F "SUPC_MIN_SMC_VERSION', '1.2.3" sabri-universal-post-composer.php
+          grep -F "SUPC_MIN_SMC_DB_VERSION', '1.2.0" sabri-universal-post-composer.php
+          grep -F "SUPC_MIN_SMC_CONTRACT_VERSION', '1.1.2" sabri-universal-post-composer.php
+
+          for path in \
+            includes/contracts/interface-governed-workflow-adapter.php \
+            includes/contracts/interface-lifecycle-adapter.php \
+            includes/core/class-plan-completion-runtime.php \
+            includes/core/class-governing-plan-runtime.php \
+            includes/core/class-policy-engine.php \
+            includes/core/class-audit-store.php \
+            includes/core/class-upload-token-store.php \
+            includes/core/class-session-store.php \
+            includes/core/class-submission-store.php \
+            includes/core/class-migration-manager.php \
+            includes/core/class-projection-bus.php \
+            includes/core/governing-plan-functions.php \
+            includes/http/class-plan-rest-controller.php \
+            includes/admin/class-activation-wizard.php \
+            assets/css/governing-plan-brand.css \
+            docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md \
+            docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md \
+            tests/GoverningPlanCompletionTest.php \
+            tests/GoverningPlanReleaseIdentityTest.php \
+            tests/NewCentralPlanIntegrationTest.php; do
+            test -f "$path"
+          done
+
+          grep -F 'composer_state varchar(32)' includes/core/class-session-store.php
+          grep -F 'review_state varchar(32)' includes/core/class-session-store.php
+          grep -F 'publication_state varchar(32)' includes/core/class-session-store.php
+          grep -F 'hold_state varchar(32)' includes/core/class-session-store.php
+          grep -F "array( 'new', 'editing', 'autosaved', 'offline_pending', 'conflicted', 'abandoned', 'completed' )" includes/core/class-session-store.php
+          grep -F "array( 'not_required', 'draft', 'submitted', 'under_review', 'changes_requested', 'approved', 'rejected', 'withdrawn' )" includes/core/class-session-store.php
+          grep -F "array( 'unpublished', 'scheduled', 'published', 'hidden', 'archived', 'deleted' )" includes/core/class-session-store.php
+          grep -F "array( 'clear', 'privacy_hold', 'medical_hold', 'copyright_hold', 'security_hold', 'suspended' )" includes/core/class-session-store.php
+
+          grep -F "'patient_case_safety'" includes/core/class-governing-plan-runtime.php
+          grep -F 'authorization_subject_mismatch' includes/core/class-governing-plan-runtime.php
+          grep -F 'MAX_REQUEST_BYTES' includes/core/class-governing-plan-runtime.php
+          grep -F 'within_rate_limit' includes/core/class-governing-plan-runtime.php
+          grep -F 'File 22 stores no command payload' includes/core/class-governing-plan-runtime.php
+          grep -F 'patient_consent_reference_required' includes/core/class-policy-engine.php
+          grep -F 'medical_safety_acknowledgement_required' includes/core/class-policy-engine.php
+          grep -F 'copyright_rights_confirmation_required' includes/core/class-policy-engine.php
+          grep -F 'verified_seller_reference_required' includes/core/class-policy-engine.php
+
+          grep -F 'supc_file19_notification_event' includes/core/class-projection-bus.php
+          grep -F 'supc_file23_projection_event' includes/core/class-projection-bus.php
+          grep -F 'supc_file24_assurance_event' includes/core/class-projection-bus.php
+          grep -F 'supc_file25_timeline_event' includes/core/class-projection-bus.php
+          grep -F 'supc_search_seo_event' includes/core/class-projection-bus.php
+          grep -F 'supc_file26_search_projection_event' includes/core/governing-plan-functions.php
+
+          grep -Fi '#087a4e' assets/css/governing-plan-brand.css
+          grep -F -- '--sabri-color-primary' assets/css/governing-plan-brand.css
+          grep -F 'File 25 remains the canonical visual-token owner' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md
+          grep -F 'AI Teacher generation policy to File 16' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md
+          grep -F 'publication lifecycle to File 21' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md
+          grep -F 'discovery/classification to File 26' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md
+
+          ! grep -R -E 'register_post_type\(' includes sabri-universal-post-composer.php
+          ! grep -E 'localStorage|sessionStorage|indexedDB' assets/js/workflow-composer.js
+          ! grep -R -E 'PKR[[:space:]]*400|Free[[:space:]]*/[[:space:]]*Pro|Premium[[:space:]]+tier|paid[[:space:]]+AI' includes sabri-universal-post-composer.php
+          ! grep -E '^\s*(payload_json|body|content|patient|consent|media_bytes)\s+(longtext|text|json|blob)' includes/core/class-submission-store.php
+
+      - name: Build deterministic exact-head RC3 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          package='22-sabri-universal-post-composer-1.0.0-rc.3-NEW-PLANS-RC'
+          stage="$RUNNER_TEMP/file22-stage"
+          extract="$RUNNER_TEMP/file22-extract"
+          root="$stage/sabri-universal-post-composer"
+          rm -rf "$stage" "$extract" release
+          mkdir -p "$root" "$extract" release
+          rsync -a --delete --exclude-from=.distignore ./ "$root/"
+          find "$root" -type l -print -quit | grep -q . && { echo 'Symlink found'; exit 1; } || true
+          find "$root" -type f \( -name '*.log' -o -name '*.zip' -o -name '.env' \) -print -quit | grep -q . && { echo 'Forbidden file found'; exit 1; } || true
+          (
+            cd "$root"
+            find . -type f ! -name 'MANIFEST.sha256' -print0 | sort -z | xargs -0 sha256sum > MANIFEST.sha256
+            awk 'NF < 2 || $1 !~ /^[0-9a-f]{64}$/ { exit 1 }' MANIFEST.sha256
+          )
+          cp "$root/MANIFEST.sha256" "release/${package}-MANIFEST.sha256"
+          (
+            cd "$stage"
+            find sabri-universal-post-composer -exec touch -h -t 202608100000.00 {} +
+            zip -X -9 -r "$GITHUB_WORKSPACE/release/${package}.zip" sabri-universal-post-composer >/dev/null
+          )
+          (cd release && sha256sum "${package}.zip" > "${package}.sha256")
+          unzip -q "release/${package}.zip" -d "$extract"
+          (cd "$extract/sabri-universal-post-composer" && sha256sum -c MANIFEST.sha256)
+          unzip -t "release/${package}.zip"
+          unzip -p "release/${package}.zip" 'sabri-universal-post-composer/sabri-universal-post-composer.php' | grep -F 'Version:     1.0.0-rc.3'
+          unzip -l "release/${package}.zip" | grep -F 'sabri-universal-post-composer/includes/core/class-plan-completion-runtime.php'
+          unzip -l "release/${package}.zip" | grep -F 'sabri-universal-post-composer/includes/core/class-governing-plan-runtime.php'
+          unzip -l "release/${package}.zip" | grep -F 'sabri-universal-post-composer/includes/core/class-policy-engine.php'
+          unzip -l "release/${package}.zip" | grep -F 'sabri-universal-post-composer/includes/contracts/interface-governed-workflow-adapter.php'
+          unzip -l "release/${package}.zip" | grep -F 'sabri-universal-post-composer/includes/contracts/interface-lifecycle-adapter.php'
+          unzip -l "release/${package}.zip" | grep -F 'sabri-universal-post-composer/assets/css/governing-plan-brand.css'
+          unzip -l "release/${package}.zip" | grep -F 'sabri-universal-post-composer/MANIFEST.sha256'
+          ! unzip -l "release/${package}.zip" | grep -E '/(tests|vendor|\.github|_apply)/'
+          cat > "release/${package}-TEST-REPORT.md" <<REPORT
+          # File 22 1.0.0-rc.3 — Two New Governing Plans Candidate
+
+          - Exact source head: ${EXPECTED_SHA}
+          - Software candidate: 1.0.0-rc.3
+          - Database schema: 1.0.0
+          - Plan contract: 1.0.0
+          - Governance API: 1.0.0
+          - Lifecycle API: 1.0.0
+          - REST API: 1.2.0
+          - Official PHPUnit: PASS
+          - PHPStan: PASS
+          - WordPress Coding Standards: PASS
+          - JavaScript syntax: PASS
+          - Four-dimensional state model: PRESENT
+          - Patient Case/common safety holds: PRESENT
+          - Native-owner lifecycle delegation: PRESENT
+          - File 26 search/discovery/ranking projection boundary: PRESENT
+          - Sabri Green fallback / File 25 token ownership: PRESENT
+          - Plaintext browser draft persistence: ABSENT
+          - File 22 duplicate content/search backend: ABSENT
+          - Paid/donor File 22 gate: ABSENT
+          - Embedded MANIFEST.sha256: PASS
+          - External archive SHA-256: PASS
+          - File 00 minimum: plugin 1.2.3 / DB 1.2.0 / contract 1.1.2
+          - Staging accepted: 0
+          - Live deployed: 0
+          - Operational: 0
+          REPORT
+
+      - name: Upload RC3 candidate evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: file22-1.0.0-rc.3-new-plans-${{ env.EXPECTED_SHA }}
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            release/22-sabri-universal-post-composer-1.0.0-rc.3-NEW-PLANS-RC.zip
+            release/22-sabri-universal-post-composer-1.0.0-rc.3-NEW-PLANS-RC.sha256
+            release/22-sabri-universal-post-composer-1.0.0-rc.3-NEW-PLANS-RC-MANIFEST.sha256
+            release/22-sabri-universal-post-composer-1.0.0-rc.3-NEW-PLANS-RC-TEST-REPORT.md
