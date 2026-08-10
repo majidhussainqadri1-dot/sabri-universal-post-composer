@@ -77,12 +77,11 @@ final class EightyPassReviewTest extends TestCase {
 	public function test_eighty_pass_ledger_contains_every_pass_and_defect_index(): void {
 		$ledger = (string) file_get_contents( $this->root . '/docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md' );
 		for ( $pass = 1; $pass <= 80; $pass++ ) {
-			$needle = $pass < 9 ? 'Pass 0' . $pass : ( $pass < 10 ? 'Pass 0' . $pass : '|' . sprintf( ' %02d ', $pass ) . '|' );
 			if ( $pass <= 8 ) {
 				$this->assertStringContainsString( 'Pass 0' . $pass, $ledger );
-			} else {
-				$this->assertStringContainsString( '| ' . sprintf( '%02d', $pass ) . ' |', $ledger );
+				continue;
 			}
+			$this->assertStringContainsString( '| ' . sprintf( '%02d', $pass ) . ' |', $ledger );
 		}
 		$this->assertStringContainsString( 'Passes 01, 02, 03, 04, 05, 06, 07 and 08', $ledger );
 		$this->assertStringContainsString( 'Passes **09–80**', $ledger );
