@@ -30,7 +30,7 @@ if ( ! defined( 'SUPC_LIFECYCLE_API_VERSION' ) ) {
 	define( 'SUPC_LIFECYCLE_API_VERSION', '1.0.0' );
 }
 if ( ! defined( 'SUPC_REST_API_VERSION' ) ) {
-	define( 'SUPC_REST_API_VERSION', '1.2.0' );
+	define( 'SUPC_REST_API_VERSION', '1.1.0' );
 }
 
 ( static function (): void {
