@@ -26,11 +26,17 @@ final class NewCentralPlanIntegrationTest extends TestCase {
 	}
 
 	public function test_green_is_file22_fallback_while_file25_remains_visual_token_owner(): void {
-		$css   = (string) file_get_contents( $this->root . '/assets/css/governing-plan-brand.css' );
-		$truth = (string) file_get_contents( $this->root . '/docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md' );
+		$css      = (string) file_get_contents( $this->root . '/assets/css/governing-plan-brand.css' );
+		$create   = (string) file_get_contents( $this->root . '/assets/css/create-surface.css' );
+		$workflow = (string) file_get_contents( $this->root . '/assets/css/workflow-composer.css' );
+		$truth    = (string) file_get_contents( $this->root . '/docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md' );
 
 		$this->assertStringContainsString( '#087a4e', strtolower( $css ) );
 		$this->assertStringContainsString( '--sabri-color-primary', $css );
+		$this->assertStringContainsString( 'var(--sabri-color-primary, #087a4e)', strtolower( $create ) );
+		$this->assertStringContainsString( 'var(--sabri-color-primary,#087a4e)', strtolower( $workflow ) );
+		$this->assertStringNotContainsString( '--supc-orange: #ff8a1f', strtolower( $create ) );
+		$this->assertStringNotContainsString( 'var(--sabri-color-primary,#ff8a1f)', strtolower( $workflow ) );
 		$this->assertStringContainsString( 'File 25 remains the canonical visual-token owner', $truth );
 		$this->assertStringContainsString( 'Sabri Green `#087A4E`', $truth );
 	}
