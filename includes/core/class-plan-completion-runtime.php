@@ -21,7 +21,6 @@ final class Plan_Completion_Runtime {
 		add_filter( 'rest_request_after_callbacks', array( $this, 'audit_rest_response' ), 20, 3 );
 	}
 
-
 	public function audit_rest_response( mixed $response, mixed $handler, mixed $request ): mixed {
 		unset( $handler );
 		if ( ! is_object( $request ) || ! method_exists( $request, 'get_route' ) || ! method_exists( $request, 'get_method' ) ) {
@@ -57,11 +56,11 @@ final class Plan_Completion_Runtime {
 			( new Projection_Bus() )->emit(
 				$event,
 				array(
-					'session_uuid'      => (string) ( $session['session_uuid'] ?? '' ),
-					'adapter_key'       => $adapter,
-					'review_state'      => (string) ( $session['review_state'] ?? 'draft' ),
-					'publication_state' => (string) ( $session['publication_state'] ?? 'unpublished' ),
-					'hold_state'        => (string) ( $session['hold_state'] ?? 'clear' ),
+					'session_uuid'          => (string) ( $session['session_uuid'] ?? '' ),
+					'adapter_key'           => $adapter,
+					'review_state'          => (string) ( $session['review_state'] ?? 'draft' ),
+					'publication_state'     => (string) ( $session['publication_state'] ?? 'unpublished' ),
+					'hold_state'            => (string) ( $session['hold_state'] ?? 'clear' ),
 					'native_reference_hash' => null === $native ? '' : hash( 'sha256', $native ),
 				)
 			);
@@ -89,7 +88,7 @@ final class Plan_Completion_Runtime {
 			'count'  => Version::valid( Taxonomy_Map::VERSION ) ? 0 : 1,
 			'codes'  => Version::valid( Taxonomy_Map::VERSION ) ? array() : array( 'taxonomy_map_invalid' ),
 		);
-		$cron = function_exists( 'wp_next_scheduled' ) && false !== wp_next_scheduled( 'supc_cleanup_plan_metadata' );
+		$cron   = function_exists( 'wp_next_scheduled' ) && false !== wp_next_scheduled( 'supc_cleanup_plan_metadata' );
 		$rows[] = $this->row( 'plan_metadata_cleanup', $cron, 'plan_metadata_cleanup_missing' );
 		$workspace = Workspace_Page_Resolver::inspect();
 		$rows[] = array(
@@ -109,8 +108,9 @@ final class Plan_Completion_Runtime {
 		);
 
 		// Optional adapter packs are independently certified. Their absence warns
-		// but never disables Core, exactly as the harmonized plan requires.
-		foreach ( array( 'learning', 'encyclopedia', 'video', 'reel', 'pdf', 'marketplace' ) as $key ) {
+		// but never disables Core. Keys must match the governing registry/catalog
+		// exactly so a correctly registered native provider is never reported absent.
+		foreach ( array( 'learning_lesson', 'encyclopedia_entry', 'video', 'reel', 'pdf_document', 'marketplace_listing' ) as $key ) {
 			$present = null !== Plugin::instance()->registry()->get( $key );
 			$rows[]  = array(
 				'key'    => 'adapter_pack_' . $key,
@@ -121,7 +121,6 @@ final class Plan_Completion_Runtime {
 		}
 		return $rows;
 	}
-
 
 	private function rest_event( string $route, string $method ): string {
 		if ( str_contains( $route, '/reconcile' ) ) {
