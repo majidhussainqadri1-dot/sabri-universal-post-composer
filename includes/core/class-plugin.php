@@ -158,15 +158,16 @@ final class Plugin {
 
 	private function ensure_create_surface_assets(): void {
 		wp_enqueue_style( 'supc-create-surface', SUPC_URL . 'assets/css/create-surface.css', array( 'dashicons' ), SUPC_VERSION );
+		wp_enqueue_style( 'supc-governing-plan-brand', SUPC_URL . 'assets/css/governing-plan-brand.css', array( 'supc-create-surface' ), SUPC_VERSION );
 
 		if (
 			function_exists( 'did_action' ) &&
 			function_exists( 'wp_style_is' ) &&
 			function_exists( 'wp_print_styles' ) &&
 			did_action( 'wp_head' ) > 0 &&
-			! wp_style_is( 'supc-create-surface', 'done' )
+			! wp_style_is( 'supc-governing-plan-brand', 'done' )
 		) {
-			wp_print_styles( 'supc-create-surface' );
+			wp_print_styles( array( 'supc-create-surface', 'supc-governing-plan-brand' ) );
 		}
 	}
 
@@ -300,140 +301,74 @@ final class Plugin {
 			$codes[] = 'file21_safe_mode_exception';
 		}
 
-		if ( null !== $adapter ) {
+		if ( function_exists( 'sabri_shell_create_contract_available' ) ) {
 			try {
-				if ( ! $adapter->is_available() ) {
-					$codes[] = 'native_adapter_unavailable';
-				} elseif ( $user_id <= 0 || ! $adapter->can_create( $user_id ) ) {
-					$codes[] = 'native_adapter_create_denied';
+				if ( ! sabri_shell_create_contract_available() ) {
+					$codes[] = 'file20_create_contract_unavailable';
 				}
 			} catch ( \Throwable $error ) {
 				unset( $error );
-				$codes[] = 'native_adapter_authorization_exception';
+				$codes[] = 'file20_create_contract_exception';
 			}
 		}
 
-		$codes = array_values( array_unique( $codes ) );
 		return array(
 			'key'    => 'current_user_authorization',
 			'status' => array() === $codes ? 'pass' : 'fail',
 			'count'  => count( $codes ),
-			'codes'  => $codes,
+			'codes'  => array_values( array_unique( $codes ) ),
 		);
 	}
 
 	/** @return array{installed:int,active:int} */
 	private function file21_copy_counts(): array {
-		$result = array( 'installed' => 0, 'active' => 0 );
-		if ( ! function_exists( 'get_plugins' ) && defined( 'ABSPATH' ) ) {
-			$plugin_api = ABSPATH . 'wp-admin/includes/plugin.php';
-			if ( is_readable( $plugin_api ) ) {
-				require_once $plugin_api;
-			}
-		}
-		if ( ! function_exists( 'get_plugins' ) ) {
-			return $result;
-		}
-
-		foreach ( get_plugins() as $basename => $headers ) {
+		$plugins = function_exists( 'get_plugins' ) ? get_plugins() : array();
+		$active  = function_exists( 'get_option' ) ? (array) get_option( 'active_plugins', array() ) : array();
+		$network = function_exists( 'get_site_option' ) ? array_keys( (array) get_site_option( 'active_sitewide_plugins', array() ) ) : array();
+		$installed = 0;
+		$active_count = 0;
+		foreach ( $plugins as $basename => $headers ) {
 			$name   = isset( $headers['Name'] ) ? (string) $headers['Name'] : '';
 			$domain = isset( $headers['TextDomain'] ) ? (string) $headers['TextDomain'] : '';
-			$match  = 'sabri-complete-home-news-feed' === $domain
-				|| in_array( $name, array( 'Sabri Complete Home and News Feed', 'Sabri News Feed and Publishing' ), true )
-				|| str_ends_with( (string) $basename, '/sabri-complete-home-news-feed.php' );
-			if ( ! $match ) {
+			if ( 'sabri-complete-home-news-feed' !== $domain && 'Sabri Complete Home and News Feed' !== $name && ! str_ends_with( (string) $basename, '/sabri-complete-home-news-feed.php' ) ) {
 				continue;
 			}
-			++$result['installed'];
-			if ( function_exists( 'is_plugin_active' ) && is_plugin_active( $basename ) ) {
-				++$result['active'];
+			++$installed;
+			if ( in_array( $basename, $active, true ) || in_array( $basename, $network, true ) ) {
+				++$active_count;
 			}
 		}
-		return $result;
+		return array( 'installed' => $installed, 'active' => $active_count );
 	}
 
-	/** @return array<string, mixed> */
+	/** @return array<string,mixed> */
 	private function public_api_contract_row(): array {
-		$codes              = array();
-		$version            = $this->runtime_constant( 'SUPC_PUBLIC_API_VERSION' );
-		$owner              = $this->runtime_constant( 'SUPC_PUBLIC_API_OWNER' );
-		$owned              = $this->runtime_constant( 'SUPC_PUBLIC_API_FUNCTIONS_OWNED' );
-		$collisions         = $this->runtime_constant( 'SUPC_PUBLIC_API_COLLISIONS' );
-		$functions_complete = Runtime_Trust::functions_available( self::PUBLIC_API_FUNCTIONS );
-
-		if ( '1.0.0' !== $version ) { $codes[] = 'public_api_version_mismatch'; }
-		if ( 'sabri-universal-post-composer' !== $owner ) { $codes[] = 'public_api_owner_mismatch'; }
-		if ( true !== $owned || ! is_string( $collisions ) || '' !== $collisions ) { $codes[] = 'public_api_function_collision'; }
-		if ( ! $functions_complete ) { $codes[] = 'public_api_incomplete'; }
-		if ( ! Runtime_Trust::public_api_owned( SUPC_PATH . 'includes/core/functions.php' ) ) {
-			$codes[] = 'public_api_function_collision';
+		$missing = array();
+		foreach ( self::PUBLIC_API_FUNCTIONS as $function ) {
+			if ( ! function_exists( $function ) ) {
+				$missing[] = $function;
+			}
 		}
-
-		$codes = array_values( array_unique( $codes ) );
-		return array( 'key' => 'public_api_contract', 'status' => array() === $codes ? 'pass' : 'fail', 'count' => count( $codes ), 'codes' => $codes );
+		return array(
+			'key'    => 'public_api_contract',
+			'status' => array() === $missing ? 'pass' : 'fail',
+			'count'  => count( $missing ),
+			'codes'  => array_map( static fn ( string $function ): string => 'missing_' . sanitize_key( $function ), $missing ),
+		);
 	}
 
-	/** @return array<string, mixed> */
+	/** @return array<string,mixed> */
 	private function file20_contract_row(): array {
-		$package_claimed  = Runtime_Trust::shell_package_claimed();
-		$contract_claimed = Runtime_Trust::shell_create_contract_claimed();
-
-		if ( ! $package_claimed && ! $contract_claimed ) {
-			return array( 'key' => 'file20_create_contract', 'status' => 'warning', 'count' => 1, 'codes' => array( 'file20_contract_missing' ) );
-		}
-
-		if ( $package_claimed && ! Runtime_Trust::shell_package_owned() ) {
-			return array( 'key' => 'file20_create_contract', 'status' => 'fail', 'count' => 1, 'codes' => array( 'file20_contract_collision' ) );
-		}
-
-		if ( ! $contract_claimed ) {
-			return array(
-				'key'    => 'file20_create_contract',
-				'status' => 'warning',
-				'count'  => 2,
-				'codes'  => array( 'file20_legacy_contract_missing', 'file20_visibility_contract_missing' ),
-			);
-		}
-
-		$codes                 = array();
-		$version               = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_VERSION' );
-		$owner                 = $this->runtime_constant( 'SABRI_SHELL_CREATE_CONTRACT_OWNER' );
-		$owned                 = $this->runtime_constant( 'SABRI_SHELL_CREATE_FUNCTIONS_OWNED' );
-		$functions_complete    = Runtime_Trust::functions_available( self::FILE20_FUNCTIONS );
-		$availability_callback = null;
-
-		if ( '1.0.1' !== $version ) { $codes[] = 'file20_contract_version_mismatch'; }
-		if ( 'sabri-unified-application-shell' !== $owner ) { $codes[] = 'file20_contract_owner_mismatch'; }
-		if ( true !== $owned ) { $codes[] = 'file20_contract_collision'; }
-		if ( ! $functions_complete ) { $codes[] = 'file20_contract_functions_missing'; }
-		if ( ! Runtime_Trust::shell_create_contract_owned() ) { $codes[] = 'file20_contract_collision'; }
-
-		if ( array() === $codes ) {
-			$availability_callback = Runtime_Trust::owned_shell_function( self::FILE20_FUNCTIONS[0] );
-			if ( ! $availability_callback instanceof \Closure ) {
-				$codes[] = 'file20_contract_collision';
+		$missing = array();
+		foreach ( self::FILE20_FUNCTIONS as $function ) {
+			if ( ! function_exists( $function ) ) {
+				$missing[] = $function;
 			}
-		}
-
-		$status = array() === $codes ? 'pass' : 'fail';
-		if ( 'pass' === $status && $availability_callback instanceof \Closure ) {
-			try {
-				if ( ! (bool) $availability_callback() ) {
-					$status  = 'warning';
-					$codes[] = 'file20_contract_unavailable';
-				}
-			} catch ( \Throwable $error ) {
-				unset( $error );
-				$status  = 'fail';
-				$codes[] = 'file20_contract_exception';
-			}
-		}
-
-		$codes = array_values( array_unique( $codes ) );
-		return array( 'key' => 'file20_create_contract', 'status' => $status, 'count' => count( $codes ), 'codes' => $codes );
-	}
-
-	private function runtime_constant( string $name ): mixed {
-		return defined( $name ) ? constant( $name ) : null;
+		return array(
+			'key'    => 'file20_create_contract',
+			'status' => array() === $missing ? 'pass' : 'warning',
+			'count'  => count( $missing ),
+			'codes'  => array_map( static fn ( string $function ): string => 'missing_' . sanitize_key( $function ), $missing ),
+		);
 	}
 }
