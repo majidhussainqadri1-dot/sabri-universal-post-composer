@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.4.0 — New governing-plan coding completion candidate
+
+### Governing-plan reconciliation
+
+- Reconciled File 22 repository source with the newly rewritten File 22 plan and consolidated central governing plan while preserving File 22 as a creation/orchestration facade rather than a duplicate domain backend.
+- Added `Governed_Workflow_Adapter` for explicit rights/license, accessibility-authoring, translation, correction/revision, scheduling, Patient Case/medical safety, source/evidence, preview, search-projection, and notification-event declarations.
+- Added `Lifecycle_Adapter` for native-owner edit, revise, correct, schedule/unschedule, withdraw, archive, and restore commands.
+- Added the governed runtime and current-subject-only PHP helpers for governance inspection and lifecycle execution.
+- Added private governance/lifecycle REST endpoints with authentication, WordPress REST nonce, request-size limits, per-user rate limiting, bounded command payloads, strict top-level fields, no-cache/noindex responses, and fail-closed errors.
+- Revalidated current File 00 eligibility and capability before protected lifecycle operations.
+- Separated existing-object edit/correction authority from new-create authority and bound lifecycle results to the originally requested native reference.
+- Added System Check evidence for the governed social-publication contract and optional adapter coverage.
+- Added a plan-derived adapter catalog keyed by canonical File 22 adapter keys and owner file numbers; no substitute backend or guessed provider slug is created.
+- Added regression coverage for Patient Case governance, current-subject binding, authorization revocation, create/edit separation, REST/payload boundaries, governance-profile consistency, and no duplicate File 22 permanent content storage.
+
+### Fresh review/correction rounds
+
+- Corrected an initial confused-deputy risk by removing caller-supplied user IDs from public governed helpers and rejecting internal subject mismatch.
+- Preserved the existing REST compatibility marker `1.1.0` after a premature marker bump was detected by exact reconciliation QA; new governance/lifecycle APIs are independently versioned at `1.0.0`.
+- Corrected lifecycle authorization so existing-object edit/correction does not require the separate new-create capability.
+- Added the omitted Patient Case safety requirement to the core social governance gate.
+- Added fail-closed notification/search governance consistency checks.
+- Removed unverified guessed native-module identifiers from the optional adapter catalog.
+- Added REST abuse controls and expanded adversarial regression coverage.
+- Performed a second corrected-source adversarial review and exact-head retest.
+
+### Release-integrity closure
+
+- Assigned a unique software identity `0.4.0` because the governing-plan source materially differs from historical `0.3.0` artifacts; reusing `0.3.0` for different source trees would break package/checksum traceability.
+- Kept database schema at `0.3.0` because this batch adds contracts/runtime orchestration but no new schema migration.
+- Reconciled README, WordPress readme, manifest, test evidence, and deterministic package workflow with the 0.4.0 source identity.
+- The plan-reserved `1.0.0` production identity remains intentionally unused until full staging Definition of Done, rollback/restore evidence, and release approval are satisfied.
+
 ## 0.3.0 — Reconciliation candidate
 
 ### Fourth fresh adversarial review corrections
@@ -31,7 +64,7 @@
 
 ## 0.1.0-dev — Historical corrective inventory
 
-The following headings are retained verbatim because the corresponding exact-head evidence workflows and documents remain part of the repository's cumulative release record.
+The following headings are retained because the corresponding exact-head evidence workflows and documents remain part of the repository's cumulative release record.
 
 ### Twelfth complete-review corrections
 
