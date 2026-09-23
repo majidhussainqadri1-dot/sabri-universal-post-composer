@@ -120,7 +120,8 @@ final class PlanCompletionCoreTest extends TestCase {
 	public function test_successful_case_reference_is_required_only_at_strict_homeopathy_gates(): void {
 		$engine  = new \Sabri\UniversalComposer\Core\Policy_Engine();
 		$payload = array(
-			'content_type'                => 'disease',
+			'content_type'                => 'standard_publication',
+			'mode'                        => 'disease_post',
 			'references'                  => array( 'source:book:1' ),
 			'medical_safety_acknowledged' => true,
 		);
@@ -149,6 +150,8 @@ final class PlanCompletionCoreTest extends TestCase {
 		$this->assertSame( 'official_news', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'platform-news' ) );
 		$this->assertSame( 'official_news', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'editorial-news' ) );
 		$this->assertSame( 'principles_hygiene', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'principles-of-hygiene' ) );
+		$this->assertSame( 'disease', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'disease_post' ) );
+		$this->assertSame( 'remedy', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'remedy_post' ) );
 		$this->assertSame( array(), \Sabri\UniversalComposer\Core\Taxonomy_Map::integrity_codes() );
 
 		$runtime = (string) file_get_contents( dirname( __DIR__ ) . '/includes/core/class-plan-completion-runtime.php' );
