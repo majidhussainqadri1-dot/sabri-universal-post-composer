@@ -162,6 +162,7 @@ final class Policy_Engine {
 			$payload['mode'] ?? null,
 			$adapter_key,
 		);
+		$fallback = 'standard_publication';
 		foreach ( $candidates as $candidate ) {
 			if ( ! is_string( $candidate ) ) {
 				continue;
@@ -173,11 +174,17 @@ final class Policy_Engine {
 				'product', 'listing', 'marketplace_listing'       => 'marketplace',
 				default => $value,
 			};
-			if ( '' !== $value ) {
-				return Taxonomy_Map::canonical( $value );
+			if ( '' === $value ) {
+				continue;
 			}
+			$value = Taxonomy_Map::canonical( $value );
+			if ( in_array( $value, array( 'standard_publication', 'social_publication' ), true ) ) {
+				$fallback = 'standard_publication';
+				continue;
+			}
+			return $value;
 		}
-		return 'standard_publication';
+		return $fallback;
 	}
 
 	private function stronger_hold( string $current, string $candidate ): string {
