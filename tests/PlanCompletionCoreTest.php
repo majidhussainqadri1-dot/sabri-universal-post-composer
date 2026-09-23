@@ -76,6 +76,9 @@ final class PlanCompletionCoreTest extends TestCase {
 		foreach ( array(
 			'patient_anonymization_required',
 			'patient_consent_reference_required',
+			'patient_pii_phone_detected',
+			'patient_pii_national_id_detected',
+			'successful_case_reference_required',
 			'medical_references_required',
 			'medical_safety_acknowledgement_required',
 			'emergency_treatment_content_prohibited',
@@ -86,6 +89,73 @@ final class PlanCompletionCoreTest extends TestCase {
 			$this->assertStringContainsString( $code, $source );
 		}
 		$this->assertStringContainsString( "'supc_policy_violation'", $source );
+	}
+
+	public function test_patient_case_pii_patterns_fail_closed_without_copying_detected_values(): void {
+		$engine = new \Sabri\UniversalComposer\Core\Policy_Engine();
+		$result = $engine->evaluate(
+			1,
+			'social_publication',
+			array(
+				'content_type'                => 'patient_case',
+				'anonymized'                  => true,
+				'consent_reference'           => 'consent:patient:1',
+				'references'                  => array( 'source:book:1' ),
+				'medical_safety_acknowledged' => true,
+				'content'                     => 'Contact: +92 300 1234567; email patient@example.test; CNIC 35202-1234567-1.',
+			),
+			'validate'
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'supc_policy_violation', $result->code );
+		$this->assertSame( 'privacy_hold', $result->data['hold_state'] );
+		$this->assertContains( 'patient_pii_phone_detected', $result->data['codes'] );
+		$this->assertContains( 'patient_pii_email_detected', $result->data['codes'] );
+		$this->assertContains( 'patient_pii_national_id_detected', $result->data['codes'] );
+		$this->assertStringNotContainsString( '+92 300 1234567', wp_json_encode( $result->data ) );
+		$this->assertStringNotContainsString( 'patient@example.test', wp_json_encode( $result->data ) );
+	}
+
+	public function test_successful_case_reference_is_required_only_at_strict_homeopathy_gates(): void {
+		$engine  = new \Sabri\UniversalComposer\Core\Policy_Engine();
+		$payload = array(
+			'content_type'                => 'standard_publication',
+			'mode'                        => 'disease_post',
+			'references'                  => array( 'source:book:1' ),
+			'medical_safety_acknowledged' => true,
+		);
+
+		$draft = $engine->evaluate( 1, 'social_publication', $payload, 'draft' );
+		$this->assertIsArray( $draft );
+		$this->assertSame( 'clear', $draft['hold_state'] );
+
+		$strict = $engine->evaluate( 1, 'social_publication', $payload, 'validate' );
+		$this->assertInstanceOf( WP_Error::class, $strict );
+		$this->assertSame( 'medical_hold', $strict->data['hold_state'] );
+		$this->assertContains( 'successful_case_reference_required', $strict->data['codes'] );
+
+		$payload['successful_case_reference'] = 'case:verified:1';
+		$complete = $engine->evaluate( 1, 'social_publication', $payload, 'validate' );
+		$this->assertIsArray( $complete );
+		$this->assertSame( 'clear', $complete['hold_state'] );
+	}
+
+	public function test_taxonomy_map_covers_required_cross_file_aliases_and_integrity(): void {
+		unset( $GLOBALS['supc_test_filter_values']['supc_taxonomy_alias_map'] );
+
+		$this->assertSame( '1.1.0', \Sabri\UniversalComposer\Core\Taxonomy_Map::VERSION );
+		$this->assertSame( 'patient_case', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'clinical-cases' ) );
+		$this->assertSame( 'patient_case', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'patient-cases' ) );
+		$this->assertSame( 'official_news', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'platform-news' ) );
+		$this->assertSame( 'official_news', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'editorial-news' ) );
+		$this->assertSame( 'principles_hygiene', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'principles-of-hygiene' ) );
+		$this->assertSame( 'disease', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'disease_post' ) );
+		$this->assertSame( 'remedy', \Sabri\UniversalComposer\Core\Taxonomy_Map::canonical( 'remedy_post' ) );
+		$this->assertSame( array(), \Sabri\UniversalComposer\Core\Taxonomy_Map::integrity_codes() );
+
+		$runtime = (string) file_get_contents( dirname( __DIR__ ) . '/includes/core/class-plan-completion-runtime.php' );
+		$this->assertStringContainsString( 'Taxonomy_Map::integrity_codes()', $runtime );
 	}
 
 	public function test_native_ownership_is_preserved_and_optional_adapter_packs_fail_soft(): void {
