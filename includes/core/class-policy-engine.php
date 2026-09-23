@@ -20,10 +20,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Policy_Engine {
 	private const PHASES = array( 'draft', 'validate', 'preview', 'submit', 'revision' );
-	private const MEDICAL_TYPES  = array( 'clinical_case', 'patient_case', 'successful_case', 'disease', 'treatment', 'remedy', 'materia_medica', 'research' );
+	private const MEDICAL_TYPES  = array( 'clinical_case', 'patient_case', 'successful_case', 'disease', 'treatment', 'remedy', 'materia_medica', 'research', 'clinical_education', 'clinical_experience' );
+	private const SUCCESSFUL_CASE_REQUIRED_TYPES = array( 'disease', 'treatment', 'remedy', 'materia_medica', 'clinical_education', 'clinical_experience' );
 	private const CONTACT_FIELDS = array( 'phone', 'phone_number', 'whatsapp', 'whatsapp_number', 'seller_phone', 'seller_whatsapp' );
 	private const REFERENCE_KEYS = array( 'references', 'citations', 'sources', 'evidence_references' );
+	private const SUCCESSFUL_CASE_REFERENCE_KEYS = array( 'successful_case_reference', 'successful_case_ref', 'documented_case_reference' );
+	private const SUCCESSFUL_CASE_REFERENCE_LIST_KEYS = array( 'successful_case_references', 'successful_case_refs', 'documented_case_references' );
 	private const RICH_TEXT_KEYS = array( 'content', 'body', 'main_content', 'post_content', 'article_body' );
+	private const PATIENT_NARRATIVE_KEYS = array( 'title', 'excerpt', 'summary', 'description', 'content', 'body', 'main_content', 'post_content', 'article_body', 'case_summary', 'clinical_notes' );
+	private const PATIENT_PII_FIELDS = array(
+		'patient_name'          => 'patient_pii_name_detected',
+		'patient_full_name'     => 'patient_pii_name_detected',
+		'patient_email'         => 'patient_pii_email_detected',
+		'patient_phone'         => 'patient_pii_phone_detected',
+		'patient_whatsapp'      => 'patient_pii_phone_detected',
+		'patient_address'       => 'patient_pii_address_detected',
+		'exact_address'         => 'patient_pii_address_detected',
+		'national_id'           => 'patient_pii_national_id_detected',
+		'cnic'                  => 'patient_pii_national_id_detected',
+		'nic'                   => 'patient_pii_national_id_detected',
+		'passport_number'       => 'patient_pii_identity_number_detected',
+		'medical_record_number' => 'patient_pii_record_number_detected',
+		'patient_file_number'   => 'patient_pii_record_number_detected',
+		'registration_number'   => 'patient_pii_record_number_detected',
+		'patient_school'        => 'patient_pii_context_identifier_detected',
+		'patient_workplace'     => 'patient_pii_context_identifier_detected',
+		'patient_latitude'      => 'patient_pii_location_detected',
+		'patient_longitude'     => 'patient_pii_location_detected',
+		'gps_coordinates'       => 'patient_pii_location_detected',
+	);
 
 	/**
 	 * @param array<string,mixed> $payload Validated native-owner payload.
@@ -66,9 +91,17 @@ final class Policy_Engine {
 				$codes[] = 'patient_consent_reference_required';
 				$hold    = $this->stronger_hold( $hold, 'privacy_hold' );
 			}
+			foreach ( $this->patient_pii_codes( $payload ) as $pii_code ) {
+				$codes[] = $pii_code;
+				$hold    = $this->stronger_hold( $hold, 'privacy_hold' );
+			}
 		}
 
 		$strict_phase = in_array( $phase, array( 'validate', 'preview', 'submit', 'revision' ), true );
+		if ( $strict_phase && in_array( $type, self::SUCCESSFUL_CASE_REQUIRED_TYPES, true ) && ! $this->has_successful_case_reference( $payload ) ) {
+			$codes[] = 'successful_case_reference_required';
+			$hold    = $this->stronger_hold( $hold, 'medical_hold' );
+		}
 		if ( $strict_phase && in_array( $type, self::MEDICAL_TYPES, true ) ) {
 			if ( ! $this->has_any_references( $payload ) ) {
 				$codes[] = 'medical_references_required';
@@ -196,6 +229,65 @@ final class Policy_Engine {
 		foreach ( self::CONTACT_FIELDS as $key ) {
 			if ( isset( $payload[ $key ] ) && is_scalar( $payload[ $key ] ) && '' !== trim( (string) $payload[ $key ] ) ) {
 				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Return privacy-safe reason codes only; never copy detected patient data into
+	 * File 22 storage, logs, errors or projection payloads.
+	 *
+	 * @param array<string,mixed> $payload
+	 * @return array<int,string>
+	 */
+	private function patient_pii_codes( array $payload ): array {
+		$codes = array();
+		foreach ( self::PATIENT_PII_FIELDS as $key => $code ) {
+			$value = $payload[ $key ] ?? null;
+			if ( is_scalar( $value ) && '' !== trim( (string) $value ) ) {
+				$codes[] = $code;
+			}
+		}
+
+		foreach ( self::PATIENT_NARRATIVE_KEYS as $key ) {
+			$value = $payload[ $key ] ?? null;
+			if ( ! is_string( $value ) || '' === trim( $value ) ) {
+				continue;
+			}
+			if ( 1 === preg_match( '/(?<![A-Z0-9._%+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}(?![A-Z0-9._%+-])/i', $value ) ) {
+				$codes[] = 'patient_pii_email_detected';
+			}
+			if ( 1 === preg_match( '/(?<!\\d)\\d{5}[- ]?\\d{7}[- ]?\\d(?!\\d)/', $value ) ) {
+				$codes[] = 'patient_pii_national_id_detected';
+			}
+			if (
+				1 === preg_match( '/(?<!\\d)(?:\\+92|0092|0)3\\d{2}[ .-]?\\d{7}(?!\\d)/', $value ) ||
+				1 === preg_match( '/(?:phone|mobile|whatsapp|contact)\\s*(?:number|no\\.?)?\\s*[:#-]?\\s*\\+?[0-9][0-9\\s().-]{7,}[0-9]/i', $value )
+			) {
+				$codes[] = 'patient_pii_phone_detected';
+			}
+			if ( 1 === preg_match( '/(?:passport|national\\s*id|cnic|medical\\s*record|mrn|registration|file\\s*(?:number|no\\.?))\\s*[:#-]\\s*[A-Z0-9][A-Z0-9._\\/-]{3,}/i', $value ) ) {
+				$codes[] = 'patient_pii_identity_number_detected';
+			}
+		}
+		return array_values( array_unique( $codes ) );
+	}
+
+	/** @param array<string,mixed> $payload */
+	private function has_successful_case_reference( array $payload ): bool {
+		if ( $this->has_reference( $payload, self::SUCCESSFUL_CASE_REFERENCE_KEYS ) ) {
+			return true;
+		}
+		foreach ( self::SUCCESSFUL_CASE_REFERENCE_LIST_KEYS as $key ) {
+			$value = $payload[ $key ] ?? null;
+			if ( ! is_array( $value ) || array_values( $value ) !== $value ) {
+				continue;
+			}
+			foreach ( array_slice( $value, 0, 100 ) as $reference ) {
+				if ( is_string( $reference ) && 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/D', $reference ) ) {
+					return true;
+				}
 			}
 		}
 		return false;
