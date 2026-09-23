@@ -82,11 +82,12 @@ final class Plan_Completion_Runtime {
 	public function append_system_check( array $rows ): array {
 		$rows[] = $this->row( 'audit_store', Audit_Store::table_exists(), 'audit_store_missing' );
 		$rows[] = $this->row( 'upload_token_store', Upload_Token_Store::table_exists(), 'upload_token_store_missing' );
+		$taxonomy_codes = Version::valid( Taxonomy_Map::VERSION ) ? Taxonomy_Map::integrity_codes() : array( 'taxonomy_map_invalid' );
 		$rows[] = array(
 			'key'    => 'taxonomy_map',
-			'status' => Version::valid( Taxonomy_Map::VERSION ) ? 'pass' : 'fail',
-			'count'  => Version::valid( Taxonomy_Map::VERSION ) ? 0 : 1,
-			'codes'  => Version::valid( Taxonomy_Map::VERSION ) ? array() : array( 'taxonomy_map_invalid' ),
+			'status' => array() === $taxonomy_codes ? 'pass' : 'fail',
+			'count'  => count( $taxonomy_codes ),
+			'codes'  => $taxonomy_codes,
 		);
 		$cron   = function_exists( 'wp_next_scheduled' ) && false !== wp_next_scheduled( 'supc_cleanup_plan_metadata' );
 		$rows[] = $this->row( 'plan_metadata_cleanup', $cron, 'plan_metadata_cleanup_missing' );
