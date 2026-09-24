@@ -143,7 +143,7 @@ final class Workflow_Surface {
 			$html .= ' <a href="' . esc_url( $native_url ) . '">' . esc_html__( 'Open the native creation form instead.', 'sabri-universal-post-composer' ) . '</a>';
 		}
 		$html .= '</p></noscript></form>';
-		$html .= '<aside class="supc-create__boundary"><strong>' . esc_html__( 'Privacy boundary:', 'sabri-universal-post-composer' ) . '</strong> ' . esc_html__( 'File 22 stores only bounded orchestration metadata and opaque native references. Draft content, media bytes, consent evidence, moderation truth and permanent publication records remain with their native owners; plaintext draft content is never written to browser local storage.', 'sabri-universal-post-composer' ) . '</aside>';
+		$html .= '<aside class="supc-create__boundary"><strong>' . esc_html__( 'Privacy boundary:', 'sabri-universal-post-composer' ) . '</strong> ' . esc_html__( 'File 22 stores only bounded orchestration metadata and opaque native references. Draft content, media bytes, consent evidence, moderation truth and permanent publication records remain with their native owners. For crash recovery, supported browsers may keep a short-lived AES-GCM encrypted draft payload in IndexedDB with a non-exportable browser key; media bytes are never stored there. On a shared device, sign out using the site logout control when you finish.', 'sabri-universal-post-composer' ) . '</aside>';
 		$html .= '</section>';
 		return $html;
 	}

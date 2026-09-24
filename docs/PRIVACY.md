@@ -15,7 +15,7 @@ File 22 may retain only opaque native references, adapter keys, status, timestam
 
 ## Sensitive drafts
 
-Patient Case and other sensitive drafts are server-side by default. Plaintext `localStorage` is prohibited. Any future offline support requires encrypted, short-lived, device-bound storage, logout purge, inactivity expiry, conflict detection, and a shared-device warning.
+Patient Case and other sensitive drafts remain native-owner/server authoritative. Plaintext `localStorage` is prohibited. File 22 now provides bounded crash recovery through IndexedDB when Web Crypto is available: draft form payloads are AES-GCM encrypted with a non-exportable browser-profile key, scoped to a pseudonymous account token and adapter, expire after two hours, and never include media bytes. A recovery record is removed after a confirmed native save/submission, when it is stale, when another account scope is detected, and when the standard site logout control is used from the Composer. A session mismatch or newer server draft blocks automatic overwrite. Browsers without IndexedDB/Web Crypto continue with server autosave only and File 22 does not claim durable offline recovery. Shared-device users are warned to sign out.
 
 ## Public/private separation
 
@@ -33,4 +33,4 @@ Retention is content-class specific. Sensitive abandoned drafts require shorter 
 
 ## WordPress privacy integration
 
-Before Core 1.0, File 22-owned records must implement personal-data export and erasure callbacks, with documented exceptions for legitimate security and audit retention.
+File 22 registers WordPress personal-data export and erasure callbacks for its orchestration sessions, submission/reconciliation metadata, upload-token metadata, and privacy-safe audit records. Erasure deletes disposable File 22 metadata and de-identifies audit rows. Records that are still queued, reconciling, or retained for dead-letter investigation may be held temporarily so an uncertain native write is not duplicated or abandoned; the eraser reports that exception explicitly. Native content, media, consent evidence, moderation records, and permanent publication records remain the responsibility of their canonical owners.

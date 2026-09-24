@@ -212,6 +212,7 @@ jobs:
             includes/contracts/interface-diagnostic-adapter.php
             includes/core/class-version.php includes/core/class-contract-boundary.php
             includes/core/class-runtime-trust.php
+            includes/core/class-privacy-integration.php
             includes/core/class-permission-resolver.php includes/core/class-page-resolver.php
             includes/core/class-safe-mode.php includes/core/class-plugin.php
             includes/core/class-registry.php includes/core/class-workflow-validator.php
@@ -221,7 +222,7 @@ jobs:
             includes/admin/class-system-check-page.php
             tests/CreateSurfaceTest.php tests/RegistryTest.php tests/AccessibilityContrastTest.php
             tests/AdminSystemCheckTest.php tests/PageResolverRepairTest.php tests/WorkflowCoordinatorTest.php
-            tests/PluginPrivacyTest.php tests/PublicApiSubjectBindingTest.php tests/SubjectSchemaTest.php
+            tests/PluginPrivacyTest.php tests/PrivacyAndDiagnosticsCompletionTest.php tests/OfflineRecoveryContractTest.php tests/LifecyclePlanParityTest.php tests/PublicApiSubjectBindingTest.php tests/SubjectSchemaTest.php
             tests/CoreAdapterRequirementsTest.php tests/SafeModeTest.php tests/ShellBridgeTest.php
             tests/SecondPostMergeHardeningTest.php tests/ThirdPostMergeHardeningTest.php
             tests/FourthCompleteReviewTest.php tests/FifthCompleteReviewTest.php tests/SixthCompleteReviewTest.php

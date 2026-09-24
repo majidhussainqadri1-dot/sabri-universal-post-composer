@@ -76,7 +76,9 @@ final class System_Check_Page {
 		'unrecognized_diagnostic', 'session_store_missing', 'submission_outbox_store_missing',
 		'reconciliation_dead_letter_present', 'reconciliation_queue_pending', 'reconciliation_cron_missing',
 		'file21_package_identity_missing', 'file21_package_identity_invalid', 'file21_package_identity_too_low', 'audit_store_missing',
-		'upload_token_store_missing', 'taxonomy_map_invalid', 'plan_metadata_cleanup_missing',
+		'upload_token_store_missing', 'taxonomy_map_invalid', 'taxonomy_alias_invalid', 'plan_metadata_cleanup_missing',
+		'governed_workflow_contract_missing', 'governance_profile_invalid', 'lifecycle_contract_missing', 'lifecycle_api_mismatch',
+		'governance_api_mismatch', 'governance_profile_notification_mismatch', 'governance_profile_search_mismatch',
 		'workspace_page_ready', 'workspace_page_repairable', 'workspace_page_ambiguous', 'workspace_page_missing',
 		'plan_contract_invalid', 'composer_feature_disabled', 'optional_adapter_pack_absent',
 	);
@@ -310,12 +312,26 @@ final class System_Check_Page {
 		}
 		$normalized = array();
 		foreach ( array_slice( $codes, 0, 20 ) as $code ) {
-			$normalized[] = is_string( $code ) && Contract_Boundary::code( $code ) && in_array( $code, self::SAFE_CODES, true ) ? $code : 'unrecognized_diagnostic';
+			$normalized[] = is_string( $code ) && $this->is_safe_diagnostic_code( $code ) ? $code : 'unrecognized_diagnostic';
 		}
 		return array_values( array_unique( $normalized ) );
 	}
 
-	/** @return array{text:string,type:string} */
+
+	private function is_safe_diagnostic_code( string $code ): bool {
+		if ( ! Contract_Boundary::code( $code ) ) {
+			return false;
+		}
+		if ( in_array( $code, self::SAFE_CODES, true ) ) {
+			return true;
+		}
+		return 1 === preg_match(
+			'/^(?:taxonomy_(?:missing|alias_missing|alias_collision)|feature_missing|optional_adapter_unavailable)_[a-z0-9_]{1,64}$/D',
+			$code
+		);
+	}
+
+/** @return array{text:string,type:string} */
 	public function notice_for_code( string $code ): array {
 		$success = array( 'dry_run_ready', 'no_change', 'mapped_existing', 'created_managed_page' );
 		$warning = array( 'dry_run_repairable', 'dry_run_ambiguous', 'dry_run_missing', 'ambiguous_selection_required', 'repair_locked' );

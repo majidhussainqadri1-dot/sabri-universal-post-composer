@@ -15,6 +15,7 @@ parameters:
         - includes/core/class-workflow-validator.php
         - includes/core/class-policy-engine.php
         - includes/core/class-audit-store.php
+        - includes/core/class-privacy-integration.php
         - includes/core/class-upload-token-store.php
         - includes/core/class-taxonomy-map.php
         - includes/core/class-projection-bus.php
