@@ -65,7 +65,10 @@ final class PlanCompleteExperienceTest extends TestCase {
 		$this->assertStringContainsString( 'navigator.onLine', $browser );
 		$this->assertStringContainsString( "setConnection('offline'", $browser );
 		$this->assertStringContainsString( "setConnection('conflict'", $browser );
-		$this->assertDoesNotMatchRegularExpression( '/localStorage|sessionStorage|indexedDB/i', $browser );
+		$this->assertDoesNotMatchRegularExpression( '/localStorage|sessionStorage/i', $browser );
+		$this->assertStringContainsString( "indexedDB.open('supc-offline-recovery-v1'", $browser );
+		$this->assertStringContainsString( "name: 'AES-GCM'", $browser );
+		$this->assertStringContainsString( 'expiresAt', $browser );
 	}
 
 	public function test_server_side_policy_rejects_unsafe_html_and_protocols(): void {
