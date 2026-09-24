@@ -75,6 +75,7 @@ final class Governing_Plan_Runtime {
 		'schedule',
 		'unschedule',
 		'withdraw',
+		'retract',
 		'archive',
 		'restore',
 	);
@@ -86,6 +87,7 @@ final class Governing_Plan_Runtime {
 		'schedule'   => 'scheduling',
 		'unschedule' => 'scheduling',
 		'withdraw'   => 'corrections',
+		'retract'    => 'corrections',
 		'archive'    => 'revision_history',
 		'restore'    => 'revision_history',
 	);

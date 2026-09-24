@@ -222,7 +222,7 @@ jobs:
             includes/admin/class-system-check-page.php
             tests/CreateSurfaceTest.php tests/RegistryTest.php tests/AccessibilityContrastTest.php
             tests/AdminSystemCheckTest.php tests/PageResolverRepairTest.php tests/WorkflowCoordinatorTest.php
-            tests/PluginPrivacyTest.php tests/PrivacyAndDiagnosticsCompletionTest.php tests/OfflineRecoveryContractTest.php tests/PublicApiSubjectBindingTest.php tests/SubjectSchemaTest.php
+            tests/PluginPrivacyTest.php tests/PrivacyAndDiagnosticsCompletionTest.php tests/OfflineRecoveryContractTest.php tests/LifecyclePlanParityTest.php tests/PublicApiSubjectBindingTest.php tests/SubjectSchemaTest.php
             tests/CoreAdapterRequirementsTest.php tests/SafeModeTest.php tests/ShellBridgeTest.php
             tests/SecondPostMergeHardeningTest.php tests/ThirdPostMergeHardeningTest.php
             tests/FourthCompleteReviewTest.php tests/FifthCompleteReviewTest.php tests/SixthCompleteReviewTest.php
