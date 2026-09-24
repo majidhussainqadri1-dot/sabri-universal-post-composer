@@ -97,15 +97,17 @@ final class CoreComposerRuntimeTest extends TestCase {
 		$this->assertStringContainsString( 'name="title"', $html );
 		$this->assertStringContainsString( 'name="content"', $html );
 		$this->assertStringContainsString( 'role="status"', $html );
-		$this->assertStringContainsString( 'never written to browser local storage', $html );
+		$this->assertStringContainsString( 'may keep a short-lived AES-GCM encrypted draft payload in IndexedDB', $html );
 	}
 
-	public function test_browser_runtime_never_uses_persistent_web_storage(): void {
+	public function test_browser_runtime_uses_only_encrypted_bounded_recovery_storage(): void {
 		$source = file_get_contents( dirname( __DIR__ ) . '/assets/js/workflow-composer.js' );
 		$this->assertIsString( $source );
 		$this->assertStringNotContainsString( 'localStorage', $source );
 		$this->assertStringNotContainsString( 'sessionStorage', $source );
-		$this->assertStringNotContainsString( 'indexedDB', $source );
+		$this->assertStringContainsString( "indexedDB.open('supc-offline-recovery-v1'", $source );
+		$this->assertStringContainsString( "name: 'AES-GCM'", $source );
+		$this->assertStringContainsString( 'expiresAt', $source );
 	}
 
 	public function test_session_table_contains_metadata_not_draft_payload(): void {
