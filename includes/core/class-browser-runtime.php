@@ -155,6 +155,7 @@ final class Browser_Runtime {
 			array(
 				'restRoot' => untrailingslashit( esc_url_raw( rest_url( Rest_Controller::NAMESPACE ) ) ),
 				'nonce'    => wp_create_nonce( 'wp_rest' ),
+				'offlineRecovery' => $this->offline_recovery_config(),
 				'strings'  => array(
 					'errorHeading'             => __( 'Please correct the following problems.', 'sabri-universal-post-composer' ),
 					'genericError'             => __( 'The request could not be completed. Your native draft was not duplicated.', 'sabri-universal-post-composer' ),
@@ -182,6 +183,10 @@ final class Browser_Runtime {
 					'submitted'                => __( 'Submission completed.', 'sabri-universal-post-composer' ),
 					'submitFailed'             => __( 'Submission was not completed.', 'sabri-universal-post-composer' ),
 					'viewPublication'          => __( 'View publication', 'sabri-universal-post-composer' ),
+					'offlineStored'            => __( 'Encrypted recovery saved on this device. It has not been synced to the native owner yet.', 'sabri-universal-post-composer' ),
+					'offlineRecovered'         => __( 'Recovered newer encrypted changes from this browser. Review them, then reconnect to sync.', 'sabri-universal-post-composer' ),
+					'offlineConflict'          => __( 'A newer native draft exists or this recovery belongs to a different session. Automatic overwrite was blocked.', 'sabri-universal-post-composer' ),
+					'offlineRecoveryUnavailable' => __( 'Durable browser recovery is unavailable in this browser; keep this tab open until the draft is synced.', 'sabri-universal-post-composer' ),
 				),
 				'errors'   => array(
 					'supc_session_conflict'                  => __( 'This draft changed in another tab. Reload the current session before continuing.', 'sabri-universal-post-composer' ),
@@ -199,7 +204,21 @@ final class Browser_Runtime {
 		);
 	}
 
-	/** @param array<int,array<string,mixed>> $rows @return array<int,array<string,mixed>> */
+
+	/** @return array{enabled:bool,scope:string,ttlSeconds:int} */
+	private function offline_recovery_config(): array {
+		$user_id = get_current_user_id();
+		if ( $user_id <= 0 || ! function_exists( 'wp_salt' ) ) {
+			return array( 'enabled' => false, 'scope' => '', 'ttlSeconds' => 7200 );
+		}
+		return array(
+			'enabled'    => true,
+			'scope'      => hash_hmac( 'sha256', (string) $user_id, wp_salt( 'auth' ) . '|supc-offline-recovery-v1' ),
+			'ttlSeconds' => 7200,
+		);
+	}
+
+/** @param array<int,array<string,mixed>> $rows @return array<int,array<string,mixed>> */
 	public function append_system_check( array $rows ): array {
 		$ready  = Session_Store::table_exists();
 		$rows[] = array(

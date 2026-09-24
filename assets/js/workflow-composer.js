@@ -37,6 +37,7 @@
 	let currentStep = 'compose';
 	let mode = 'advanced';
 	let connectionState = 'online';
+	let offlineRecoveryTimer = null;
 
 	const strings = Object.assign({
 		offline: 'Offline — editing remains available, but File 22 will not claim a save or submit until the connection returns.',
@@ -49,7 +50,11 @@
 		uploadPreparing: 'Preparing native upload…',
 		uploadPending: 'The native owner issued an upload token but did not provide a direct transfer URL. Continue in the native owner.',
 		uploadComplete: 'Upload completed with the native owner.',
-		uploadFailed: 'Upload failed. Your draft text was not discarded.'
+		uploadFailed: 'Upload failed. Your draft text was not discarded.',
+		offlineStored: 'Encrypted recovery saved on this device. It has not been synced to the native owner yet.',
+		offlineRecovered: 'Recovered newer encrypted changes from this browser. Review them, then reconnect to sync.',
+		offlineConflict: 'A newer native draft exists or this recovery belongs to a different session. Automatic overwrite was blocked.',
+		offlineRecoveryUnavailable: 'Durable browser recovery is unavailable in this browser; keep this tab open until the draft is synced.'
 	}, config.strings || {});
 
 	const announce = (message) => {
@@ -302,6 +307,205 @@
 		return result;
 	};
 
+
+	const recoveryConfig = config.offlineRecovery && typeof config.offlineRecovery === 'object' ? config.offlineRecovery : {};
+	const recoveryScope = typeof recoveryConfig.scope === 'string' ? recoveryConfig.scope : '';
+	const recoveryTtlMs = Math.max(300000, Math.min(86400000, Number(recoveryConfig.ttlSeconds || 7200) * 1000));
+	const recoveryId = recoveryScope && root.dataset.adapter ? recoveryScope + ':' + root.dataset.adapter : '';
+	const recoverySupported = Boolean(
+		recoveryConfig.enabled &&
+		recoveryId &&
+		window.indexedDB &&
+		window.crypto &&
+		window.crypto.subtle &&
+		window.TextEncoder &&
+		window.TextDecoder
+	);
+
+	const openRecoveryDb = () => new Promise((resolve, reject) => {
+		if (!recoverySupported) {
+			reject(new Error('offline_recovery_unavailable'));
+			return;
+		}
+		const requestDb = window.indexedDB.open('supc-offline-recovery-v1', 1);
+		requestDb.addEventListener('upgradeneeded', () => {
+			const db = requestDb.result;
+			if (!db.objectStoreNames.contains('keys')) db.createObjectStore('keys', { keyPath: 'scope' });
+			if (!db.objectStoreNames.contains('drafts')) db.createObjectStore('drafts', { keyPath: 'id' });
+		});
+		requestDb.addEventListener('success', () => resolve(requestDb.result));
+		requestDb.addEventListener('error', () => reject(requestDb.error || new Error('offline_recovery_db_failed')));
+	});
+
+	const recoveryStore = async (storeName, mode, operation) => {
+		const db = await openRecoveryDb();
+		try {
+			return await new Promise((resolve, reject) => {
+				const transaction = db.transaction(storeName, mode);
+				const store = transaction.objectStore(storeName);
+				let requestResult;
+				try {
+					requestResult = operation(store);
+				} catch (error) {
+					reject(error);
+					return;
+				}
+				if (requestResult && typeof requestResult.addEventListener === 'function') {
+					requestResult.addEventListener('success', () => resolve(requestResult.result));
+					requestResult.addEventListener('error', () => reject(requestResult.error || new Error('offline_recovery_store_failed')));
+				} else {
+					transaction.addEventListener('complete', () => resolve(requestResult));
+				}
+				transaction.addEventListener('abort', () => reject(transaction.error || new Error('offline_recovery_transaction_aborted')));
+				transaction.addEventListener('error', () => reject(transaction.error || new Error('offline_recovery_transaction_failed')));
+			});
+		} finally {
+			db.close();
+		}
+	};
+
+	const recoveryKey = async () => {
+		const existing = await recoveryStore('keys', 'readonly', (store) => store.get(recoveryScope));
+		if (existing && existing.key) return existing.key;
+		const key = await window.crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+		await recoveryStore('keys', 'readwrite', (store) => store.put({ scope: recoveryScope, key: key, createdAt: Date.now() }));
+		return key;
+	};
+
+	const bytesToBase64 = (bytes) => {
+		let binary = '';
+		const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+		for (let offset = 0; offset < view.length; offset += 8192) {
+			binary += String.fromCharCode.apply(null, view.subarray(offset, Math.min(offset + 8192, view.length)));
+		}
+		return window.btoa(binary);
+	};
+
+	const base64ToBytes = (value) => {
+		const binary = window.atob(String(value || ''));
+		const bytes = new Uint8Array(binary.length);
+		for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+		return bytes;
+	};
+
+	const purgeRecovery = async (includeKey) => {
+		if (!recoverySupported) return;
+		try {
+			await recoveryStore('drafts', 'readwrite', (store) => store.delete(recoveryId));
+			if (includeKey) await recoveryStore('keys', 'readwrite', (store) => store.delete(recoveryScope));
+		} catch (error) {
+			// Privacy cleanup is best-effort in hostile/disabled browser storage.
+		}
+	};
+
+	const purgeForeignOrExpiredRecovery = async () => {
+		if (!recoverySupported) return;
+		try {
+			const db = await openRecoveryDb();
+			await new Promise((resolve, reject) => {
+				const transaction = db.transaction(['drafts', 'keys'], 'readwrite');
+				const drafts = transaction.objectStore('drafts');
+				const keys = transaction.objectStore('keys');
+				const cursorRequest = drafts.openCursor();
+				cursorRequest.addEventListener('success', () => {
+					const cursor = cursorRequest.result;
+					if (!cursor) return;
+					const value = cursor.value || {};
+					if (value.scope !== recoveryScope || Number(value.expiresAt || 0) <= Date.now()) cursor.delete();
+					cursor.continue();
+				});
+				const keyCursorRequest = keys.openCursor();
+				keyCursorRequest.addEventListener('success', () => {
+					const cursor = keyCursorRequest.result;
+					if (!cursor) return;
+					if (cursor.key !== recoveryScope) cursor.delete();
+					cursor.continue();
+				});
+				transaction.addEventListener('complete', resolve);
+				transaction.addEventListener('abort', () => reject(transaction.error || new Error('offline_recovery_cleanup_aborted')));
+				transaction.addEventListener('error', () => reject(transaction.error || new Error('offline_recovery_cleanup_failed')));
+			});
+			db.close();
+		} catch (error) {
+			// Do not make the canonical server workflow depend on IndexedDB cleanup.
+		}
+	};
+
+	const persistOfflineRecovery = async () => {
+		if (!recoverySupported || !dirty) return false;
+		try {
+			syncAllRichEditors();
+			const clear = {
+				scope: recoveryScope,
+				adapter: root.dataset.adapter,
+				sessionUuid: session && session.session_uuid ? session.session_uuid : '',
+				serverUpdatedAt: session && session.updated_at ? session.updated_at : '',
+				savedAt: Date.now(),
+				expiresAt: Date.now() + recoveryTtlMs,
+				payload: payload()
+			};
+			const key = await recoveryKey();
+			const iv = window.crypto.getRandomValues(new Uint8Array(12));
+			const encoded = new TextEncoder().encode(JSON.stringify(clear));
+			const cipher = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, encoded);
+			await recoveryStore('drafts', 'readwrite', (store) => store.put({
+				id: recoveryId,
+				scope: recoveryScope,
+				expiresAt: clear.expiresAt,
+				iv: bytesToBase64(iv),
+				cipher: bytesToBase64(new Uint8Array(cipher))
+			}));
+			if (!navigator.onLine) {
+				setAutosaveState('Encrypted offline recovery');
+				announce(strings.offlineStored);
+			}
+			return true;
+		} catch (error) {
+			if (!navigator.onLine) announce(strings.offlineRecoveryUnavailable);
+			return false;
+		}
+	};
+
+	const restoreOfflineRecovery = async () => {
+		if (!recoverySupported) return false;
+		try {
+			await purgeForeignOrExpiredRecovery();
+			const stored = await recoveryStore('drafts', 'readonly', (store) => store.get(recoveryId));
+			if (!stored || Number(stored.expiresAt || 0) <= Date.now()) {
+				await purgeRecovery(false);
+				return false;
+			}
+			const key = await recoveryKey();
+			const clearBuffer = await window.crypto.subtle.decrypt(
+				{ name: 'AES-GCM', iv: base64ToBytes(stored.iv) },
+				key,
+				base64ToBytes(stored.cipher)
+			);
+			const recovered = JSON.parse(new TextDecoder().decode(clearBuffer));
+			if (!recovered || recovered.scope !== recoveryScope || recovered.adapter !== root.dataset.adapter || Number(recovered.expiresAt || 0) <= Date.now()) {
+				await purgeRecovery(false);
+				return false;
+			}
+			if (session && recovered.sessionUuid && recovered.sessionUuid !== session.session_uuid) {
+				announce(strings.offlineConflict);
+				return false;
+			}
+			const serverTime = session && session.updated_at ? Date.parse(String(session.updated_at).replace(' ', 'T') + 'Z') : 0;
+			if (serverTime && serverTime >= Number(recovered.savedAt || 0)) {
+				await purgeRecovery(false);
+				return false;
+			}
+			if (!applyRecoveredPayload(recovered.payload)) return false;
+			dirty = true;
+			setAutosaveState('Recovered locally');
+			announce(strings.offlineRecovered);
+			return true;
+		} catch (error) {
+			await purgeRecovery(false);
+			return false;
+		}
+	};
+
 	const request = async (path, method, body) => {
 		if (!navigator.onLine) {
 			const offline = new Error(strings.offline);
@@ -411,6 +615,10 @@
 				}
 			}
 		} catch (error) {
+			if (error.code === 'supc_offline') {
+				announce(strings.offline);
+				return;
+			}
 			const details = error.data && error.data.details ? error.data.details : {};
 			if (details.session && details.session.adapter_key === root.dataset.adapter) {
 				session = details.session;
@@ -467,7 +675,8 @@
 		}
 		if (!navigator.onLine) {
 			setAutosaveState('Offline');
-			announce(strings.offline);
+			await persistOfflineRecovery();
+			announce(strings.offlineStored);
 			return false;
 		}
 		if (!silent) {
@@ -478,12 +687,14 @@
 		try {
 			await run('autosave');
 			dirty = false;
+			await purgeRecovery(false);
 			announce(config.strings.saved);
 			setAutosaveState('Saved');
 			updateDraftPreview();
 			evaluateConnection();
 			return true;
 		} catch (error) {
+			await persistOfflineRecovery();
 			announce(config.strings.notSaved);
 			setAutosaveState('Not saved');
 			if (error.code !== 'supc_session_conflict') {
@@ -628,6 +839,7 @@
 
 	const finishSubmission = (result, message) => {
 		dirty = false;
+		purgeRecovery(false);
 		announce(message || config.strings.submitted);
 		setAutosaveState('Completed');
 		window.clearTimeout(timer);
@@ -777,6 +989,8 @@
 		if (event.target && event.target.matches('[data-supc-rte-source]')) return;
 		dirty = true;
 		window.clearTimeout(timer);
+		window.clearTimeout(offlineRecoveryTimer);
+		offlineRecoveryTimer = window.setTimeout(() => { persistOfflineRecovery(); }, 350);
 		announce(config.strings.unsaved);
 		setAutosaveState('Unsaved');
 		updateDraftPreview();
@@ -857,6 +1071,10 @@
 		evaluateConnection();
 		if (dirty && !busy) save(true);
 	});
+	document.addEventListener('click', (event) => {
+		const link = event.target && event.target.closest ? event.target.closest('a[href*="action=logout"]') : null;
+		if (link) purgeRecovery(true);
+	});
 	window.addEventListener('offline', evaluateConnection);
 	const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 	if (connection && typeof connection.addEventListener === 'function') connection.addEventListener('change', evaluateConnection);
@@ -871,7 +1089,7 @@
 	initRichEditors();
 	evaluateConnection();
 	setStep('compose');
-	resumePromise = resumeSession().finally(() => {
+	resumePromise = resumeSession().then(() => restoreOfflineRecovery()).finally(() => {
 		resumePromise = null;
 		updateDraftPreview();
 	});
