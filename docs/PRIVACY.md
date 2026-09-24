@@ -33,4 +33,4 @@ Retention is content-class specific. Sensitive abandoned drafts require shorter 
 
 ## WordPress privacy integration
 
-Before Core 1.0, File 22-owned records must implement personal-data export and erasure callbacks, with documented exceptions for legitimate security and audit retention.
+File 22 registers WordPress personal-data export and erasure callbacks for its orchestration sessions, submission/reconciliation metadata, upload-token metadata, and privacy-safe audit records. Erasure deletes disposable File 22 metadata and de-identifies audit rows. Records that are still queued, reconciling, or retained for dead-letter investigation may be held temporarily so an uncertain native write is not duplicated or abandoned; the eraser reports that exception explicitly. Native content, media, consent evidence, moderation records, and permanent publication records remain the responsibility of their canonical owners.

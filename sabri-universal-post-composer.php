@@ -60,6 +60,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\\UniversalComposer\\Core\\Workflow_Coordinator',
 		'Sabri\\UniversalComposer\\Core\\Policy_Engine',
 		'Sabri\\UniversalComposer\\Core\\Audit_Store',
+		'Sabri\\UniversalComposer\\Core\\Privacy_Integration',
 		'Sabri\\UniversalComposer\\Core\\Upload_Token_Store',
 		'Sabri\\UniversalComposer\\Core\\Taxonomy_Map',
 		'Sabri\\UniversalComposer\\Core\\Projection_Bus',
@@ -155,6 +156,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/core/class-workflow-validator.php';
 	require_once SUPC_PATH . 'includes/core/class-policy-engine.php';
 	require_once SUPC_PATH . 'includes/core/class-audit-store.php';
+	require_once SUPC_PATH . 'includes/core/class-privacy-integration.php';
 	require_once SUPC_PATH . 'includes/core/class-upload-token-store.php';
 	require_once SUPC_PATH . 'includes/core/class-taxonomy-map.php';
 	require_once SUPC_PATH . 'includes/core/class-projection-bus.php';

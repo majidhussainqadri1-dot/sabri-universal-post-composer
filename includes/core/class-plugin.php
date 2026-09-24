@@ -79,6 +79,7 @@ final class Plugin {
 
 		$this->create_surface->register();
 		$this->system_check_page->register();
+		( new Privacy_Integration() )->register();
 		( new Shell_Bridge( $this->registry ) )->register();
 		( new Core_Adapter_Requirements( $this->registry ) )->register();
 		do_action( 'supc_booted', $this->registry );
