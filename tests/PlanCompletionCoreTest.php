@@ -184,7 +184,9 @@ final class PlanCompletionCoreTest extends TestCase {
 			$core .= (string) file_get_contents( $file );
 		}
 		$this->assertIsString( $browser );
-		$this->assertDoesNotMatchRegularExpression( '/localStorage|sessionStorage|indexedDB/', $browser );
+		$this->assertDoesNotMatchRegularExpression( '/localStorage|sessionStorage/', $browser );
+		$this->assertStringContainsString( "indexedDB.open('supc-offline-recovery-v1'", $browser );
+		$this->assertStringContainsString( "name: 'AES-GCM'", $browser );
 		$this->assertStringNotContainsString( 'register_post_type(', $core );
 		$this->assertStringNotContainsString( 'wp_supc_content', $core );
 	}
