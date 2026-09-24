@@ -29,6 +29,8 @@ final class FortyPassReviewTest extends TestCase {
 		$this->assertIsString( $browser );
 		$this->assertStringNotContainsString( 'register_post_type(', $core );
 		$this->assertStringNotContainsString( 'longblob', strtolower( $core ) );
-		$this->assertDoesNotMatchRegularExpression( '/localStorage|sessionStorage|indexedDB/', $browser );
+		$this->assertDoesNotMatchRegularExpression( '/localStorage|sessionStorage/', $browser );
+		$this->assertStringContainsString( "indexedDB.open('supc-offline-recovery-v1'", $browser );
+		$this->assertStringContainsString( "name: 'AES-GCM'", $browser );
 	}
 }
