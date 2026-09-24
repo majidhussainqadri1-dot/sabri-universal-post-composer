@@ -19,6 +19,6 @@ final class OfflineRecoveryContractTest extends TestCase {
 		$this->assertStringContainsString( "action=logout", $js );
 		$this->assertStringContainsString( "hash_hmac( 'sha256'", $runtime );
 		$this->assertStringContainsString( "'ttlSeconds' => 7200", $runtime );
-		$this->assertStringContainsString( 'media bytes are never stored there', $privacy );
+		$this->assertStringContainsString( 'never include media bytes', $privacy );
 	}
 }
