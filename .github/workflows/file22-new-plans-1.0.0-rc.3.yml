@@ -83,12 +83,16 @@ jobs:
             includes/core/governing-plan-functions.php \
             includes/http/class-plan-rest-controller.php \
             includes/admin/class-activation-wizard.php \
+            includes/integration/class-file19-notification-bridge.php \
+            includes/integration/class-file23-dashboard-bridge.php \
+            includes/integration/class-file24-assurance-bridge.php \
             assets/css/governing-plan-brand.css \
             docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md \
             docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md \
             tests/GoverningPlanCompletionTest.php \
             tests/GoverningPlanReleaseIdentityTest.php \
-            tests/NewCentralPlanIntegrationTest.php; do
+            tests/NewCentralPlanIntegrationTest.php \
+            tests/TwentyPassCrossFileCompletionTest.php; do
             test -f "$path"
           done
 
@@ -125,10 +129,26 @@ jobs:
           grep -F 'publication lifecycle to File 21' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md
           grep -F 'discovery/classification to File 26' docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md
 
-          ! grep -R -E 'register_post_type\(' includes sabri-universal-post-composer.php
-          ! grep -E 'localStorage|sessionStorage|indexedDB' assets/js/workflow-composer.js
-          ! grep -R -E 'PKR[[:space:]]*400|Free[[:space:]]*/[[:space:]]*Pro|Premium[[:space:]]+tier|paid[[:space:]]+AI' includes sabri-universal-post-composer.php
-          ! grep -E '^\s*(payload_json|body|content|patient|consent|media_bytes)\s+(longtext|text|json|blob)' includes/core/class-submission-store.php
+          if grep -R -E 'register_post_type\(' includes sabri-universal-post-composer.php; then
+            echo 'Forbidden duplicate content post type found.' >&2
+            exit 1
+          fi
+          if grep -E 'localStorage|sessionStorage' assets/js/workflow-composer.js; then
+            echo 'Forbidden plaintext browser storage found.' >&2
+            exit 1
+          fi
+          grep -F "indexedDB.open('supc-offline-recovery-v1'" assets/js/workflow-composer.js
+          grep -F "name: 'AES-GCM'" assets/js/workflow-composer.js
+          grep -F 'expiresAt' assets/js/workflow-composer.js
+          grep -F 'offlineConflict' assets/js/workflow-composer.js
+          if grep -R -E 'PKR[[:space:]]*400|Free[[:space:]]*/[[:space:]]*Pro|Premium[[:space:]]+tier|paid[[:space:]]+AI' includes sabri-universal-post-composer.php; then
+            echo 'Forbidden File 22 paid/donor gate found.' >&2
+            exit 1
+          fi
+          if grep -E '^\s*(payload_json|body|content|patient|consent|media_bytes)\s+(longtext|text|json|blob)' includes/core/class-submission-store.php; then
+            echo 'Forbidden native content payload storage found in submission store.' >&2
+            exit 1
+          fi
 
       - name: Build deterministic exact-head RC3 candidate
         shell: bash
