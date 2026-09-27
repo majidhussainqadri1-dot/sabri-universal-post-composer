@@ -44,6 +44,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `includes/core/class-reconciliation-service.php`
 - `includes/core/class-policy-engine.php`
 - `includes/core/class-audit-store.php`
+- `includes/core/class-privacy-integration.php`
 - `includes/core/class-upload-token-store.php`
 - `includes/core/class-taxonomy-map.php`
 - `includes/core/class-projection-bus.php`
@@ -58,8 +59,10 @@ This manifest describes the current repository/source candidate after reconcilia
 - `includes/http/class-plan-rest-controller.php`
 - `includes/integration/class-shell-bridge.php`
 - `includes/integration/class-core-adapter-requirements.php`
+- `includes/integration/class-file19-notification-bridge.php`
 - `includes/integration/class-file23-dashboard-bridge.php`
 - `includes/integration/class-file23-dashboard-adapter-runtime.php`
+- `includes/integration/class-file24-assurance-bridge.php`
 - `includes/presentation/class-create-surface.php`
 - `includes/presentation/class-workflow-surface.php`
 - `includes/presentation/class-my-content-workspace.php`
@@ -174,6 +177,10 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/NinthCompleteReviewTest.php`
 - `tests/PageResolverRepairTest.php`
 - `tests/PluginPrivacyTest.php`
+- `tests/TwentyPassCrossFileCompletionTest.php`
+- `tests/LifecyclePlanParityTest.php`
+- `tests/OfflineRecoveryContractTest.php`
+- `tests/PrivacyAndDiagnosticsCompletionTest.php`
 - `tests/PublicApiSubjectBindingTest.php`
 - `tests/RegistryTest.php`
 - `tests/SafeModeTest.php`
