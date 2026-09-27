@@ -67,7 +67,7 @@ final class File24_Assurance_Bridge {
 			'erasers'                => array( 'wordpress-personal-data-eraser' ),
 			'emergency_callbacks'    => array( 'file22-safe-mode', 'file22-write-feature-gate' ),
 			'last_security_test'     => $last_security_test,
-			'verification_level'     => 'not-applicable',
+			'verification_level'     => 'asvs-l2',
 			'contract_version'       => self::CONTRACT_VERSION,
 			'canonical_data_owner'   => 'File 22 orchestration metadata only',
 			'canonical_action_owner' => 'Native domain owners; File 22 orchestration only',
