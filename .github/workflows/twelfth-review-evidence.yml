@@ -55,7 +55,10 @@ jobs:
             grep -Fq -- "- \`$file\`" MANIFEST.md
           done
           grep -Fq '! Contract_Boundary::bounded_text' includes/presentation/class-create-surface.php
-          ! grep -Fq '_Contract_Boundary' includes/presentation/class-create-surface.php
+          if grep -Fq '_Contract_Boundary' includes/presentation/class-create-surface.php; then
+            echo 'Forbidden private Contract_Boundary implementation leak found in Create surface.' >&2
+            exit 1
+          fi
           grep -Fq "! isset( \$parts['user'] )" includes/core/class-workflow-validator.php
           grep -Fq "! isset( \$parts['pass'] )" includes/core/class-workflow-validator.php
           grep -Fq 'class-workflow-validator.php' phpstan.neon.dist

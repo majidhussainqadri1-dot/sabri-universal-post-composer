@@ -54,6 +54,14 @@ class WP_Error {
 		public mixed $data = null
 	) {
 	}
+
+	public function get_error_code(): string {
+		return $this->code;
+	}
+
+	public function get_error_message(): string {
+		return $this->message;
+	}
 }
 
 class WP_Post {

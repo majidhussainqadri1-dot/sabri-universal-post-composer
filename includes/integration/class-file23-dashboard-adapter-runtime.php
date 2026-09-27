@@ -33,9 +33,9 @@ final class File23_Dashboard_Adapter_Runtime implements \SPDB_Provider_Adapter {
 	}
 
 	public function get_provider_version(): string {
-		return defined( 'SUPC_FILE23_BRIDGE_VERSION' ) && preg_match( '/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/', (string) SUPC_FILE23_BRIDGE_VERSION )
-			? (string) SUPC_FILE23_BRIDGE_VERSION
-			: '1.0.0-rc.2';
+		return defined( 'SUPC_VERSION' ) && preg_match( '/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/', (string) SUPC_VERSION )
+			? (string) SUPC_VERSION
+			: '0.0.0';
 	}
 
 	public function get_minimum_contract_version(): string {

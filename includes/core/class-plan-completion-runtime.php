@@ -62,6 +62,7 @@ final class Plan_Completion_Runtime {
 					'publication_state'     => (string) ( $session['publication_state'] ?? 'unpublished' ),
 					'hold_state'            => (string) ( $session['hold_state'] ?? 'clear' ),
 					'native_reference_hash' => null === $native ? '' : hash( 'sha256', $native ),
+					'recipient_user_id'     => get_current_user_id(),
 				)
 			);
 		}

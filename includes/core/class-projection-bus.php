@@ -48,7 +48,14 @@ final class Projection_Bus {
 		do_action( 'supc_file23_projection_event', $event, $bounded );
 		do_action( 'supc_file24_assurance_event', $event, $bounded );
 		do_action( 'supc_file25_timeline_event', $event, $bounded );
-		do_action( 'supc_file19_notification_event', $event, $bounded );
+		$file19_metadata = $bounded;
+		if ( isset( $metadata['recipient_user_id'] ) && is_scalar( $metadata['recipient_user_id'] ) ) {
+			$recipient_user_id = absint( $metadata['recipient_user_id'] );
+			if ( $recipient_user_id > 0 ) {
+				$file19_metadata['recipient_user_id'] = $recipient_user_id;
+			}
+		}
+		do_action( 'supc_file19_notification_event', $event, $file19_metadata );
 		do_action( 'supc_search_seo_event', $event, $bounded );
 		return true;
 	}

@@ -35,6 +35,9 @@ parameters:
         - includes/presentation/class-my-content-workspace.php
         - includes/integration/class-shell-bridge.php
         - includes/integration/class-core-adapter-requirements.php
+        - includes/integration/class-file19-notification-bridge.php
+        - includes/integration/class-file23-dashboard-bridge.php
+        - includes/integration/class-file24-assurance-bridge.php
         - includes/admin/class-system-check-page.php
         - includes/admin/class-activation-wizard.php
     bootstrapFiles:
