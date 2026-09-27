@@ -62,8 +62,14 @@ jobs:
           grep -Fq 'var(--sabri-color-primary, #087a4e)' assets/css/create-surface.css
           grep -Fq 'var(--sabri-color-primary-strong, #05623e)' assets/css/create-surface.css
           grep -Fq 'var(--sabri-color-primary,#087a4e)' assets/css/workflow-composer.css
-          ! grep -Fq -- '--supc-orange: #ff8a1f' assets/css/create-surface.css
-          ! grep -Fq 'var(--sabri-color-primary,#ff8a1f)' assets/css/workflow-composer.css
+          if grep -Fq -- '--supc-orange: #ff8a1f' assets/css/create-surface.css; then
+            echo 'Deprecated orange primary token returned to Create surface.' >&2
+            exit 1
+          fi
+          if grep -Fq 'var(--sabri-color-primary,#ff8a1f)' assets/css/workflow-composer.css; then
+            echo 'Deprecated orange primary fallback returned to workflow composer.' >&2
+            exit 1
+          fi
           grep -Fq "'rest_post_dispatch'" includes/core/functions.php
           grep -Fq "'support_reference'" includes/core/functions.php
           grep -Fq 'File 25 — Complete Public UI, Profile Timeline and Visual Experience' docs/ARCHITECTURE.md
