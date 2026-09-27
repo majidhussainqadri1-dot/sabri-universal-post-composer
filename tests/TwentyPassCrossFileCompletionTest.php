@@ -32,9 +32,9 @@ final class TwentyPassCrossFileCompletionTest extends TestCase {
 	}
 
 	public function test_pass_02_universal_create_gateway_is_real_and_role_aware(): void {
-		$main = $this->source( 'sabri-universal-post-composer.php' );
+		$plugin = $this->source( 'includes/core/class-plugin.php' );
 		$surface = $this->source( 'includes/presentation/class-create-surface.php' );
-		$this->assertStringContainsString( "add_shortcode( 'sabri_universal_composer'", $main );
+		$this->assertStringContainsString( "add_shortcode( 'sabri_universal_composer'", $plugin );
 		$this->assertStringContainsString( 'system_check_row', $surface );
 		$this->assertStringContainsString( 'can_create', $surface );
 	}
@@ -133,7 +133,7 @@ final class TwentyPassCrossFileCompletionTest extends TestCase {
 		foreach ( array( 'learning_lesson', 'encyclopedia_entry', 'video', 'reel', 'pdf_document', 'marketplace_listing' ) as $key ) {
 			$this->assertStringContainsString( "'{$key}'", $runtime );
 		}
-		$this->assertStringContainsString( "'status' => $present ? 'pass' : 'warning'", $runtime );
+		$this->assertStringContainsString( "'status' => present ? 'pass' : 'warning'", str_replace( '$present', 'present', $runtime ) );
 		$this->assertStringContainsString( 'optional_adapter_pack_absent', $runtime );
 	}
 
