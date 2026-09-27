@@ -34,6 +34,12 @@ final class Projection_Bus {
 				}
 			}
 		}
+		if ( isset( $metadata['recipient_user_id'] ) && is_scalar( $metadata['recipient_user_id'] ) ) {
+			$recipient_user_id = absint( $metadata['recipient_user_id'] );
+			if ( $recipient_user_id > 0 ) {
+				$bounded['recipient_user_id'] = $recipient_user_id;
+			}
+		}
 		if ( ! isset( $bounded['session_uuid'], $bounded['adapter_key'] ) || ! Contract_Boundary::adapter_key( $bounded['adapter_key'] ) ) {
 			return false;
 		}
