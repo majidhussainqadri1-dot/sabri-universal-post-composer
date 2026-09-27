@@ -80,11 +80,15 @@ final class File24_Assurance_Bridge {
 	/** @param array<int,array<string,mixed>> $rows @return array<int,array<string,mixed>> */
 	public function append_system_check( array $rows ): array {
 		$available = defined( 'SPCRC_VERSION' ) || class_exists( '\\Sabri\\Platform\\Security\\Registry\\ModuleRegistry' );
+		$manifest = $this->manifest();
+		$evidence_ready = '' !== (string) ( $manifest['last_security_test'] ?? '' ) && '' !== (string) ( $manifest['evidence_source'] ?? '' );
+		$status = $available && $evidence_ready ? 'pass' : 'warning';
+		$code = ! $available ? 'file24_assurance_optional_unavailable' : 'file24_assurance_evidence_unverified';
 		$rows[] = array(
 			'key'    => 'file24_assurance_contract',
-			'status' => $available ? 'pass' : 'warning',
-			'count'  => $available ? 0 : 1,
-			'codes'  => $available ? array() : array( 'file24_assurance_optional_unavailable' ),
+			'status' => $status,
+			'count'  => 'pass' === $status ? 0 : 1,
+			'codes'  => 'pass' === $status ? array() : array( $code ),
 		);
 		return $rows;
 	}
