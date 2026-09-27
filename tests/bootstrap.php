@@ -226,3 +226,198 @@ function wp_validate_redirect( string $location, string $fallback = '' ): string
 		str_starts_with( $location, 'https://' ) ||
 		str_starts_with( $location, 'http://' )
 	) {
+		return $location;
+	}
+	return $fallback;
+}
+
+function wp_enqueue_style( string $handle, string $src = '', array $deps = array(), string|bool|null $ver = false, string $media = 'all' ): void {
+	$GLOBALS['supc_test_enqueued_css'][ $handle ] = array( $src, $deps, $ver, $media );
+}
+
+function has_shortcode( string $content, string $tag ): bool {
+	return str_contains( $content, '[' . $tag );
+}
+
+function get_post_status( int $post_id ): string|false {
+	return $GLOBALS['supc_test_pages'][ $post_id ]['status'] ?? false;
+}
+
+function get_post_type( int $post_id ): string|false {
+	return $GLOBALS['supc_test_pages'][ $post_id ]['type'] ?? false;
+}
+
+function get_post_field( string $field, int $post_id ): mixed {
+	if ( 'post_content' === $field ) {
+		return $GLOBALS['supc_test_pages'][ $post_id ]['content'] ?? '';
+	}
+	if ( 'post_name' === $field ) {
+		return $GLOBALS['supc_test_pages'][ $post_id ]['slug'] ?? '';
+	}
+	return '';
+}
+
+function get_post_meta( int $post_id, string $key = '', bool $single = false ): mixed {
+	$value = $GLOBALS['supc_test_pages'][ $post_id ]['meta_input'][ $key ] ?? '';
+	return $single ? $value : array( $value );
+}
+
+/** @return array<int, int> */
+function get_posts( array $args = array() ): array {
+	++$GLOBALS['supc_test_get_posts_calls'];
+	$ids       = array();
+	$post_type = (string) ( $args['post_type'] ?? 'post' );
+	$status    = (string) ( $args['post_status'] ?? 'publish' );
+	foreach ( $GLOBALS['supc_test_pages'] as $id => $page ) {
+		if ( $status === ( $page['status'] ?? '' ) && $post_type === ( $page['type'] ?? 'page' ) ) {
+			$ids[] = (int) $id;
+		}
+	}
+	sort( $ids );
+	return $ids;
+}
+
+function get_page_by_path( string $path, string $output = OBJECT, string $post_type = 'page' ): object|null {
+	unset( $output );
+	foreach ( $GLOBALS['supc_test_pages'] as $id => $page ) {
+		if ( $path === ( $page['slug'] ?? '' ) && $post_type === ( $page['type'] ?? 'page' ) ) {
+			return (object) array( 'ID' => (int) $id );
+		}
+	}
+	return null;
+}
+
+function wp_insert_post( array $postarr, bool $wp_error = false ): int|WP_Error {
+	unset( $wp_error );
+	$mutations = $GLOBALS['supc_test_insert_mutations'];
+	if ( ! empty( $mutations['return_error'] ) ) {
+		return new WP_Error( 'insert_failed', 'Insert failed.' );
+	}
+
+	$id      = ++$GLOBALS['supc_test_next_post_id'];
+	$slug    = (string) ( $postarr['post_name'] ?? '' );
+	$content = (string) ( $postarr['post_content'] ?? '' );
+	$status  = (string) ( $postarr['post_status'] ?? 'draft' );
+	$type    = (string) ( $postarr['post_type'] ?? 'post' );
+	$meta    = $postarr['meta_input'] ?? array();
+
+	if ( isset( $mutations['slug'] ) ) {
+		$slug = (string) $mutations['slug'];
+	}
+	if ( isset( $mutations['content'] ) ) {
+		$content = (string) $mutations['content'];
+	}
+	if ( isset( $mutations['status'] ) ) {
+		$status = (string) $mutations['status'];
+	}
+	if ( isset( $mutations['type'] ) ) {
+		$type = (string) $mutations['type'];
+	}
+	if ( ! empty( $mutations['strip_meta'] ) ) {
+		$meta = array();
+	}
+
+	$GLOBALS['supc_test_pages'][ $id ] = array(
+		'status'     => $status,
+		'type'       => $type,
+		'content'    => $content,
+		'slug'       => $slug,
+		'permalink'  => 'https://example.test/' . $slug . '/',
+		'meta_input' => $meta,
+	);
+	return $id;
+}
+
+function wp_delete_post( int $post_id, bool $force_delete = false ): object|false|null {
+	unset( $force_delete );
+	$result = (string) $GLOBALS['supc_test_delete_post_result'];
+	if ( 'null' === $result ) {
+		return null;
+	}
+	if ( 'false' === $result ) {
+		return false;
+	}
+	if ( ! isset( $GLOBALS['supc_test_pages'][ $post_id ] ) ) {
+		return null;
+	}
+
+	$GLOBALS['supc_test_deleted_posts'][] = $post_id;
+	unset( $GLOBALS['supc_test_pages'][ $post_id ] );
+	return (object) array( 'ID' => $post_id );
+}
+
+function wp_update_post( array $postarr, bool $wp_error = false ): int|WP_Error {
+	unset( $wp_error );
+	$result  = (string) $GLOBALS['supc_test_update_post_result'];
+	$post_id = (int) ( $postarr['ID'] ?? 0 );
+	if ( 'error' === $result ) {
+		return new WP_Error( 'update_failed', 'Update failed.' );
+	}
+	if ( 'zero' === $result || $post_id <= 0 || ! isset( $GLOBALS['supc_test_pages'][ $post_id ] ) ) {
+		return 0;
+	}
+
+	if ( 'no_mutation' !== $result ) {
+		if ( array_key_exists( 'post_status', $postarr ) ) {
+			$GLOBALS['supc_test_pages'][ $post_id ]['status'] = (string) $postarr['post_status'];
+		}
+		if ( array_key_exists( 'post_content', $postarr ) ) {
+			$GLOBALS['supc_test_pages'][ $post_id ]['content'] = (string) $postarr['post_content'];
+		}
+	}
+
+	$GLOBALS['supc_test_updated_posts'][] = $post_id;
+	return $post_id;
+}
+
+function is_wp_error( mixed $thing ): bool {
+	return $thing instanceof WP_Error;
+}
+
+function get_permalink( int $post_id ): string|false {
+	return $GLOBALS['supc_test_pages'][ $post_id ]['permalink'] ?? false;
+}
+
+function is_page( int $post_id ): bool {
+	return (int) $GLOBALS['supc_test_is_page'] === $post_id;
+}
+
+function wp_nonce_field( string $action ): void {
+	echo '<input type="hidden" name="_wpnonce" value="' . esc_attr( $action ) . '">';
+}
+
+function check_admin_referer( string $action ): int {
+	unset( $action );
+	$GLOBALS['supc_test_nonce_checked'] = true;
+	return 1;
+}
+
+function submit_button( string $text, string $type = 'primary', string $name = 'submit', bool $wrap = true, array|string $other_attributes = array() ): void {
+	unset( $wrap );
+	$value = is_array( $other_attributes ) ? (string) ( $other_attributes['value'] ?? $text ) : $text;
+	echo '<button class="button button-' . esc_attr( $type ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '">' . esc_html( $text ) . '</button>';
+}
+
+function add_query_arg( array $args, string $url ): string {
+	return $url . '?' . http_build_query( $args );
+}
+
+function wp_safe_redirect( string $location ): bool {
+	$GLOBALS['supc_test_redirect'] = $location;
+	return (bool) $GLOBALS['supc_test_redirect_success'];
+}
+
+function wp_die( string $message ): never {
+	throw new RuntimeException( $message );
+}
+
+require_once dirname( __DIR__ ) . '/includes/contracts/interface-adapter.php';
+require_once dirname( __DIR__ ) . '/includes/contracts/interface-diagnostic-adapter.php';
+require_once dirname( __DIR__ ) . '/includes/core/class-version.php';
+require_once dirname( __DIR__ ) . '/includes/core/class-safe-mode.php';
+require_once dirname( __DIR__ ) . '/includes/core/class-permission-resolver.php';
+require_once dirname( __DIR__ ) . '/includes/core/class-page-resolver.php';
+require_once dirname( __DIR__ ) . '/includes/core/class-registry.php';
+require_once dirname( __DIR__ ) . '/includes/presentation/class-create-surface.php';
+require_once dirname( __DIR__ ) . '/includes/integration/class-core-adapter-requirements.php';
+require_once dirname( __DIR__ ) . '/includes/admin/class-system-check-page.php';
