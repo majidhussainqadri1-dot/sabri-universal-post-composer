@@ -219,10 +219,13 @@ jobs:
             includes/core/class-workflow-coordinator.php
             includes/core/functions.php includes/presentation/class-create-surface.php
             includes/integration/class-shell-bridge.php includes/integration/class-core-adapter-requirements.php
+            includes/integration/class-file19-notification-bridge.php
+            includes/integration/class-file23-dashboard-bridge.php
+            includes/integration/class-file24-assurance-bridge.php
             includes/admin/class-system-check-page.php
             tests/CreateSurfaceTest.php tests/RegistryTest.php tests/AccessibilityContrastTest.php
             tests/AdminSystemCheckTest.php tests/PageResolverRepairTest.php tests/WorkflowCoordinatorTest.php
-            tests/PluginPrivacyTest.php tests/PrivacyAndDiagnosticsCompletionTest.php tests/OfflineRecoveryContractTest.php tests/LifecyclePlanParityTest.php tests/PublicApiSubjectBindingTest.php tests/SubjectSchemaTest.php
+            tests/PluginPrivacyTest.php tests/PrivacyAndDiagnosticsCompletionTest.php tests/OfflineRecoveryContractTest.php tests/LifecyclePlanParityTest.php tests/TwentyPassCrossFileCompletionTest.php tests/PublicApiSubjectBindingTest.php tests/SubjectSchemaTest.php
             tests/CoreAdapterRequirementsTest.php tests/SafeModeTest.php tests/ShellBridgeTest.php
             tests/SecondPostMergeHardeningTest.php tests/ThirdPostMergeHardeningTest.php
             tests/FourthCompleteReviewTest.php tests/FifthCompleteReviewTest.php tests/SixthCompleteReviewTest.php
