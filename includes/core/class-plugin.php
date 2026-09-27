@@ -11,6 +11,9 @@ namespace Sabri\UniversalComposer\Core;
 
 use Sabri\UniversalComposer\Admin\System_Check_Page;
 use Sabri\UniversalComposer\Integration\Core_Adapter_Requirements;
+use Sabri\UniversalComposer\Integration\File19_Notification_Bridge;
+use Sabri\UniversalComposer\Integration\File23_Dashboard_Bridge;
+use Sabri\UniversalComposer\Integration\File24_Assurance_Bridge;
 use Sabri\UniversalComposer\Integration\Shell_Bridge;
 use Sabri\UniversalComposer\Presentation\Create_Surface;
 
@@ -82,6 +85,9 @@ final class Plugin {
 		( new Privacy_Integration() )->register();
 		( new Shell_Bridge( $this->registry ) )->register();
 		( new Core_Adapter_Requirements( $this->registry ) )->register();
+		( new File19_Notification_Bridge() )->register();
+		( new File23_Dashboard_Bridge() )->register();
+		( new File24_Assurance_Bridge() )->register();
 		do_action( 'supc_booted', $this->registry );
 	}
 
