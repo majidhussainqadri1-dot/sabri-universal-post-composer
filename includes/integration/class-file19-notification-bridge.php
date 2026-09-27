@@ -111,7 +111,7 @@ final class File19_Notification_Bridge {
 
 		$result = sun_ingest_domain_event( $envelope );
 		if ( function_exists( 'is_wp_error' ) && is_wp_error( $result ) ) {
-			do_action( 'supc_file19_notification_ingest_failed', sanitize_key( (string) $result->get_error_code() ) );
+			do_action( 'supc_file19_notification_ingest_failed', 'file19_ingest_rejected' );
 		}
 	}
 
@@ -119,13 +119,18 @@ final class File19_Notification_Bridge {
 	public function append_system_check( array $rows ): array {
 		$register = function_exists( 'sun_register_notification_producer' );
 		$ingest   = function_exists( 'sun_ingest_domain_event' );
+		$partial  = $register xor $ingest;
 		$available = $register && $ingest;
-		$partial   = $register xor $ingest;
+		$producer_ready = $available ? $this->register_producer() : false;
+		$status = $partial || ( $available && ! $producer_ready ) ? 'fail' : ( $producer_ready ? 'pass' : 'warning' );
+		$code = $partial
+			? 'file19_notification_contract_partial'
+			: ( $available && ! $producer_ready ? 'file19_notification_producer_registration_failed' : 'file19_notification_optional_unavailable' );
 		$rows[] = array(
 			'key'    => 'file19_notification_contract',
-			'status' => $partial ? 'fail' : ( $available ? 'pass' : 'warning' ),
-			'count'  => $available ? 0 : 1,
-			'codes'  => $available ? array() : array( $partial ? 'file19_notification_contract_partial' : 'file19_notification_optional_unavailable' ),
+			'status' => $status,
+			'count'  => 'pass' === $status ? 0 : 1,
+			'codes'  => 'pass' === $status ? array() : array( $code ),
 		);
 		return $rows;
 	}
