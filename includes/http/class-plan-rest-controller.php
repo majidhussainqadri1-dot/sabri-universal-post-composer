@@ -506,6 +506,7 @@ final class Plan_Rest_Controller {
 			'publication_state' => (string) ( $session['publication_state'] ?? 'unpublished' ),
 			'hold_state'        => (string) ( $session['hold_state'] ?? 'clear' ),
 			'native_reference_hash' => is_string( $session['native_reference'] ?? null ) ? hash( 'sha256', (string) $session['native_reference'] ) : '',
+			'recipient_user_id'     => get_current_user_id(),
 		);
 	}
 
