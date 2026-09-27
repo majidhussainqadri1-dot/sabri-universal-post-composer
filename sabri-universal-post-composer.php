@@ -79,6 +79,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 		'Sabri\\UniversalComposer\\Http\\Plan_Rest_Controller',
 		'Sabri\\UniversalComposer\\Integration\\Shell_Bridge',
 		'Sabri\\UniversalComposer\\Integration\\Core_Adapter_Requirements',
+		'Sabri\\UniversalComposer\\Integration\\File19_Notification_Bridge',
+		'Sabri\\UniversalComposer\\Integration\\File23_Dashboard_Bridge',
+		'Sabri\\UniversalComposer\\Integration\\File24_Assurance_Bridge',
 		'Sabri\\UniversalComposer\\Admin\\System_Check_Page',
 		'Sabri\\UniversalComposer\\Admin\\Activation_Wizard',
 	);
@@ -174,6 +177,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	require_once SUPC_PATH . 'includes/http/class-plan-rest-controller.php';
 	require_once SUPC_PATH . 'includes/integration/class-shell-bridge.php';
 	require_once SUPC_PATH . 'includes/integration/class-core-adapter-requirements.php';
+	require_once SUPC_PATH . 'includes/integration/class-file19-notification-bridge.php';
+	require_once SUPC_PATH . 'includes/integration/class-file23-dashboard-bridge.php';
+	require_once SUPC_PATH . 'includes/integration/class-file24-assurance-bridge.php';
 	require_once SUPC_PATH . 'includes/admin/class-system-check-page.php';
 	require_once SUPC_PATH . 'includes/admin/class-activation-wizard.php';
 	require_once SUPC_PATH . 'includes/core/class-plugin.php';
