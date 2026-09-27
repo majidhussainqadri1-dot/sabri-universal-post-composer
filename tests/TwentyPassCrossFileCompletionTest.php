@@ -36,7 +36,7 @@ final class TwentyPassCrossFileCompletionTest extends TestCase {
 		$surface = $this->source( 'includes/presentation/class-create-surface.php' );
 		$this->assertStringContainsString( "add_shortcode( 'sabri_universal_composer'", $plugin );
 		$this->assertStringContainsString( 'system_check_row', $surface );
-		$this->assertStringContainsString( 'can_create', $surface );
+		$this->assertStringContainsString( 'availability_snapshot_for_user', $surface );
 	}
 
 	public function test_pass_03_file00_is_the_hard_identity_authority(): void {
