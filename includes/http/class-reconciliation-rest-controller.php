@@ -405,7 +405,7 @@ final class Reconciliation_Rest_Controller {
 			'supc_permission_denied', 'supc_membership_unavailable', 'supc_adapter_permission_denied', 'supc_workflow_permission_denied' => 403,
 			'supc_not_found', 'supc_session_not_found', 'supc_submission_not_found' => 404,
 			'supc_expired', 'supc_session_expired' => 410,
-			'supc_validation_failed', 'supc_workflow_payload_required_field_missing', 'supc_workflow_payload_field_invalid' => 422,
+			'supc_validation_failed', 'supc_policy_violation', 'supc_workflow_payload_required_field_missing', 'supc_workflow_payload_field_invalid' => 422,
 			'supc_conflict', 'supc_session_conflict', 'supc_idempotency_key_conflict', 'supc_adapter_version_changed', 'supc_native_reference_mismatch', 'supc_submission_identity_conflict', 'supc_idempotency_payload_mismatch', 'supc_submission_already_final', 'supc_reconciliation_pending' => 409,
 			'supc_rate_limited' => 429,
 			'supc_temporarily_unavailable', 'supc_workflow_disabled', 'supc_workflow_adapter_unavailable', 'supc_native_workflow_unavailable', 'supc_session_store_unavailable', 'supc_submission_store_unavailable', 'supc_submission_prepare_failed', 'supc_submission_dispatch_record_failed', 'supc_session_finalize_failed', 'supc_submission_ack_record_failed', 'supc_reconciliation_hash_failed', 'supc_submission_reconcile_record_failed', 'supc_payload_fingerprint_failed', 'supc_workflow_adapter_exception' => 503,
