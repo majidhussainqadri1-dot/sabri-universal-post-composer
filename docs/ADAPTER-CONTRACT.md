@@ -56,7 +56,7 @@ A full workflow adapter additionally supplies:
 
 `workflow_api_version()` must equal `SUPC_WORKFLOW_API_VERSION` (`1.0.0`). Workflow API, central capability, and native-draft support are captured at registration. A non-workflow adapter is `not_applicable` in workflow health. A Workflow Adapter without its immutable workflow snapshot is a failure. An incompatible workflow API is reported without invoking schema or native methods.
 
-Phase 22E exposes guarded server-side PHP functions only; it has no REST, AJAX, or browser write controller.
+Historical Phase 22E initially exposed guarded server-side PHP functions only. The current 1.0.0-rc.3 source includes authenticated private REST controllers (`includes/http/class-rest-controller.php`, `includes/http/class-plan-rest-controller.php`, and `includes/http/class-reconciliation-rest-controller.php`) together with the browser workflow (`assets/js/workflow-composer.js`). Every current mutation still requires fresh server-side current-subject authorization, nonce/CSRF enforcement, schema validation, privacy-safe response handling, and native-owner permission checks. The historical Phase 22E statement does not describe the current RC3 attack surface.
 
 ## Public PHP API ownership
 
