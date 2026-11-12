@@ -97,6 +97,8 @@ final class Privacy_Integration {
 		}
 
 		$removed = 0;
+		$recovery_schema_ready = Submission_Store::tables_exist();
+		$recovery_schema_incomplete = false;
 		if ( Upload_Token_Store::table_exists() ) {
 			$result = $wpdb->query(
 				$wpdb->prepare(
@@ -109,7 +111,7 @@ final class Privacy_Integration {
 			$removed += is_int( $result ) && $result > 0 ? $result : 0;
 		}
 
-		if ( Submission_Store::tables_exist() ) {
+		if ( $recovery_schema_ready ) {
 			$outbox = Submission_Store::outbox_table_name();
 			$submissions = Submission_Store::submission_table_name();
 
@@ -125,7 +127,7 @@ final class Privacy_Integration {
 
 			$result = $wpdb->query(
 				$wpdb->prepare(
-					"DELETE FROM %i WHERE user_id = %d AND attempt_uuid NOT IN (SELECT attempt_uuid FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter')) LIMIT %d",
+					"DELETE FROM %i WHERE user_id = %d AND state NOT IN ('prepared','dispatched','reconcile','retryable','dead_letter') AND attempt_uuid NOT IN (SELECT attempt_uuid FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter')) LIMIT %d",
 					$submissions,
 					$user_id,
 					$outbox,
@@ -137,28 +139,24 @@ final class Privacy_Integration {
 		}
 
 		if ( Session_Store::table_exists() ) {
-			if ( Submission_Store::tables_exist() ) {
+			if ( $recovery_schema_ready ) {
 				$result = $wpdb->query(
 					$wpdb->prepare(
-						"DELETE FROM %i WHERE user_id = %d AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter')) LIMIT %d",
+						"DELETE FROM %i WHERE user_id = %d AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter')) AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE user_id = %d AND state IN ('prepared','dispatched','reconcile','retryable','dead_letter')) LIMIT %d",
 						Session_Store::table_name(),
 						$user_id,
 						Submission_Store::outbox_table_name(),
+						$user_id,
+						Submission_Store::submission_table_name(),
 						$user_id,
 						self::ERASE_BATCH_SIZE
 					)
 				);
 			} else {
-				$result = $wpdb->query(
-					$wpdb->prepare(
-						'DELETE FROM %i WHERE user_id = %d LIMIT %d',
-						Session_Store::table_name(),
-						$user_id,
-						self::ERASE_BATCH_SIZE
-					)
-				);
+				// No verified recovery schema: preserve potentially uncertain native writes.
+				$recovery_schema_incomplete = true;
 			}
-			$removed += is_int( $result ) && $result > 0 ? $result : 0;
+			$removed += is_int( $result ?? null ) && $result > 0 ? $result : 0;
 		}
 
 		if ( Audit_Store::table_exists() ) {
@@ -175,14 +173,19 @@ final class Privacy_Integration {
 
 		$active_retained = self::active_reconciliation_count( $user_id );
 		$more_erasable   = self::erasable_count( $user_id );
+		$items_retained  = $active_retained > 0 || $recovery_schema_incomplete;
 		$messages        = array();
 		if ( $active_retained > 0 ) {
-			$messages[] = __( 'Some File 22 orchestration metadata is temporarily retained because a native submission is queued, reconciling, or held for dead-letter investigation. It expires under the operational retention policy and does not include the draft body.', 'sabri-universal-post-composer' );
+			$messages[] = __( 'Some File 22 orchestration metadata is temporarily retained because a native submission remains pending, uncertain, reconciling, or held for investigation. It does not include the draft body.', 'sabri-universal-post-composer' );
+		}
+
+		if ( $recovery_schema_incomplete ) {
+			$messages[] = __( 'File 22 recovery tables require schema verification or repair before session metadata can be erased safely.', 'sabri-universal-post-composer' );
 		}
 
 		return array(
 			'items_removed'  => $removed > 0,
-			'items_retained' => $active_retained > 0,
+			'items_retained' => $items_retained,
 			'messages'       => $messages,
 			'done'           => 0 === $more_erasable,
 		);
