@@ -691,8 +691,13 @@
 		}
 		if (!navigator.onLine) {
 			setAutosaveState('Offline');
-			await persistOfflineRecovery();
-			announce(strings.offlineStored);
+			const storedLocally = await persistOfflineRecovery();
+			if (!storedLocally) {
+				setAutosaveState('Not saved');
+				if (!recoverySupported) announce(strings.offlineRecoveryUnavailable);
+			}
+			// persistOfflineRecovery reports success only after a committed
+			// encrypted write. Never announce success for unsupported or failed storage.
 			return false;
 		}
 		if (!silent) {
