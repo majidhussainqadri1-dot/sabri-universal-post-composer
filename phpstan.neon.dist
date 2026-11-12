@@ -20,6 +20,7 @@ parameters:
         - includes/core/class-taxonomy-map.php
         - includes/core/class-projection-bus.php
         - includes/core/class-plan-completion-runtime.php
+        - includes/core/class-governing-plan-runtime.php
         - includes/core/class-workflow-coordinator.php
         - includes/core/class-session-store.php
         - includes/core/class-submission-store.php
@@ -27,6 +28,7 @@ parameters:
         - includes/core/class-browser-runtime.php
         - includes/core/class-plugin.php
         - includes/core/functions.php
+        - includes/core/governing-plan-functions.php
         - includes/http/class-rest-controller.php
         - includes/http/class-reconciliation-rest-controller.php
         - includes/http/class-plan-rest-controller.php
@@ -37,6 +39,7 @@ parameters:
         - includes/integration/class-core-adapter-requirements.php
         - includes/integration/class-file19-notification-bridge.php
         - includes/integration/class-file23-dashboard-bridge.php
+        - includes/integration/class-file23-dashboard-adapter-runtime.php
         - includes/integration/class-file24-assurance-bridge.php
         - includes/admin/class-system-check-page.php
         - includes/admin/class-activation-wizard.php
