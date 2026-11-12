@@ -332,3 +332,5 @@ jobs:
           node --version
           node --check tests/run-indexeddb-transaction-completion-test.cjs
           node tests/run-indexeddb-transaction-completion-test.cjs
+          node --check tests/run-offline-save-acknowledgement-test.cjs
+          node tests/run-offline-save-acknowledgement-test.cjs
