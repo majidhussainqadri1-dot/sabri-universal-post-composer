@@ -6,6 +6,8 @@
  */
 declare(strict_types=1);
 
+require_once dirname( __DIR__ ) . '/includes/core/class-privacy-integration.php';
+
 use PHPUnit\Framework\TestCase;
 use Sabri\UniversalComposer\Core\Privacy_Integration;
 use Sabri\UniversalComposer\Core\Session_Store;
@@ -133,7 +135,7 @@ final class PrivacyErasureUnknownSubmissionTest extends TestCase {
             $source
         );
         self::assertStringNotContainsString(
-            "'items_retained' => $active_retained > 0",
+            "'items_retained' => \$active_retained > 0",
             $source
         );
     }
