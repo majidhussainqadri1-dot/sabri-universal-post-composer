@@ -138,6 +138,7 @@ final class Privacy_Integration {
 			$removed += is_int( $result ) && $result > 0 ? $result : 0;
 		}
 
+		$result = null;
 		if ( Session_Store::table_exists() ) {
 			if ( $recovery_schema_ready ) {
 				$result = $wpdb->query(
