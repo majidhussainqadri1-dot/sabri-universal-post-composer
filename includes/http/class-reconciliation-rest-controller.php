@@ -411,7 +411,7 @@ final class Reconciliation_Rest_Controller {
 			'supc_temporarily_unavailable', 'supc_workflow_disabled', 'supc_workflow_adapter_unavailable', 'supc_native_workflow_unavailable', 'supc_session_store_unavailable', 'supc_submission_store_unavailable', 'supc_submission_prepare_failed', 'supc_submission_dispatch_record_failed', 'supc_session_finalize_failed', 'supc_submission_ack_record_failed', 'supc_reconciliation_hash_failed', 'supc_submission_reconcile_record_failed', 'supc_payload_fingerprint_failed', 'supc_workflow_adapter_exception' => 503,
 			default => 400,
 		};
-		return $this->error( str_replace( 'supc_', '', $code ), $status, array_merge( $details, $extra ) );
+		return $this->error( str_replace( 'supc_', '', $code ), $status, array_merge( Contract_Boundary::safe_rest_error_details( $code, $details ), $extra ) );
 	}
 
 	/** @param array<string,mixed> $result */
