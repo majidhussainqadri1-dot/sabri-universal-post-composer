@@ -344,20 +344,36 @@
 				const transaction = db.transaction(storeName, mode);
 				const store = transaction.objectStore(storeName);
 				let requestResult;
+				let requestValue;
+				let requestError = null;
+				// An IndexedDB request can succeed before its transaction commits.
+				// Only the transaction's complete event proves durable recovery storage.
+				transaction.addEventListener('complete', () => {
+					if (requestError) {
+						reject(requestError);
+						return;
+					}
+					resolve(requestResult && typeof requestResult.addEventListener === 'function' ? requestValue : requestResult);
+				});
+				transaction.addEventListener('abort', () => reject(transaction.error || requestError || new Error('offline_recovery_transaction_aborted')));
+				transaction.addEventListener('error', () => reject(transaction.error || requestError || new Error('offline_recovery_transaction_failed')));
 				try {
 					requestResult = operation(store);
 				} catch (error) {
+					try {
+						transaction.abort();
+					} catch (abortError) {
+						// An already inactive transaction cannot be aborted again.
+					}
 					reject(error);
 					return;
 				}
 				if (requestResult && typeof requestResult.addEventListener === 'function') {
-					requestResult.addEventListener('success', () => resolve(requestResult.result));
-					requestResult.addEventListener('error', () => reject(requestResult.error || new Error('offline_recovery_store_failed')));
-				} else {
-					transaction.addEventListener('complete', () => resolve(requestResult));
+					requestResult.addEventListener('success', () => { requestValue = requestResult.result; });
+					requestResult.addEventListener('error', () => {
+						requestError = requestResult.error || new Error('offline_recovery_store_failed');
+					});
 				}
-				transaction.addEventListener('abort', () => reject(transaction.error || new Error('offline_recovery_transaction_aborted')));
-				transaction.addEventListener('error', () => reject(transaction.error || new Error('offline_recovery_transaction_failed')));
 			});
 		} finally {
 			db.close();
