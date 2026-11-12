@@ -360,12 +360,12 @@
 				try {
 					requestResult = operation(store);
 				} catch (error) {
+					reject(error);
 					try {
 						transaction.abort();
 					} catch (abortError) {
 						// An already inactive transaction cannot be aborted again.
 					}
-					reject(error);
 					return;
 				}
 				if (requestResult && typeof requestResult.addEventListener === 'function') {
