@@ -70,8 +70,7 @@ final class RestErrorDetailsBoundaryTest extends TestCase {
         foreach ( $this->controllers() as $controller ) {
             $outcome = $this->normalize( $controller, new PrivateRestDataCarrierError( 'supc_policy_violation', 'Error', $raw ) );
             self::assertSame( $expected, $outcome->data['details'] );
-            $expected_status = Reconciliation_Rest_Controller::class === $controller ? 400 : 422;
-            self::assertSame( $expected_status, $outcome->data['status'] );
+            self::assertSame( 422, $outcome->data['status'], $controller );
         }
     }
 
