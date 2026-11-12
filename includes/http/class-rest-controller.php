@@ -450,7 +450,7 @@ final class Rest_Controller {
 			'supc_workflow_adapter_exception' => 503,
 			default => 400,
 		};
-		return $this->error( str_replace( 'supc_', '', $code ), $status, array_merge( $details, $extra_details ) );
+		return $this->error( str_replace( 'supc_', '', $code ), $status, array_merge( Contract_Boundary::safe_rest_error_details( $code, $details ), $extra_details ) );
 	}
 
 	private function error( string $code, int $status, mixed $data = null ): WP_Error {

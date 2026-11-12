@@ -104,6 +104,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-IDB-DURABLE-COMMIT-AUDIT-NOV12-2026.md`
 - `docs/FILE22-UNCERTAIN-SESSION-RETENTION-AUDIT-NOV12-2026.md`
 - `docs/FILE22-OFFLINE-SAVE-ACKNOWLEDGEMENT-AUDIT-NOV12-2026.md`
+- `docs/FILE22-REST-ERROR-DETAILS-AUDIT-NOV12-2026.md`
 - `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 
 ## Historical exact-head review documents retained
@@ -168,6 +169,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/ManifestInventoryTest.php`
 - `tests/StaticAnalysisCoverageTest.php`
 - `tests/UncertainSessionCleanupTest.php`
+- `tests/RestErrorDetailsBoundaryTest.php`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
 - `tests/run-offline-save-acknowledgement-test.cjs`
 - `tests/GoverningPlanReleaseIdentityTest.php`

@@ -561,7 +561,7 @@ final class Plan_Rest_Controller {
 		if ( 'supc_policy_violation' === $raw_code ) {
 			$status = 422;
 		}
-		return $this->error( str_replace( 'supc_', '', sanitize_key( $raw_code ) ), $status, array_merge( is_array( $raw_data ) ? $raw_data : array(), $extra ) );
+		return $this->error( str_replace( 'supc_', '', sanitize_key( $raw_code ) ), $status, array_merge( Contract_Boundary::safe_rest_error_details( $raw_code, $raw_data ), $extra ) );
 	}
 
 	private function error( string $code, int $status, mixed $data = null ): WP_Error {

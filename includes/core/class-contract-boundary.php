@@ -16,6 +16,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Contract_Boundary {
 	private const UNSAFE_TEXT_CONTROLS = '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\x{202A}-\x{202E}\x{2066}-\x{2069}]/u';
 	private const UNSAFE_TOKEN_CONTROLS = '/[\x00-\x1F\x7F-\x9F\x{202A}-\x{202E}\x{2066}-\x{2069}]/u';
+	private const PUBLIC_POLICY_CODES = array(
+		'invalid_policy_context',
+		'unsafe_rich_text_markup_prohibited',
+		'unsafe_link_or_embed_protocol',
+		'verified_seller_reference_required',
+		'patient_anonymization_required',
+		'patient_consent_reference_required',
+		'patient_pii_name_detected',
+		'patient_pii_email_detected',
+		'patient_pii_phone_detected',
+		'patient_pii_address_detected',
+		'patient_pii_national_id_detected',
+		'patient_pii_identity_number_detected',
+		'patient_pii_record_number_detected',
+		'patient_pii_context_identifier_detected',
+		'patient_pii_location_detected',
+		'successful_case_reference_required',
+		'medical_references_required',
+		'medical_safety_acknowledgement_required',
+		'emergency_treatment_content_prohibited',
+		'copyright_rights_confirmation_required',
+		'copyright_source_reference_required',
+	);
+
 
 	public static function valid_utf8( string $value ): bool {
 		return 1 === preg_match( '//u', $value );
@@ -81,6 +105,38 @@ final class Contract_Boundary {
 
 	public static function public_identifier( string $candidate ): string {
 		return self::adapter_key( $candidate ) ? $candidate : 'invalid_adapter';
+	}
+
+	/**
+	 * Reduce a native/store WP_Error payload to controlled public diagnostics.
+	 * Raw session rows, idempotency keys, payload hashes, patient data and
+	 * arbitrary adapter error data must never be copied into REST responses.
+	 *
+	 * @param mixed $raw_data Untrusted error data from an internal/native caller.
+	 * @return array<string,mixed>
+	 */
+	public static function safe_rest_error_details( string $error_code, mixed $raw_data ): array {
+		if ( 'supc_policy_violation' !== $error_code || ! is_array( $raw_data ) ) {
+			return array();
+		}
+		$safe  = array();
+		$holds = array( 'privacy_hold', 'medical_hold', 'copyright_hold', 'security_hold' );
+		if ( is_string( $raw_data['hold_state'] ?? null ) && in_array( $raw_data['hold_state'], $holds, true ) ) {
+			$safe['hold_state'] = $raw_data['hold_state'];
+		}
+		$codes = $raw_data['codes'] ?? null;
+		if ( is_array( $codes ) && array_is_list( $codes ) ) {
+			$public_codes = array();
+			foreach ( array_slice( $codes, 0, 100 ) as $code ) {
+				if ( is_string( $code ) && self::code( $code ) && in_array( $code, self::PUBLIC_POLICY_CODES, true ) ) {
+					$public_codes[] = $code;
+				}
+			}
+			if ( array() !== $public_codes ) {
+				$safe['codes'] = array_values( array_unique( $public_codes ) );
+			}
+		}
+		return $safe;
 	}
 
 	public static function declared_public_instance_method( object $object, string $method, int $required_parameters ): bool {
