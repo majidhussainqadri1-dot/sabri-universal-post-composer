@@ -80,12 +80,12 @@ final class File23_Dashboard_Adapter_Runtime implements \SPDB_Provider_Adapter {
 	}
 
 	/** Composer sessions are not inventory records and are not projected. */
-	public function list_items( array $query ) {
+	public function list_items( array $query ): array|\WP_Error {
 		unset( $query );
 		return array( 'items' => array(), 'total' => 0, 'has_more' => false );
 	}
 
-	public function get_item( string $object_type, string $object_id ) {
+	public function get_item( string $object_type, string $object_id ): array|\WP_Error {
 		unset( $object_type, $object_id );
 		return new \WP_Error( 'supc_spdb_object_not_projected', __( 'File 22 Composer sessions are not projected as dashboard content objects.', 'sabri-universal-post-composer' ) );
 	}
@@ -95,7 +95,7 @@ final class File23_Dashboard_Adapter_Runtime implements \SPDB_Provider_Adapter {
 		return array();
 	}
 
-	public function execute_operation( string $operation_key, string $object_type, string $object_id, array $payload ) {
+	public function execute_operation( string $operation_key, string $object_type, string $object_id, array $payload ): array|\WP_Error {
 		unset( $operation_key, $object_type, $object_id, $payload );
 		return new \WP_Error( 'supc_spdb_direct_write_forbidden', __( 'Open the canonical File 22 Composer to create or edit content.', 'sabri-universal-post-composer' ), array( 'status' => 409 ) );
 	}
