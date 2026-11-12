@@ -321,14 +321,23 @@ final class Privacy_Integration {
 			return 0;
 		}
 		global $wpdb;
-		$count = $wpdb->get_var(
+		$outbox_count = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(*) FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter')",
 				Submission_Store::outbox_table_name(),
 				$user_id
 			)
 		);
-		return max( 0, (int) $count );
+		// A native attempt can remain uncertain without an outbox event if
+		// enqueue failed. Count the durable submission row independently.
+		$submission_count = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM %i WHERE user_id = %d AND state IN ('prepared','dispatched','reconcile','retryable','dead_letter')",
+				Submission_Store::submission_table_name(),
+				$user_id
+			)
+		);
+		return max( 0, (int) $outbox_count ) + max( 0, (int) $submission_count );
 	}
 
 	private static function erasable_count( int $user_id ): int {
@@ -353,7 +362,7 @@ final class Privacy_Integration {
 			);
 			$count += (int) $wpdb->get_var(
 				$wpdb->prepare(
-					"SELECT COUNT(*) FROM %i WHERE user_id = %d AND attempt_uuid NOT IN (SELECT attempt_uuid FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter'))",
+					"SELECT COUNT(*) FROM %i WHERE user_id = %d AND state NOT IN ('prepared','dispatched','reconcile','retryable','dead_letter') AND attempt_uuid NOT IN (SELECT attempt_uuid FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter'))",
 					Submission_Store::submission_table_name(),
 					$user_id,
 					Submission_Store::outbox_table_name(),
@@ -365,10 +374,12 @@ final class Privacy_Integration {
 			if ( Submission_Store::tables_exist() ) {
 				$count += (int) $wpdb->get_var(
 					$wpdb->prepare(
-						"SELECT COUNT(*) FROM %i WHERE user_id = %d AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter'))",
+						"SELECT COUNT(*) FROM %i WHERE user_id = %d AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE user_id = %d AND status IN ('queued','retry','processing','dead_letter')) AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE user_id = %d AND state IN ('prepared','dispatched','reconcile','retryable','dead_letter'))",
 						Session_Store::table_name(),
 						$user_id,
 						Submission_Store::outbox_table_name(),
+						$user_id,
+						Submission_Store::submission_table_name(),
 						$user_id
 					)
 				);
