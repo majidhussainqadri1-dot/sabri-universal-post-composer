@@ -181,37 +181,48 @@ final class Plan_Rest_Controller {
 	}
 
 	public function delete_session( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$session = $this->owned_session( $request );
-		if ( $session instanceof WP_Error ) {
-			return $session;
+		$uuid  = strtolower( (string) $request['session'] );
+		$token = $this->acquire_session_lock( $uuid );
+		if ( '' === $token ) {
+			return $this->error( 'session_busy', 409 );
 		}
-		$body = $this->body_optional( $request );
-		if ( $body instanceof WP_Error ) {
-			return $body;
-		}
-		$lock = isset( $body['lock_version'] ) && is_int( $body['lock_version'] ) ? $body['lock_version'] : (int) $session['lock_version'];
-		if ( $lock !== (int) $session['lock_version'] ) {
-			return $this->error( 'session_conflict', 409, array( 'session' => $this->public_session( $session ) ) );
-		}
-		if ( is_string( $session['native_reference'] ) && '' !== $session['native_reference'] ) {
-			$discarded = $this->coordinator->discard_draft( get_current_user_id(), (string) $session['adapter_key'], $session['native_reference'] );
-			if ( $discarded instanceof WP_Error ) {
-				return $this->normalize_error( $discarded );
+		try {
+			$session = $this->owned_session( $request );
+			if ( $session instanceof WP_Error ) {
+				return $session;
 			}
-			if ( true !== $discarded ) {
-				return $this->error( 'native_draft_not_discarded', 409 );
+			$body = $this->body_optional( $request );
+			if ( $body instanceof WP_Error ) {
+				return $body;
 			}
+			// Destructive discard requires the caller's exact observed revision.
+			// Never substitute a freshly observed version for a stale client.
+			$lock = $body['lock_version'] ?? null;
+			if ( ! is_int( $lock ) || $lock !== (int) $session['lock_version'] ) {
+				return $this->error( 'session_conflict', 409, array( 'session' => $this->public_session( $session ) ) );
+			}
+			if ( is_string( $session['native_reference'] ) && '' !== $session['native_reference'] ) {
+				$discarded = $this->coordinator->discard_draft( get_current_user_id(), (string) $session['adapter_key'], $session['native_reference'] );
+				if ( $discarded instanceof WP_Error ) {
+					return $this->normalize_error( $discarded );
+				}
+				if ( true !== $discarded ) {
+					return $this->error( 'native_draft_not_discarded', 409 );
+				}
+			}
+			$abandoned = $this->sessions->mark_abandoned( (string) $session['session_uuid'], get_current_user_id(), (int) $session['lock_version'] );
+			if ( $abandoned instanceof WP_Error ) {
+				return $this->normalize_error( $abandoned );
+			}
+			$deleted = $this->sessions->delete_owned( (string) $session['session_uuid'], get_current_user_id() );
+			if ( ! $deleted ) {
+				return $this->error( 'session_delete_failed', 503 );
+			}
+			$this->record_success( $abandoned, 'draft_discarded', 'draft_discarded' );
+			return $this->response( array( 'deleted' => true ) );
+		} finally {
+			$this->release_session_lock( $uuid, $token );
 		}
-		$abandoned = $this->sessions->mark_abandoned( (string) $session['session_uuid'], get_current_user_id(), (int) $session['lock_version'] );
-		if ( $abandoned instanceof WP_Error ) {
-			return $this->normalize_error( $abandoned );
-		}
-		$deleted = $this->sessions->delete_owned( (string) $session['session_uuid'], get_current_user_id() );
-		if ( ! $deleted ) {
-			return $this->error( 'session_delete_failed', 503 );
-		}
-		$this->record_success( $abandoned, 'draft_discarded', 'draft_discarded' );
-		return $this->response( array( 'deleted' => true ) );
 	}
 
 	public function status( WP_REST_Request $request ): WP_REST_Response|WP_Error {
@@ -227,123 +238,159 @@ final class Plan_Rest_Controller {
 	}
 
 	public function revision( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$context = $this->operation_context( $request );
-		if ( $context instanceof WP_Error ) {
-			return $context;
+		$uuid  = strtolower( (string) $request['session'] );
+		$token = $this->acquire_session_lock( $uuid );
+		if ( '' === $token ) {
+			return $this->error( 'session_busy', 409 );
 		}
-		$session = $context['session'];
-		if ( ! is_string( $session['native_reference'] ) || '' === $session['native_reference'] ) {
-			return $this->error( 'native_reference_required', 409 );
+		try {
+			$context = $this->operation_context( $request );
+			if ( $context instanceof WP_Error ) {
+				return $context;
+			}
+			$session = $context['session'];
+			if ( ! is_string( $session['native_reference'] ) || '' === $session['native_reference'] ) {
+				return $this->error( 'native_reference_required', 409 );
+			}
+			$body = $this->body( $request );
+			if ( $body instanceof WP_Error ) {
+				return $body;
+			}
+			$key = isset( $body['idempotency_key'] ) && is_string( $body['idempotency_key'] ) ? trim( $body['idempotency_key'] ) : $this->coordinator->generate_idempotency_key();
+			if ( '' === $key ) {
+				return $this->error( 'idempotency_key_failed', 503 );
+			}
+			if ( ! Contract_Boundary::idempotency_key( $key ) ) {
+				return $this->error( 'invalid_idempotency_key', 400 );
+			}
+			$result = $this->coordinator->submit_revision( get_current_user_id(), (string) $session['adapter_key'], $session['native_reference'], $key, $context['payload'] );
+			if ( $result instanceof WP_Error ) {
+				$held = $this->sessions->apply_policy_error( $session, $result );
+				$this->record_failure( $held, 'revision_submit_failed', $result );
+				return $this->normalize_error( $result, array( 'session' => $this->public_session( $held ) ) );
+			}
+			$native_status = sanitize_key( (string) ( $result['status'] ?? 'pending_review' ) );
+			$state_map = array(
+				'draft' => 'draft',
+				'pending_review' => 'submitted',
+				'submitted' => 'submitted',
+				'under_review' => 'under_review',
+				'changes_requested' => 'changes_requested',
+				'approved' => 'approved',
+				'published' => 'published',
+				'scheduled' => 'scheduled',
+				'rejected' => 'rejected',
+				'withdrawn' => 'withdrawn',
+			);
+			if ( ! isset( $state_map[ $native_status ] ) ) {
+				return $this->error( 'invalid_native_revision_status', 502 );
+			}
+			$state = $state_map[ $native_status ];
+			$updated = $this->sessions->update( (string) $session['session_uuid'], get_current_user_id(), (int) $session['lock_version'], $state, $session['native_reference'], $key );
+			if ( $updated instanceof WP_Error ) {
+				return $this->normalize_error( $updated );
+			}
+			$this->record_success( $updated, 'revision_submitted', 'revision_submitted' );
+			return $this->response( array( 'session' => $this->public_session( $updated ), 'native' => $result ) );
+		} finally {
+			$this->release_session_lock( $uuid, $token );
 		}
-		$body = $this->body( $request );
-		if ( $body instanceof WP_Error ) {
-			return $body;
-		}
-		$key = isset( $body['idempotency_key'] ) && is_string( $body['idempotency_key'] ) ? trim( $body['idempotency_key'] ) : $this->coordinator->generate_idempotency_key();
-		if ( '' === $key ) {
-			return $this->error( 'idempotency_key_failed', 503 );
-		}
-		if ( ! Contract_Boundary::idempotency_key( $key ) ) {
-			return $this->error( 'invalid_idempotency_key', 400 );
-		}
-		$result = $this->coordinator->submit_revision( get_current_user_id(), (string) $session['adapter_key'], $session['native_reference'], $key, $context['payload'] );
-		if ( $result instanceof WP_Error ) {
-			$held = $this->sessions->apply_policy_error( $session, $result );
-			$this->record_failure( $held, 'revision_submit_failed', $result );
-			return $this->normalize_error( $result, array( 'session' => $this->public_session( $held ) ) );
-		}
-		$native_status = sanitize_key( (string) ( $result['status'] ?? 'pending_review' ) );
-		$state_map = array(
-			'draft' => 'draft',
-			'pending_review' => 'submitted',
-			'submitted' => 'submitted',
-			'under_review' => 'under_review',
-			'changes_requested' => 'changes_requested',
-			'approved' => 'approved',
-			'published' => 'published',
-			'scheduled' => 'scheduled',
-			'rejected' => 'rejected',
-			'withdrawn' => 'withdrawn',
-		);
-		if ( ! isset( $state_map[ $native_status ] ) ) {
-			return $this->error( 'invalid_native_revision_status', 502 );
-		}
-		$state = $state_map[ $native_status ];
-		$updated = $this->sessions->update( (string) $session['session_uuid'], get_current_user_id(), (int) $session['lock_version'], $state, $session['native_reference'], $key );
-		if ( $updated instanceof WP_Error ) {
-			return $this->normalize_error( $updated );
-		}
-		$this->record_success( $updated, 'revision_submitted', 'revision_submitted' );
-		return $this->response( array( 'session' => $this->public_session( $updated ), 'native' => $result ) );
 	}
 
 	public function begin_upload( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$session = $this->owned_session( $request );
-		if ( $session instanceof WP_Error ) {
-			return $session;
+		$uuid  = strtolower( (string) $request['session'] );
+		$token = $this->acquire_session_lock( $uuid );
+		if ( '' === $token ) {
+			return $this->error( 'session_busy', 409 );
 		}
-		if ( ! $this->session_allows_operation( $session, 'upload' ) ) {
-			return $this->error( 'session_not_editable', 409, array( 'session' => $this->public_session( $session, false ) ) );
+		try {
+			$session = $this->owned_session( $request );
+			if ( $session instanceof WP_Error ) {
+				return $session;
+			}
+			if ( ! $this->session_allows_operation( $session, 'upload' ) ) {
+				return $this->error( 'session_not_editable', 409, array( 'session' => $this->public_session( $session, false ) ) );
+			}
+			$body = $this->body( $request );
+			if ( $body instanceof WP_Error ) {
+				return $body;
+			}
+			$purpose  = sanitize_key( (string) ( $body['purpose'] ?? '' ) );
+			$metadata = isset( $body['metadata'] ) && is_array( $body['metadata'] ) ? $body['metadata'] : array();
+			if ( ! Contract_Boundary::code( $purpose ) ) {
+				return $this->error( 'invalid_upload_purpose', 400 );
+			}
+			if ( count( $metadata ) > 32 || strlen( (string) wp_json_encode( $metadata ) ) > 16384 ) {
+				return $this->error( 'upload_metadata_too_large', 413 );
+			}
+			$result   = $this->coordinator->begin_upload( get_current_user_id(), (string) $session['adapter_key'], $purpose, $metadata );
+			if ( $result instanceof WP_Error ) {
+				return $this->normalize_error( $result );
+			}
+			$record = $this->uploads->register( (string) $session['session_uuid'], get_current_user_id(), (string) $session['adapter_key'], (string) $result['upload_reference'], $purpose, $metadata );
+			if ( $record instanceof WP_Error ) {
+				$this->coordinator->cancel_upload( get_current_user_id(), (string) $session['adapter_key'], (string) $result['upload_reference'] );
+				return $this->normalize_error( $record );
+			}
+			$this->record_success( $session, 'upload_issued', 'upload_issued' );
+			return $this->response( array( 'upload' => $this->public_upload( $record ), 'native' => $result ), 201 );
+		} finally {
+			$this->release_session_lock( $uuid, $token );
 		}
-		$body = $this->body( $request );
-		if ( $body instanceof WP_Error ) {
-			return $body;
-		}
-		$purpose  = sanitize_key( (string) ( $body['purpose'] ?? '' ) );
-		$metadata = isset( $body['metadata'] ) && is_array( $body['metadata'] ) ? $body['metadata'] : array();
-		if ( ! Contract_Boundary::code( $purpose ) ) {
-			return $this->error( 'invalid_upload_purpose', 400 );
-		}
-		if ( count( $metadata ) > 32 || strlen( (string) wp_json_encode( $metadata ) ) > 16384 ) {
-			return $this->error( 'upload_metadata_too_large', 413 );
-		}
-		$result   = $this->coordinator->begin_upload( get_current_user_id(), (string) $session['adapter_key'], $purpose, $metadata );
-		if ( $result instanceof WP_Error ) {
-			return $this->normalize_error( $result );
-		}
-		$record = $this->uploads->register( (string) $session['session_uuid'], get_current_user_id(), (string) $session['adapter_key'], (string) $result['upload_reference'], $purpose, $metadata );
-		if ( $record instanceof WP_Error ) {
-			$this->coordinator->cancel_upload( get_current_user_id(), (string) $session['adapter_key'], (string) $result['upload_reference'] );
-			return $this->normalize_error( $record );
-		}
-		$this->record_success( $session, 'upload_issued', 'upload_issued' );
-		return $this->response( array( 'upload' => $this->public_upload( $record ), 'native' => $result ), 201 );
 	}
 
 	public function complete_upload( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$context = $this->upload_context( $request );
-		if ( $context instanceof WP_Error ) {
-			return $context;
+		$uuid  = strtolower( (string) $request['session'] );
+		$token = $this->acquire_session_lock( $uuid );
+		if ( '' === $token ) {
+			return $this->error( 'session_busy', 409 );
 		}
-		$result = $this->coordinator->complete_upload( get_current_user_id(), (string) $context['session']['adapter_key'], (string) $context['upload']['native_upload_reference'] );
-		if ( $result instanceof WP_Error ) {
-			return $this->normalize_error( $result );
+		try {
+			$context = $this->upload_context( $request );
+			if ( $context instanceof WP_Error ) {
+				return $context;
+			}
+			$result = $this->coordinator->complete_upload( get_current_user_id(), (string) $context['session']['adapter_key'], (string) $context['upload']['native_upload_reference'] );
+			if ( $result instanceof WP_Error ) {
+				return $this->normalize_error( $result );
+			}
+			$expected = in_array( (string) $context['upload']['status'], array( 'issued', 'uploading' ), true ) ? (string) $context['upload']['status'] : 'issued';
+			$updated  = $this->uploads->transition( (string) $context['upload']['upload_uuid'], get_current_user_id(), $expected, 'completed' );
+			if ( $updated instanceof WP_Error ) {
+				return $this->normalize_error( $updated );
+			}
+			$this->record_success( $context['session'], 'upload_completed', 'upload_completed' );
+			return $this->response( array( 'upload' => $this->public_upload( $updated ), 'native' => $result ) );
+		} finally {
+			$this->release_session_lock( $uuid, $token );
 		}
-		$expected = in_array( (string) $context['upload']['status'], array( 'issued', 'uploading' ), true ) ? (string) $context['upload']['status'] : 'issued';
-		$updated  = $this->uploads->transition( (string) $context['upload']['upload_uuid'], get_current_user_id(), $expected, 'completed' );
-		if ( $updated instanceof WP_Error ) {
-			return $this->normalize_error( $updated );
-		}
-		$this->record_success( $context['session'], 'upload_completed', 'upload_completed' );
-		return $this->response( array( 'upload' => $this->public_upload( $updated ), 'native' => $result ) );
 	}
 
 	public function cancel_upload( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$context = $this->upload_context( $request );
-		if ( $context instanceof WP_Error ) {
-			return $context;
+		$uuid  = strtolower( (string) $request['session'] );
+		$token = $this->acquire_session_lock( $uuid );
+		if ( '' === $token ) {
+			return $this->error( 'session_busy', 409 );
 		}
-		$result = $this->coordinator->cancel_upload( get_current_user_id(), (string) $context['session']['adapter_key'], (string) $context['upload']['native_upload_reference'] );
-		if ( $result instanceof WP_Error ) {
-			return $this->normalize_error( $result );
+		try {
+			$context = $this->upload_context( $request );
+			if ( $context instanceof WP_Error ) {
+				return $context;
+			}
+			$result = $this->coordinator->cancel_upload( get_current_user_id(), (string) $context['session']['adapter_key'], (string) $context['upload']['native_upload_reference'] );
+			if ( $result instanceof WP_Error ) {
+				return $this->normalize_error( $result );
+			}
+			$expected = in_array( (string) $context['upload']['status'], array( 'issued', 'uploading', 'completed' ), true ) ? (string) $context['upload']['status'] : 'issued';
+			$updated  = $this->uploads->transition( (string) $context['upload']['upload_uuid'], get_current_user_id(), $expected, 'cancelled' );
+			if ( $updated instanceof WP_Error ) {
+				return $this->normalize_error( $updated );
+			}
+			$this->record_success( $context['session'], 'upload_cancelled', 'upload_cancelled' );
+			return $this->response( array( 'upload' => $this->public_upload( $updated ) ) );
+		} finally {
+			$this->release_session_lock( $uuid, $token );
 		}
-		$expected = in_array( (string) $context['upload']['status'], array( 'issued', 'uploading', 'completed' ), true ) ? (string) $context['upload']['status'] : 'issued';
-		$updated  = $this->uploads->transition( (string) $context['upload']['upload_uuid'], get_current_user_id(), $expected, 'cancelled' );
-		if ( $updated instanceof WP_Error ) {
-			return $this->normalize_error( $updated );
-		}
-		$this->record_success( $context['session'], 'upload_cancelled', 'upload_cancelled' );
-		return $this->response( array( 'upload' => $this->public_upload( $updated ) ) );
 	}
 
 	/** @return array{session:array<string,mixed>,payload:array<string,mixed>}|WP_Error */
