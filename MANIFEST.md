@@ -106,6 +106,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-OFFLINE-SAVE-ACKNOWLEDGEMENT-AUDIT-NOV12-2026.md`
 - `docs/FILE22-REST-ERROR-DETAILS-AUDIT-NOV12-2026.md`
 - `docs/FILE22-POLICY-HTTP-422-STATUS-AUDIT-NOV12-2026.md`
+- `docs/FILE22-PLAN-REST-SESSION-LOCK-AUDIT-2026-11-12.md`
 - `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 
 ## Historical exact-head review documents retained
@@ -171,6 +172,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/StaticAnalysisCoverageTest.php`
 - `tests/UncertainSessionCleanupTest.php`
 - `tests/RestErrorDetailsBoundaryTest.php`
+- `tests/PlanRestSessionLockTest.php`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
 - `tests/run-offline-save-acknowledgement-test.cjs`
 - `tests/GoverningPlanReleaseIdentityTest.php`
