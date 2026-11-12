@@ -123,3 +123,40 @@ if ( ! function_exists( 'is_email' ) ) {
 		return false !== filter_var( $email, FILTER_VALIDATE_EMAIL ) ? $email : false;
 	}
 }
+
+
+/**
+ * Static-only mirror of File 23 interface-spdb-provider-adapter.php, contract
+ * 2.0.0, verified against File 23 main dcae138e6073f4d0ff596623deb05b9940b8271b.
+ *
+ * The real interface is defined by File 23 on WordPress and is NOT bundled or
+ * loaded by File 22 in production. This exists only in the PHPStan bootstrap.
+ */
+if ( ! interface_exists( 'SPDB_Provider_Adapter', false ) ) {
+	interface SPDB_Provider_Adapter {
+		public function get_provider_key(): string;
+		public function get_provider_name(): string;
+		public function get_provider_version(): string;
+		public function get_minimum_contract_version(): string;
+		public function get_maximum_contract_version(): string;
+		public function get_declared_capability_state(): string;
+		/** @return array<int,string> */
+		public function get_object_types(): array;
+		/** @return array<int,string> */
+		public function get_privacy_classifications(): array;
+		/** @return array<int,string> */
+		public function get_supported_capabilities(): array;
+		/** @return array<string,array<string,mixed>> */
+		public function get_operation_definitions(): array;
+		/** @return array<string,mixed> */
+		public function health_check(): array;
+		/** @param array<string,mixed> $query @return array<string,mixed>|\WP_Error */
+		public function list_items( array $query );
+		/** @return array<string,mixed>|\WP_Error */
+		public function get_item( string $object_type, string $object_id );
+		/** @return array<int,string> */
+		public function get_allowed_operations( string $object_type, string $object_id ): array;
+		/** @param array<string,mixed> $payload @return array<string,mixed>|\WP_Error */
+		public function execute_operation( string $operation_key, string $object_type, string $object_id, array $payload );
+	}
+}
