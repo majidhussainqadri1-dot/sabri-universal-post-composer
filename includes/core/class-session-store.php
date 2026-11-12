@@ -628,19 +628,27 @@ final class Session_Store {
 		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'query' ) || ! method_exists( $wpdb, 'prepare' ) ) {
 			return 0;
 		}
-		$now = gmdate( 'Y-m-d H:i:s' );
-		if ( class_exists( Submission_Store::class, false ) && Submission_Store::tables_exist() ) {
-			$deleted = $wpdb->query(
-				$wpdb->prepare(
-					"DELETE FROM %i WHERE expires_at < %s AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE status IN ('queued','retry','processing','dead_letter')) LIMIT 500",
-					self::table_name(),
-					$now,
-					Submission_Store::outbox_table_name()
-				)
-			);
-		} else {
-			$deleted = $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE expires_at < %s LIMIT 500', self::table_name(), $now ) );
+		// Do not remove the only durable session identity while a native
+		// submission outcome may still be uncertain. An outbox insert itself
+		// can fail; the submission row is the independent recovery authority.
+		// If either recovery table is unavailable, defer cleanup until the
+		// schema/migration has been repaired rather than deleting blindly.
+		if ( ! class_exists( Submission_Store::class, false ) || ! Submission_Store::tables_exist() ) {
+			return 0;
 		}
+		$now = gmdate( 'Y-m-d H:i:s' );
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM %i WHERE expires_at < %s
+				AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE status IN ('queued','retry','processing','dead_letter'))
+				AND session_uuid NOT IN (SELECT session_uuid FROM %i WHERE state IN ('prepared','dispatched','reconcile','retryable','dead_letter'))
+				LIMIT 500",
+				self::table_name(),
+				$now,
+				Submission_Store::outbox_table_name(),
+				Submission_Store::submission_table_name()
+			)
+		);
 		return is_int( $deleted ) && $deleted > 0 ? $deleted : 0;
 	}
 

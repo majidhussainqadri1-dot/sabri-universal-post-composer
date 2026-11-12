@@ -102,6 +102,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-NOVEMBER-12-2026-V121-SOURCE-AUDIT.md`
 - `docs/FILE22-PHPSTAN-SCOPE-AUDIT-NOV12-2026.md`
 - `docs/FILE22-IDB-DURABLE-COMMIT-AUDIT-NOV12-2026.md`
+- `docs/FILE22-UNCERTAIN-SESSION-RETENTION-AUDIT-NOV12-2026.md`
 - `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 
 ## Historical exact-head review documents retained
@@ -165,6 +166,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/ReconciliationOutboxTest.php`
 - `tests/ManifestInventoryTest.php`
 - `tests/StaticAnalysisCoverageTest.php`
+- `tests/UncertainSessionCleanupTest.php`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
 - `tests/GoverningPlanReleaseIdentityTest.php`
 - `tests/NewCentralPlanIntegrationTest.php`
