@@ -17,6 +17,9 @@ final class OfflineRecoveryContractTest extends TestCase {
 		$this->assertStringContainsString( 'expiresAt', $js );
 		$this->assertStringContainsString( 'offlineConflict', $js );
 		$this->assertStringContainsString( "action=logout", $js );
+		// Request success is not a durable IndexedDB commit.
+		$this->assertStringContainsString( "transaction.addEventListener('complete'", $js );
+		$this->assertStringNotContainsString( "requestResult.addEventListener('success', () => resolve", $js );
 		$this->assertStringContainsString( "hash_hmac( 'sha256'", $runtime );
 		$this->assertStringContainsString( "'ttlSeconds' => 7200", $runtime );
 		$this->assertStringContainsString( 'never include media bytes', $privacy );
