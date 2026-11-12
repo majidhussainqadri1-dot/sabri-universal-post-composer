@@ -45,6 +45,22 @@ final class StaticAnalysisCoverageTest extends TestCase {
         self::assertGreaterThan(30, $checked, 'Runtime PHP inventory unexpectedly small');
     }
 
+    public function test_optional_file23_interface_is_statically_mirrored_without_bundling_it_into_production(): void {
+        $stub = file_get_contents($this->root . '/tests/phpstan-wordpress-stubs.php');
+        $adapter = file_get_contents($this->root . '/includes/integration/class-file23-dashboard-adapter-runtime.php');
+        $plugin = file_get_contents($this->root . '/sabri-universal-post-composer.php');
+        self::assertIsString($stub);
+        self::assertIsString($adapter);
+        self::assertIsString($plugin);
+        self::assertStringContainsString("interface SPDB_Provider_Adapter", $stub);
+        self::assertStringContainsString("implements \SPDB_Provider_Adapter", $adapter);
+        self::assertStringContainsString("list_items( array \$query ): array|\WP_Error", $adapter);
+        self::assertStringContainsString("get_item( string \$object_type, string \$object_id ): array|\WP_Error", $adapter);
+        self::assertStringContainsString("array \$payload ): array|\WP_Error", $adapter);
+        self::assertStringNotContainsString('phpstan-wordpress-stubs.php', $plugin);
+        self::assertStringNotContainsString('phpstan-file23', $plugin);
+    }
+
     public function test_composer_static_analysis_uses_the_checked_configuration(): void {
         $raw = file_get_contents($this->root . '/composer.json');
         self::assertIsString($raw);
