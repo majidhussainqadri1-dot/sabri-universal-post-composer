@@ -99,6 +99,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md`
 - `docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md`
 - `docs/FILE22-RC3-TWO-FRESH-REVIEWS-AND-FINAL-SOURCE-CLOSURE-2026-08-10.md`
+- `docs/FILE22-NOVEMBER-12-2026-V121-SOURCE-AUDIT.md`
 - `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 
 ## Historical exact-head review documents retained
