@@ -157,7 +157,7 @@ final class Privacy_Integration {
 				// No verified recovery schema: preserve potentially uncertain native writes.
 				$recovery_schema_incomplete = true;
 			}
-			$removed += is_int( $result ?? null ) && $result > 0 ? $result : 0;
+			$removed += is_int( $result ) && $result > 0 ? $result : 0;
 		}
 
 		if ( Audit_Store::table_exists() ) {
@@ -188,7 +188,7 @@ final class Privacy_Integration {
 			'items_removed'  => $removed > 0,
 			'items_retained' => $items_retained,
 			'messages'       => $messages,
-			'done'           => 0 === $more_erasable,
+			'done'           => 0 === $more_erasable && ! $recovery_schema_incomplete,
 		);
 	}
 
