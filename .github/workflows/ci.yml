@@ -313,3 +313,22 @@ jobs:
           grep -q 'Eleventh full defect census' CHANGELOG.md
           grep -q 'Twelfth complete-review corrections' CHANGELOG.md
           grep -q 'EXPECTED_SHA' .github/workflows/eleventh-review-evidence.yml
+
+  offline-recovery-commit:
+    name: IndexedDB durable recovery contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out exact source head
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+      - name: Verify exact source head
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+      - name: Run dependency-free IndexedDB transaction regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          node --check tests/run-indexeddb-transaction-completion-test.cjs
+          node tests/run-indexeddb-transaction-completion-test.cjs
