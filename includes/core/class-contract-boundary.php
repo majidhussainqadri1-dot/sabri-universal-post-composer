@@ -16,6 +16,30 @@ if ( ! defined( 'ABSPATH' ) ) {
 final class Contract_Boundary {
 	private const UNSAFE_TEXT_CONTROLS = '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\x{202A}-\x{202E}\x{2066}-\x{2069}]/u';
 	private const UNSAFE_TOKEN_CONTROLS = '/[\x00-\x1F\x7F-\x9F\x{202A}-\x{202E}\x{2066}-\x{2069}]/u';
+	private const PUBLIC_POLICY_CODES = array(
+		'invalid_policy_context',
+		'unsafe_rich_text_markup_prohibited',
+		'unsafe_link_or_embed_protocol',
+		'verified_seller_reference_required',
+		'patient_anonymization_required',
+		'patient_consent_reference_required',
+		'patient_pii_name_detected',
+		'patient_pii_email_detected',
+		'patient_pii_phone_detected',
+		'patient_pii_address_detected',
+		'patient_pii_national_id_detected',
+		'patient_pii_identity_number_detected',
+		'patient_pii_record_number_detected',
+		'patient_pii_context_identifier_detected',
+		'patient_pii_location_detected',
+		'successful_case_reference_required',
+		'medical_references_required',
+		'medical_safety_acknowledgement_required',
+		'emergency_treatment_content_prohibited',
+		'copyright_rights_confirmation_required',
+		'copyright_source_reference_required',
+	);
+
 
 	public static function valid_utf8( string $value ): bool {
 		return 1 === preg_match( '//u', $value );
@@ -104,7 +128,7 @@ final class Contract_Boundary {
 		if ( is_array( $codes ) && array_is_list( $codes ) ) {
 			$public_codes = array();
 			foreach ( array_slice( $codes, 0, 100 ) as $code ) {
-				if ( is_string( $code ) && self::code( $code ) ) {
+				if ( is_string( $code ) && self::code( $code ) && in_array( $code, self::PUBLIC_POLICY_CODES, true ) ) {
 					$public_codes[] = $code;
 				}
 			}
