@@ -99,6 +99,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-RC3-NEW-PLANS-RELEASE-TRUTH-2026-08-10.md`
 - `docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md`
 - `docs/FILE22-RC3-TWO-FRESH-REVIEWS-AND-FINAL-SOURCE-CLOSURE-2026-08-10.md`
+- `docs/FILE22-NOVEMBER-12-2026-V121-SOURCE-AUDIT.md`
 - `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 
 ## Historical exact-head review documents retained
@@ -138,7 +139,6 @@ This manifest describes the current repository/source candidate after reconcilia
 - `.github/workflows/ci.yml`
 - `.github/workflows/file22-new-plans-1.0.0-rc.3.yml`
 - `.github/workflows/file22-eighty-pass-review.yml`
-- `.github/workflows/file22-plan-complete-core.yml`
 - `.github/workflows/cumulative-review-evidence.yml`
 - `.github/workflows/fifth-review-evidence.yml`
 - `.github/workflows/sixth-review-evidence.yml`
@@ -158,6 +158,10 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/bootstrap.php`
 - `tests/workflow-bootstrap.php`
 - `tests/GoverningPlanCompletionTest.php`
+- `tests/CompleteAuthorizationForensicTest.php`
+- `tests/CoreComposerRuntimeTest.php`
+- `tests/ReconciliationOutboxTest.php`
+- `tests/ManifestInventoryTest.php`
 - `tests/GoverningPlanReleaseIdentityTest.php`
 - `tests/NewCentralPlanIntegrationTest.php`
 - `tests/EightyPassReviewTest.php`
@@ -206,6 +210,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/run-file20-legacy-1-0-0-compatibility-test.php`
 - `tests/run-file20-partial-create-contract-test.php`
 - `tests/run-global-scope-isolation-test.php`
+- `tests/run-file22-file23-dashboard-bridge-tests.php`
 - `tests/run-invalid-idempotency-generator-test.php`
 - `tests/run-late-shortcode-privacy-test.php`
 - `tests/run-managed-page-rollback-test.php`
