@@ -83,6 +83,38 @@ final class Contract_Boundary {
 		return self::adapter_key( $candidate ) ? $candidate : 'invalid_adapter';
 	}
 
+	/**
+	 * Reduce a native/store WP_Error payload to controlled public diagnostics.
+	 * Raw session rows, idempotency keys, payload hashes, patient data and
+	 * arbitrary adapter error data must never be copied into REST responses.
+	 *
+	 * @param mixed $raw_data Untrusted error data from an internal/native caller.
+	 * @return array<string,mixed>
+	 */
+	public static function safe_rest_error_details( string $error_code, mixed $raw_data ): array {
+		if ( 'supc_policy_violation' !== $error_code || ! is_array( $raw_data ) ) {
+			return array();
+		}
+		$safe  = array();
+		$holds = array( 'privacy_hold', 'medical_hold', 'copyright_hold', 'security_hold' );
+		if ( is_string( $raw_data['hold_state'] ?? null ) && in_array( $raw_data['hold_state'], $holds, true ) ) {
+			$safe['hold_state'] = $raw_data['hold_state'];
+		}
+		$codes = $raw_data['codes'] ?? null;
+		if ( is_array( $codes ) && array_is_list( $codes ) ) {
+			$public_codes = array();
+			foreach ( array_slice( $codes, 0, 100 ) as $code ) {
+				if ( is_string( $code ) && self::code( $code ) ) {
+					$public_codes[] = $code;
+				}
+			}
+			if ( array() !== $public_codes ) {
+				$safe['codes'] = array_values( array_unique( $public_codes ) );
+			}
+		}
+		return $safe;
+	}
+
 	public static function declared_public_instance_method( object $object, string $method, int $required_parameters ): bool {
 		if ( '' === $method || $required_parameters < 0 || ! method_exists( $object, $method ) ) {
 			return false;
