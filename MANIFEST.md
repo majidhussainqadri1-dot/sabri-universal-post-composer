@@ -110,6 +110,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-PRIVACY-ERASURE-UNKNOWN-SUBMISSION-AUDIT-2026-11-12.md`
 - `docs/FILE22-MEDICAL-CITATION-PRESENCE-GATE-2026-11-13.md`
 - `docs/FILE22-NATIVE-REFERENCE-PLACEHOLDER-AUDIT-2026-11-13.md`
+- `docs/FILE22-STRUCTURED-CITATION-URL-DOI-AUDIT-2026-11-13.md`
 - `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 
 ## Historical exact-head review documents retained
@@ -179,6 +180,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/PrivacyErasureUnknownSubmissionTest.php`
 - `tests/MedicalReferenceEvidenceGateTest.php`
 - `tests/NativeReferencePlaceholderTest.php`
+- `tests/StructuredCitationSafetyTest.php`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
 - `tests/run-offline-save-acknowledgement-test.cjs`
 - `tests/GoverningPlanReleaseIdentityTest.php`

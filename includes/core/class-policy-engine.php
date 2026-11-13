@@ -237,7 +237,54 @@ final class Policy_Engine {
 				}
 			}
 		}
+		return $this->contains_unsafe_structured_reference_url( $payload );
+	}
+
+	/**
+	 * Structured native citations are arrays, so the top-level string link
+	 * scanner cannot see a malicious embedded URL. Check bounded citation
+	 * records without following arbitrary nested values or loading any URL.
+	 *
+	 * @param array<string,mixed> $payload
+	 */
+	private function contains_unsafe_structured_reference_url( array $payload ): bool {
+		foreach ( self::REFERENCE_KEYS as $key ) {
+			$value = $payload[ $key ] ?? null;
+			if ( ! is_array( $value ) ) {
+				continue;
+			}
+			$records = array_values( $value ) === $value ? array_slice( $value, 0, 100 ) : array( $value );
+			foreach ( $records as $record ) {
+				if ( ! is_array( $record ) ) {
+					continue;
+				}
+				foreach ( array( 'url', 'source_url', 'link_url', 'href' ) as $url_key ) {
+					$url = $record[ $url_key ] ?? null;
+					if ( is_string( $url ) && '' !== trim( $url ) && ! $this->safe_reference_url( $url ) ) {
+						return true;
+					}
+				}
+				foreach ( array( 'reference', 'citation', 'source_reference', 'source', 'identifier', 'locator', 'doi' ) as $id_key ) {
+					$identifier = $record[ $id_key ] ?? null;
+					if ( is_string( $identifier ) && 1 === preg_match( '/^(?:javascript|vbscript|data|file|blob|ftp|mailto|about|intent):/i', trim( $identifier ) ) ) {
+						return true;
+					}
+				}
+			}
+		}
 		return false;
+	}
+
+	private function safe_reference_url( string $url ): bool {
+		$url   = trim( $url );
+		$parts = parse_url( $url );
+		return strlen( $url ) <= 2048
+			&& 1 === preg_match( '/^https?:\/\//i', $url )
+			&& is_array( $parts )
+			&& is_string( $parts['host'] ?? null )
+			&& '' !== $parts['host']
+			&& ! isset( $parts['user'] )
+			&& ! isset( $parts['pass'] );
 	}
 
 	/** @param array<string,mixed> $payload */
@@ -377,9 +424,17 @@ final class Policy_Engine {
 			return false;
 		}
 		foreach ( array( 'reference', 'citation', 'source_reference', 'url', 'doi', 'locator', 'source', 'identifier' ) as $key ) {
-			if ( is_string( $item[ $key ] ?? null ) && $this->usable_reference( $item[ $key ] ) ) {
-				return true;
+			$locator = $item[ $key ] ?? null;
+			if ( ! is_string( $locator ) || ! $this->usable_reference( $locator ) ) {
+				continue;
 			}
+			if ( 'url' === $key && ! $this->safe_reference_url( $locator ) ) {
+				continue;
+			}
+			if ( 'doi' === $key && 1 !== preg_match( '/^10\.[0-9]{4,9}\/\S{1,500}$/u', trim( $locator ) ) ) {
+				continue;
+			}
+			return true;
 		}
 		return false;
 	}
