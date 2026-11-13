@@ -292,7 +292,7 @@ final class Policy_Engine {
 				continue;
 			}
 			foreach ( array_slice( $value, 0, 100 ) as $reference ) {
-				if ( is_string( $reference ) && 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/D', $reference ) ) {
+				if ( $this->valid_opaque_reference( $reference ) ) {
 					return true;
 				}
 			}
@@ -304,11 +304,28 @@ final class Policy_Engine {
 	private function has_reference( array $payload, array $keys ): bool {
 		foreach ( $keys as $key ) {
 			$value = $payload[ $key ] ?? null;
-			if ( is_string( $value ) && 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/D', $value ) ) {
+			if ( $this->valid_opaque_reference( $value ) ) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * An opaque identifier must be a real-looking owner reference, not an
+	 * unchecked placeholder. Its actual existence and provenance are still
+	 * verified by the consent, marketplace or publication native owner.
+	 */
+	private function valid_opaque_reference( mixed $value ): bool {
+		if ( ! is_string( $value ) || 1 !== preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/D', $value ) ) {
+			return false;
+		}
+		return ! in_array( strtolower( $value ), array(
+			'0', '1', 'yes', 'no', 'true', 'false',
+			'na', 'none', 'null', 'undefined',
+			'unknown', 'pending', 'tbd', 'placeholder',
+			'not-available', 'not_available',
+		), true );
 	}
 
 	/**
