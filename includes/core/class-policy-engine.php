@@ -311,14 +311,47 @@ final class Policy_Engine {
 		return false;
 	}
 
-	/** @param array<string,mixed> $payload */
+	/**
+	 * A populated reference container is not evidence of an actual citation.
+	 * File 22 checks only usable reference presence; the native owner verifies
+	 * scholarly attribution, edition, page, DOI and any required source locator.
+	 *
+	 * @param array<string,mixed> $payload
+	 */
 	private function has_any_references( array $payload ): bool {
 		foreach ( self::REFERENCE_KEYS as $key ) {
 			$value = $payload[ $key ] ?? null;
-			if ( is_array( $value ) && array() !== $value ) {
+			if ( $this->usable_reference( $value ) ) {
 				return true;
 			}
-			if ( is_string( $value ) && '' !== trim( $value ) ) {
+			if ( ! is_array( $value ) || array_values( $value ) !== $value ) {
+				continue;
+			}
+			foreach ( array_slice( $value, 0, 100 ) as $item ) {
+				if ( $this->usable_reference( $item ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param mixed $item Opaque reference or a native structured citation.
+	 */
+	private function usable_reference( mixed $item ): bool {
+		if ( is_string( $item ) ) {
+			$value = trim( $item );
+			if ( strlen( $value ) < 3 || strlen( $value ) > 2048 || preg_match( '/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]/', $value ) ) {
+				return false;
+			}
+			return ! in_array( strtolower( $value ), array( 'n/a', 'tbd', 'none', 'null', 'false', 'undefined', 'unknown', 'pending', 'placeholder', 'not available', '[]', '{}' ), true );
+		}
+		if ( ! is_array( $item ) ) {
+			return false;
+		}
+		foreach ( array( 'reference', 'citation', 'source_reference', 'url', 'doi', 'locator', 'source', 'identifier' ) as $key ) {
+			if ( $this->usable_reference( $item[ $key ] ?? null ) ) {
 				return true;
 			}
 		}
