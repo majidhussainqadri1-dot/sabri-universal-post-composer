@@ -174,7 +174,7 @@ final class Upload_Token_Store {
 			),
 			ARRAY_A
 		);
-		return is_array( $row ) ? $this->normalize( $row ) : $this->error( 'upload_not_found' );
+		return is_array( $row ) ? $this->active_record( $row ) : $this->error( 'upload_not_found' );
 	}
 
 	/** @return array<string,mixed>|WP_Error */
@@ -242,7 +242,26 @@ final class Upload_Token_Store {
 			),
 			ARRAY_A
 		);
-		return is_array( $row ) ? $this->normalize( $row ) : $this->error( 'upload_not_found' );
+		return is_array( $row ) ? $this->active_record( $row ) : $this->error( 'upload_not_found' );
+	}
+
+	/**
+	 * Cleanup is asynchronous and may be delayed. Never treat an expired
+	 * upload token as valid simply because its row is still present.
+	 *
+	 * @param array<string,mixed> $row
+	 * @return array<string,mixed>|WP_Error
+	 */
+	private function active_record( array $row ): array|WP_Error {
+		$expires = $row['expires_at'] ?? null;
+		if ( ! is_string( $expires ) || 1 !== preg_match( '/^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$/D', $expires ) ) {
+			return $this->error( 'upload_expired' );
+		}
+		$timestamp = strtotime( $expires . ' UTC' );
+		if ( false === $timestamp || $timestamp <= time() ) {
+			return $this->error( 'upload_expired' );
+		}
+		return $this->normalize( $row );
 	}
 
 	private function error_code( WP_Error $error ): string {
