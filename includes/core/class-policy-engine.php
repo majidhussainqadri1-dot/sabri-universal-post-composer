@@ -262,6 +262,11 @@ final class Policy_Engine {
 			// bounded leading entries here without conflating limits with URLs.
 			$records = $is_list ? array_slice( $value, 0, 100 ) : array( $value );
 			foreach ( $records as $record ) {
+				// Native sources may be a list of plain strings as well as
+				// structured records. Do not skip unsafe schemes in the former.
+				if ( is_string( $record ) && 1 === preg_match( '/^(?:javascript|vbscript|data|file|blob|ftp|mailto|about|intent):/i', trim( $record ) ) ) {
+					return true;
+				}
 				if ( ! is_array( $record ) ) {
 					continue;
 				}

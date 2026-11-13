@@ -111,6 +111,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-MEDICAL-CITATION-PRESENCE-GATE-2026-11-13.md`
 - `docs/FILE22-NATIVE-REFERENCE-PLACEHOLDER-AUDIT-2026-11-13.md`
 - `docs/FILE22-STRUCTURED-CITATION-URL-DOI-AUDIT-2026-11-13.md`
+- `docs/FILE22-SCALAR-CITATION-SCHEME-AUDIT-2026-11-13.md`
 - `docs/FILE22-UPLOAD-TOKEN-EXPIRES-AT-USE-AUDIT-2026-11-13.md`
 - `docs/FILE22-LIFECYCLE-REST-ACTUAL-BODY-LIMIT-AUDIT-2026-11-13.md`
 - `docs/FILE22-MULTILINGUAL-TEXTAREA-BIDI-RENDERING-AUDIT-2026-11-13.md`
@@ -184,6 +185,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/MedicalReferenceEvidenceGateTest.php`
 - `tests/NativeReferencePlaceholderTest.php`
 - `tests/StructuredCitationSafetyTest.php`
+- `tests/ScalarCitationSchemeTest.php`
 - `tests/UploadTokenExpiryAtUseTest.php`
 - `tests/MultilingualTextareaPresentationTest.php`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
