@@ -242,7 +242,7 @@ final class Upload_Token_Store {
 			),
 			ARRAY_A
 		);
-		return is_array( $row ) ? $this->normalize( $row ) : $this->error( 'upload_not_found' );
+		return is_array( $row ) ? $this->active_record( $row ) : $this->error( 'upload_not_found' );
 	}
 
 	/**
