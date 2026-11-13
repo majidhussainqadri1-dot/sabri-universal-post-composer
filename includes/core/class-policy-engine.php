@@ -351,7 +351,7 @@ final class Policy_Engine {
 			return false;
 		}
 		foreach ( array( 'reference', 'citation', 'source_reference', 'url', 'doi', 'locator', 'source', 'identifier' ) as $key ) {
-			if ( $this->usable_reference( $item[ $key ] ?? null ) ) {
+			if ( is_string( $item[ $key ] ?? null ) && $this->usable_reference( $item[ $key ] ) ) {
 				return true;
 			}
 		}
