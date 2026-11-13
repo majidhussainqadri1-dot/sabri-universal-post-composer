@@ -98,6 +98,29 @@ final class NativeReferencePlaceholderTest extends TestCase {
         }
     }
 
+    public function test_untrusted_link_protocols_stay_blocked_without_rejecting_opaque_native_sources(): void {
+        $valid = $this->policy( array(
+            'content_type' => 'standard_publication',
+            'third_party_material' => true,
+            'rights_confirmed' => true,
+            'source_reference' => 'rights:license:1',
+        ) );
+        self::assertIsArray( $valid );
+
+        foreach ( array(
+            array( 'source_reference' => 'javascript:alert' ),
+            array( 'source_reference' => 'data:text/html,script' ),
+            array( 'source_url' => 'ftp://example.test/resource' ),
+            array( 'link_url' => 'mailto:fake@example.test' ),
+        ) as $field ) {
+            $result = $this->policy( array_merge( array(
+                'content_type' => 'standard_publication',
+            ), $field ) );
+            self::assertInstanceOf( WP_Error::class, $result );
+            self::assertContains( 'unsafe_link_or_embed_protocol', $result->data['codes'] );
+        }
+    }
+
     public function test_draft_phase_still_allows_incomplete_external_proof(): void {
         $result = $this->engine->evaluate( 1, 'social_publication', array(
             'content_type' => 'patient_case',
