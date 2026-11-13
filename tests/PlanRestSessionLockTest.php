@@ -11,6 +11,19 @@ use Sabri\UniversalComposer\Http\Plan_Rest_Controller;
 if ( ! class_exists( 'WP_REST_Request', false ) ) {
     class WP_REST_Request implements ArrayAccess {
         private array $params = array();
+        private string $raw_body = '';
+
+        public function set_body( string $body ): void {
+            $this->raw_body = $body;
+        }
+
+        public function get_body(): string {
+            return $this->raw_body;
+        }
+
+        public function get_json_params(): array {
+            throw new RuntimeException( 'Oversized JSON must not be decoded.' );
+        }
 
         public function offsetExists( mixed $offset ): bool {
             return isset( $this->params[$offset] );
@@ -94,6 +107,17 @@ final class PlanRestSessionLockTest extends TestCase {
             strpos( $method, '! is_int( $lock )' ),
             'Reject stale or missing client version before irreversible native deletion.'
         );
+    }
+
+    public function test_oversized_actual_lifecycle_body_is_denied_before_json_decode(): void {
+        $request = new WP_REST_Request();
+        $request->set_body( str_repeat( 'x', 1048577 ) );
+        $runtime = ( new ReflectionClass( \Sabri\UniversalComposer\Core\Governing_Plan_Runtime::class ) )->newInstanceWithoutConstructor();
+        $result = $runtime->rest_lifecycle_execute( $request );
+
+        self::assertInstanceOf( WP_Error::class, $result );
+        self::assertSame( 'supc_request_too_large', $result->get_error_code() );
+        self::assertSame( 413, $result->data['status'] );
     }
 
     public function test_plan_and_durable_submission_controllers_share_the_same_option_lock_namespace(): void {
