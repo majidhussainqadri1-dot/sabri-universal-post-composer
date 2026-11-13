@@ -224,8 +224,17 @@ final class Policy_Engine {
 				}
 				continue;
 			}
-			if ( preg_match( '/(?:url|link|embed|source)/', $key ) && preg_match( '/^[a-z][a-z0-9+.-]*:/i', trim( $value ) ) && 1 !== preg_match( '/^https?:\/\//i', trim( $value ) ) ) {
-				return true;
+			if ( preg_match( '/(?:url|link|embed|source)/', $key ) && preg_match( '/^[a-z][a-z0-9+.-]*:/i', trim( $value ) ) ) {
+				$locator = trim( $value );
+				// URI-valued fields must use HTTP(S); references are permitted to
+				// use opaque native identifiers such as "rights:license:1".
+				// Still prohibit dangerous schemes in all source-related fields.
+				if ( 1 === preg_match( '/^(?:javascript|vbscript|data|file|blob|ftp|mailto|about|intent):/i', $locator ) ) {
+					return true;
+				}
+				if ( ( 1 === preg_match( '/(?:url|link|embed)/', $key ) || str_contains( $locator, '://' ) ) && 1 !== preg_match( '/^https?:\/\//i', $locator ) ) {
+					return true;
+				}
 			}
 		}
 		return false;
