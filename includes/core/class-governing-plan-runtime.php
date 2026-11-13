@@ -189,6 +189,11 @@ final class Governing_Plan_Runtime {
 	}
 
 	public function rest_lifecycle_execute( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		// Content-Length can be absent or inaccurate. Bound the actual body
+		// before decoding JSON, as the other File 22 mutation routes do.
+		if ( strlen( (string) $request->get_body() ) > self::MAX_REQUEST_BYTES ) {
+			return $this->error( 'request_too_large', 413 );
+		}
 		$body = $request->get_json_params();
 		if ( ! is_array( $body ) ) {
 			return $this->error( 'invalid_request_body', 400 );
