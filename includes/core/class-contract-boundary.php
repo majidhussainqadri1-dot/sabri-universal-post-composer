@@ -20,6 +20,7 @@ final class Contract_Boundary {
 		'invalid_policy_context',
 		'unsafe_rich_text_markup_prohibited',
 		'unsafe_link_or_embed_protocol',
+		'citation_reference_limit_exceeded',
 		'verified_seller_reference_required',
 		'patient_anonymization_required',
 		'patient_consent_reference_required',
