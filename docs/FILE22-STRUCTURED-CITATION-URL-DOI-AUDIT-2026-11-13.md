@@ -25,3 +25,10 @@ Migration State: UNVERIFIED.
 Live Verification Status: NOT PERFORMED.
 
 **Exact deployed code ابھی unverified ہے؛ repository-based diagnosis provisional ہے۔**
+
+## D22-SRC-15 — citation-list overflow without tail verification (13 November 2026)
+A follow-up source audit identified that the V12.1 structured-reference link scanner examined only the first 100 list members while accepting a 101+ item list. A trailing malicious URL could remain unchecked when an earlier citation fulfilled the medical reference-presence gate. This is one independent cardinality-boundary defect, **not evidence of a live exploit**.
+
+The corrected File22 common policy refuses any >100 entry reference list with a distinct `citation_reference_limit_exceeded` reason and `security_hold`; the URI scanner itself still processes a bounded leading 100 entries. The error reason is explicitly whitelisted in `Contract_Boundary::safe_rest_error_details()`, while raw references never leave internal error data.
+
+Existing `tests/StructuredCitationSafetyTest.php` now adds exact 100 accepted, 101 benign rejected, and 101st malicious URL denied. `RestErrorDetailsBoundaryTest.php` verifies controlled reason exposure without raw source data. These are PHP-source regressions, not full staging/browser acceptance. Origin citation verification and native owner controls remain required.
