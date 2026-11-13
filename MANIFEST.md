@@ -113,6 +113,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-STRUCTURED-CITATION-URL-DOI-AUDIT-2026-11-13.md`
 - `docs/FILE22-UPLOAD-TOKEN-EXPIRES-AT-USE-AUDIT-2026-11-13.md`
 - `docs/FILE22-LIFECYCLE-REST-ACTUAL-BODY-LIMIT-AUDIT-2026-11-13.md`
+- `docs/FILE22-MULTILINGUAL-TEXTAREA-BIDI-RENDERING-AUDIT-2026-11-13.md`
 - `docs/FILE22-EIGHTY-PASS-REVIEW-AND-CORRECTION-2026-08-10.md`
 
 ## Historical exact-head review documents retained
@@ -184,6 +185,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/NativeReferencePlaceholderTest.php`
 - `tests/StructuredCitationSafetyTest.php`
 - `tests/UploadTokenExpiryAtUseTest.php`
+- `tests/MultilingualTextareaPresentationTest.php`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
 - `tests/run-offline-save-acknowledgement-test.cjs`
 - `tests/GoverningPlanReleaseIdentityTest.php`
