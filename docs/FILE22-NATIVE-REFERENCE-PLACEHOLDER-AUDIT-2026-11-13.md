@@ -8,6 +8,11 @@ The shared `valid_opaque_reference()` preserves the previous bounded syntax and 
 
 This **does not** prove real consent, actual DOI, lawful reuse, seller verification or patient anonymization. Native owner must recheck identity, records, expiry, rights, approval, modification and context server-side at publish time; File22 never grants itself those permissions.
 
+## Additional D22-SRC-10 discovered by exact-head CI
+The initial exact PR SHA `5caf733807ee1f05956d5e745dd6bffab1fa3500` failed PHPUnit (one failed assertion, repeated across multiple workflows) on a valid `rights:license:1` source reference. Root cause: `contains_unsafe_link_protocol()` treated **every** colon-prefixed string in fields containing `source` as an external URL; meanwhile `has_reference()` correctly treated `source_reference` as a native opaque ID. Both constraints cannot hold simultaneously.
+
+The correction distinguishes URI-bearing keys (`url/link/embed`) from opaque source/reference keys. It retains rejection of dangerous `javascript:/vbscript:/data:/file:/blob:/ftp:/mailto:/about:/intent:` schemes and rejects non-HTTP(S) URLs containing `://`. A source ID such as `rights:license:1` may pass the *syntactic* File22 gate, while the actual native owner must verify existence, rights and context. Regression now includes four dangerous URI cases. This is **one additional root cause**, not ten separate CI defects.
+
 ## Regression and release
 `tests/NativeReferencePlaceholderTest.php` exercises patients, documented cases, marketplace and copyright; good opaque identifiers remain valid; privacy holds still apply in draft. Require exact PR-HEAD full CI, source review and real File00/21/18 adapter staging. Do not mark user consent, rights or live safety resolved from source alone.
 
