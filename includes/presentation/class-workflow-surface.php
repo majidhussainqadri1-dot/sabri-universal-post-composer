@@ -185,7 +185,7 @@ final class Workflow_Surface {
 		$html  = '<section class="supc-workflow__stage" data-supc-step="preview" hidden><header class="supc-workflow__stage-header"><p class="supc-workflow__stage-kicker">' . esc_html__( 'Step', 'sabri-universal-post-composer' ) . '</p><h3>' . esc_html__( 'Preview', 'sabri-universal-post-composer' ) . '</h3><p>' . esc_html__( 'Use the drafting projection below, then open the authoritative native preview before publication.', 'sabri-universal-post-composer' ) . '</p></header>';
 		$html .= '<div class="supc-preview-modes" role="group" aria-label="' . esc_attr__( 'Preview surface', 'sabri-universal-post-composer' ) . '"><button type="button" class="button is-active" data-supc-preview-surface="home">' . esc_html__( 'Home Card', 'sabri-universal-post-composer' ) . '</button><button type="button" class="button" data-supc-preview-surface="profile">' . esc_html__( 'Profile Timeline', 'sabri-universal-post-composer' ) . '</button><button type="button" class="button" data-supc-preview-surface="single">' . esc_html__( 'Single Page', 'sabri-universal-post-composer' ) . '</button><button type="button" class="button" data-supc-preview-surface="module">' . esc_html__( 'Module', 'sabri-universal-post-composer' ) . '</button></div>';
 		$html .= '<div class="supc-preview-devices" role="group" aria-label="' . esc_attr__( 'Preview device', 'sabri-universal-post-composer' ) . '"><button type="button" class="button is-active" data-supc-preview-device="desktop">' . esc_html__( 'Desktop', 'sabri-universal-post-composer' ) . '</button><button type="button" class="button" data-supc-preview-device="tablet">' . esc_html__( 'Tablet', 'sabri-universal-post-composer' ) . '</button><button type="button" class="button" data-supc-preview-device="mobile">' . esc_html__( 'Mobile', 'sabri-universal-post-composer' ) . '</button></div>';
-		$html .= '<div class="supc-preview-canvas" data-supc-preview-canvas data-surface="home" data-device="desktop"><article><p class="supc-preview-canvas__meta" data-supc-preview-meta>' . esc_html__( 'Draft · Native owner preview pending', 'sabri-universal-post-composer' ) . '</p><h4 data-supc-preview-title>' . esc_html__( 'Your title will appear here', 'sabri-universal-post-composer' ) . '</h4><div data-supc-preview-body>' . esc_html__( 'Your content preview will appear here as you write.', 'sabri-universal-post-composer' ) . '</div></article></div>';
+		$html .= '<div class="supc-preview-canvas" data-supc-preview-canvas data-surface="home" data-device="desktop"><article><p class="supc-preview-canvas__meta" data-supc-preview-meta>' . esc_html__( 'Draft · Native owner preview pending', 'sabri-universal-post-composer' ) . '</p><h4 data-supc-preview-title dir="auto">' . esc_html__( 'Your title will appear here', 'sabri-universal-post-composer' ) . '</h4><div data-supc-preview-body dir="auto">' . esc_html__( 'Your content preview will appear here as you write.', 'sabri-universal-post-composer' ) . '</div></article></div>';
 		$html .= '<p><button type="button" class="button button-primary" data-supc-action="preview">' . esc_html__( 'Open Authoritative Preview', 'sabri-universal-post-composer' ) . '</button></p>';
 		return $html . $this->stage_navigation_buttons( 'preview' ) . '</section>';
 	}
@@ -253,6 +253,10 @@ final class Workflow_Surface {
 		}
 		if ( $is_rich ) {
 			$html .= $this->rich_text_editor( $id, $attrs, $label, $required );
+		} elseif ( 'textarea' === $type ) {
+			// Preserve the native schema's multiline semantics and automatic
+			// Urdu/Arabic/English text direction for plain-text descriptions.
+			$html .= '<textarea' . $attrs . ' dir="auto" rows="6"></textarea>';
 		} elseif ( in_array( $type, array( 'select', 'multiselect' ), true ) ) {
 			$html .= '<select' . $attrs . ( 'multiselect' === $type ? ' multiple' : '' ) . ( $is_action ? ' hidden data-supc-publication-action' : '' ) . '>';
 			if ( 'select' === $type && ! $is_action ) {
@@ -270,7 +274,7 @@ final class Workflow_Surface {
 			$input_type = match ( $type ) {
 				'number' => 'number', 'date' => 'date', 'datetime' => 'datetime-local', 'url' => 'url', 'email' => 'email', default => 'text',
 			};
-			$html .= '<input type="' . esc_attr( $input_type ) . '"' . $attrs;
+			$html .= '<input type="' . esc_attr( $input_type ) . '"' . $attrs . ( 'text' === $input_type ? ' dir="auto"' : '' );
 			if ( isset( $definition['minimum'] ) ) {
 				$html .= ' min="' . esc_attr( (string) $definition['minimum'] ) . '"';
 			}
@@ -297,8 +301,8 @@ final class Workflow_Surface {
 		foreach ( $buttons as $command => $button_label ) {
 			$html .= '<button type="button" class="button" data-supc-rte-command="' . esc_attr( $command ) . '" aria-label="' . esc_attr__( $button_label, 'sabri-universal-post-composer' ) . '">' . esc_html__( $button_label, 'sabri-universal-post-composer' ) . '</button>';
 		}
-		$html .= '</div><div id="' . esc_attr( $editor_id ) . '" class="supc-rte__editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="' . esc_attr( $label ) . '"' . ( $required ? ' aria-required="true"' : '' ) . ' data-supc-rte></div>';
-		$html .= '<textarea' . $attrs . ' class="supc-rte__source" data-supc-rte-source tabindex="-1" aria-hidden="true"></textarea><div class="supc-rte__metrics"><span data-supc-rte-words>0 words</span><span data-supc-rte-reading>0 min read</span></div></div>';
+		$html .= '</div><div id="' . esc_attr( $editor_id ) . '" class="supc-rte__editor" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="' . esc_attr( $label ) . '"' . ( $required ? ' aria-required="true"' : '' ) . ' data-supc-rte></div>';
+		$html .= '<textarea' . $attrs . ' dir="auto" class="supc-rte__source" data-supc-rte-source tabindex="-1" aria-hidden="true"></textarea><div class="supc-rte__metrics"><span data-supc-rte-words>0 words</span><span data-supc-rte-reading>0 min read</span></div></div>';
 		return $html;
 	}
 
