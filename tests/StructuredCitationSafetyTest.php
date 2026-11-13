@@ -81,6 +81,27 @@ final class StructuredCitationSafetyTest extends TestCase {
         }
     }
 
+    public function test_citation_overflow_is_rejected_instead_of_skipping_unchecked_last_url(): void {
+        $references = array_fill( 0, 100, 'source:book:1' );
+        $references[] = array( 'url' => 'javascript:unscanned' );
+        $result = $this->engine->evaluate( 1, 'social_publication', $this->patientCase( $references ), 'submit' );
+        self::assertInstanceOf( WP_Error::class, $result );
+        self::assertSame( 'security_hold', $result->data['hold_state'] );
+        self::assertContains( 'citation_reference_limit_exceeded', $result->data['codes'] );
+    }
+
+    public function test_benign_overflow_is_also_denied_and_exactly_100_safe_references_still_pass(): void {
+        $references = array_fill( 0, 100, 'source:book:1' );
+        $accepted = $this->engine->evaluate( 1, 'social_publication', $this->patientCase( $references ), 'preview' );
+        self::assertIsArray( $accepted );
+        self::assertSame( 'clear', $accepted['hold_state'] );
+
+        $references[] = 'source:book:101';
+        $rejected = $this->engine->evaluate( 1, 'social_publication', $this->patientCase( $references ), 'preview' );
+        self::assertInstanceOf( WP_Error::class, $rejected );
+        self::assertContains( 'citation_reference_limit_exceeded', $rejected->data['codes'] );
+    }
+
     public function test_unsafe_structured_source_in_nonmedical_content_also_fails_common_security(): void {
         $result = $this->engine->evaluate( 1, 'social_publication', array(
             'content_type' => 'standard_publication',

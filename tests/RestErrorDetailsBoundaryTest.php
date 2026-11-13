@@ -103,6 +103,21 @@ final class RestErrorDetailsBoundaryTest extends TestCase {
         );
     }
 
+    public function test_citation_limit_reason_is_public_safe_without_raw_reference_payload(): void {
+        $result = Contract_Boundary::safe_rest_error_details(
+            'supc_policy_violation',
+            array(
+                'hold_state' => 'security_hold',
+                'codes' => array( 'citation_reference_limit_exceeded' ),
+                'references' => array( 'secret:patient:source' ),
+            )
+        );
+        self::assertSame(
+            array( 'hold_state' => 'security_hold', 'codes' => array( 'citation_reference_limit_exceeded' ) ),
+            $result
+        );
+    }
+
     public function test_native_error_mapping_does_not_echo_native_diagnostic_payload(): void {
         $raw = array( 'native_code' => 'native_error', 'adapter_key' => 'internal_secret', 'operation' => 'submit', 'patient_text' => 'private' );
         foreach ( $this->controllers() as $controller ) {
