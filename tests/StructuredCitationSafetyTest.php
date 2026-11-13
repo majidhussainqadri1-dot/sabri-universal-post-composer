@@ -87,7 +87,7 @@ final class StructuredCitationSafetyTest extends TestCase {
         $result = $this->engine->evaluate( 1, 'social_publication', $this->patientCase( $references ), 'submit' );
         self::assertInstanceOf( WP_Error::class, $result );
         self::assertSame( 'security_hold', $result->data['hold_state'] );
-        self::assertContains( 'unsafe_link_or_embed_protocol', $result->data['codes'] );
+        self::assertContains( 'citation_reference_limit_exceeded', $result->data['codes'] );
     }
 
     public function test_benign_overflow_is_also_denied_and_exactly_100_safe_references_still_pass(): void {
@@ -99,7 +99,7 @@ final class StructuredCitationSafetyTest extends TestCase {
         $references[] = 'source:book:101';
         $rejected = $this->engine->evaluate( 1, 'social_publication', $this->patientCase( $references ), 'preview' );
         self::assertInstanceOf( WP_Error::class, $rejected );
-        self::assertContains( 'unsafe_link_or_embed_protocol', $rejected->data['codes'] );
+        self::assertContains( 'citation_reference_limit_exceeded', $rejected->data['codes'] );
     }
 
     public function test_unsafe_structured_source_in_nonmedical_content_also_fails_common_security(): void {
