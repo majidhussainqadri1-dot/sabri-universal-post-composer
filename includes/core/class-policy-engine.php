@@ -253,7 +253,13 @@ final class Policy_Engine {
 			if ( ! is_array( $value ) ) {
 				continue;
 			}
-			$records = array_values( $value ) === $value ? array_slice( $value, 0, 100 ) : array( $value );
+			$is_list = array_values( $value ) === $value;
+			// Do not inspect only the first 100 entries and silently forward
+			// unchecked trailing URLs to a native publisher.
+			if ( $is_list && count( $value ) > 100 ) {
+				return true;
+			}
+			$records = $is_list ? $value : array( $value );
 			foreach ( $records as $record ) {
 				if ( ! is_array( $record ) ) {
 					continue;
