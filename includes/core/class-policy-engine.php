@@ -71,6 +71,10 @@ final class Policy_Engine {
 			$codes[] = 'unsafe_link_or_embed_protocol';
 			$hold    = $this->stronger_hold( $hold, 'security_hold' );
 		}
+		if ( $this->has_excess_reference_entries( $payload ) ) {
+			$codes[] = 'citation_reference_limit_exceeded';
+			$hold    = $this->stronger_hold( $hold, 'security_hold' );
+		}
 
 		if ( $this->contains_raw_contact( $payload ) && 'marketplace' === $type ) {
 			$codes[] = 'verified_seller_reference_required';
@@ -254,12 +258,9 @@ final class Policy_Engine {
 				continue;
 			}
 			$is_list = array_values( $value ) === $value;
-			// Do not inspect only the first 100 entries and silently forward
-			// unchecked trailing URLs to a native publisher.
-			if ( $is_list && count( $value ) > 100 ) {
-				return true;
-			}
-			$records = $is_list ? $value : array( $value );
+			// The separate count gate rejects every oversized list; scan only
+			// bounded leading entries here without conflating limits with URLs.
+			$records = $is_list ? array_slice( $value, 0, 100 ) : array( $value );
 			foreach ( $records as $record ) {
 				if ( ! is_array( $record ) ) {
 					continue;
@@ -276,6 +277,21 @@ final class Policy_Engine {
 						return true;
 					}
 				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Never permit unchecked citation-list tails after the bounded URI scan.
+	 *
+	 * @param array<string,mixed> $payload
+	 */
+	private function has_excess_reference_entries( array $payload ): bool {
+		foreach ( self::REFERENCE_KEYS as $key ) {
+			$value = $payload[ $key ] ?? null;
+			if ( is_array( $value ) && array_is_list( $value ) && count( $value ) > 100 ) {
+				return true;
 			}
 		}
 		return false;
