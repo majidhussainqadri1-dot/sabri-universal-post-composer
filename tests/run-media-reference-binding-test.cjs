@@ -76,4 +76,11 @@ assert.equal(h3.bindOpaqueReference('upload:image:2', 'image/webp'), true);
 assert.equal(h3.bindOpaqueReference('upload:image:3', 'image/jpeg'), false, 'Existing native reference must not be overwritten');
 assert.equal(h3fields[0].value, 'upload:image:2');
 
+const h4fields = [field('media_reference')];
+const h4 = harness(h4fields);
+assert.equal(h4.bindOpaqueReference('upload:unknown:1', 'application/octet-stream'), false, 'Unknown MIME must not be auto-bound');
+assert.equal(h4.bindOpaqueReference('upload:unknown:2', ''), false, 'Empty MIME must not be auto-bound');
+assert.equal(h4fields[0].value, '');
+assert.equal(h4.getDirty(), false);
+
 console.log('File22 V12.3 native media reference binding: PASS.');
