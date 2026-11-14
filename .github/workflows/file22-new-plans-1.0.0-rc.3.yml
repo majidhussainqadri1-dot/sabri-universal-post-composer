@@ -52,6 +52,7 @@ jobs:
           composer phpcs
           node --check assets/js/workflow-composer.js
           node tests/run-validation-grouping-test.cjs
+          node tests/run-media-reference-binding-test.cjs
           git diff --check
 
       - name: Verify integrated central-plan and File-22-plan contracts
