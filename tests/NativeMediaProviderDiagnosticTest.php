@@ -21,7 +21,7 @@ final class NativeMediaProviderDiagnosticTest extends TestCase {
 		self::assertStringContainsString( "'social_publication'", $source );
 		self::assertStringContainsString( 'instanceof \\Sabri\\UniversalComposer\\Contracts\\Upload_Token_Adapter', $source );
 		self::assertStringContainsString( "'native_social_media_upload_adapter_missing'", $source );
-		self::assertStringContainsString( "'status' => $native_upload ? 'pass' : 'warning'", $source );
+		self::assertStringContainsString( "'status' => " . '$native_upload' . " ? 'pass' : 'warning'", $source );
 	}
 
 	public function test_diagnostic_key_and_code_are_allowlisted_without_private_payload_fields(): void {
