@@ -1046,12 +1046,12 @@
 			if (previewCanvas) previewCanvas.dataset.device = button.dataset.supcPreviewDevice;
 		});
 	});
-	if (uploadInput) {
-		uploadInput.addEventListener('change', () => {
-			Array.from(uploadInput.files || []).forEach(uploadFile);
-			uploadInput.value = '';
+	uploadInputs.forEach((input) => {
+		input.addEventListener('change', () => {
+			Array.from(input.files || []).forEach(uploadFile);
+			input.value = '';
 		});
-	}
+	});
 
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
