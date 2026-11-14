@@ -193,6 +193,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/UploadTokenExpiryAtUseTest.php`
 - `tests/MultilingualTextareaPresentationTest.php`
 - `tests/D13MediaPickerContractTest.php`
+- `tests/UploadUrlProvenanceContractTest.php`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
 - `tests/run-offline-save-acknowledgement-test.cjs`
 - `tests/GoverningPlanReleaseIdentityTest.php`
