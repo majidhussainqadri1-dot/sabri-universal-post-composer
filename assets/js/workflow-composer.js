@@ -24,7 +24,7 @@
 	const previewTitle = root.querySelector('[data-supc-preview-title]');
 	const previewBody = root.querySelector('[data-supc-preview-body]');
 	const previewMeta = root.querySelector('[data-supc-preview-meta]');
-	const uploadInput = root.querySelector('[data-supc-upload-input]');
+	const uploadInputs = Array.from(root.querySelectorAll('[data-supc-upload-input]'));
 	const uploadList = root.querySelector('[data-supc-upload-list]');
 	const nativeUrl = String(root.dataset.nativeUrl || '');
 	let session = null;
