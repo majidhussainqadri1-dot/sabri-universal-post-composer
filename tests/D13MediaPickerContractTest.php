@@ -75,6 +75,14 @@ final class D13MediaPickerContractTest extends TestCase {
 		self::assertStringContainsString( "fieldset( 'media', \$grouped['media'], false, \$uploads )", $source );
 	}
 
+	public function test_media_without_native_upload_adapter_fails_visibly_closed(): void {
+		$surface = ( new ReflectionClass( Workflow_Surface::class ) )->newInstanceWithoutConstructor();
+		$html    = ( new ReflectionMethod( Workflow_Surface::class, 'fieldset' ) )->invoke( $surface, 'media', array(), false, false );
+		self::assertStringContainsString( 'secure media upload adapter', $html );
+		self::assertStringContainsString( 'role="status"', $html );
+		self::assertStringNotContainsString( 'data-supc-upload-input', $html );
+	}
+
 	public function test_browser_wires_every_input_through_the_same_native_upload_flow(): void {
 		$source = file_get_contents( dirname( __DIR__ ) . '/assets/js/workflow-composer.js' );
 
