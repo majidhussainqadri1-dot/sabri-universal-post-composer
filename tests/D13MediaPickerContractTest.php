@@ -67,7 +67,7 @@ final class D13MediaPickerContractTest extends TestCase {
 		$source = file_get_contents( dirname( __DIR__ ) . '/includes/presentation/class-workflow-surface.php' );
 
 		self::assertIsString( $source );
-		self::assertStringContainsString( 'if ( $uploads ) {', $source );
+		self::assertStringContainsString( '$uploads      = $adapter instanceof Upload_Token_Adapter;', $source );
 		self::assertStringContainsString( '$this->upload_panel()', $source );
 		self::assertStringContainsString( 'Upload_Token_Adapter', $source );
 	}
