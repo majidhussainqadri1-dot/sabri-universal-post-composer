@@ -982,6 +982,9 @@
 		if (!target) return false;
 		target.value = reference;
 		dirty = true;
+		// Hidden programmatic mutations do not raise input events automatically.
+		// Reuse normal unsaved/autosave/recovery scheduling after media binding.
+		target.dispatchEvent(new Event('input', {bubbles: true}));
 		return true;
 	};
 
