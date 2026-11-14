@@ -331,13 +331,16 @@ final class Workflow_Surface {
 		if ( preg_match( '/(?:reference|citation|source|copyright|rights|license|patient|consent|anonym|medical|safety|emergency|seller|declaration|privacy)/', $value ) ) {
 			return 'compliance';
 		}
-		if ( preg_match( '/(?:publication_action|scheduled|schedule|distribution|visibility|status|publish)/', $value ) ) {
+		if ( 'publication_action' === $value ) {
 			return 'publish';
 		}
-		// D13 media authoring fields must remain together when supplied by the
-		// authorized native schema; File 22 does not create a parallel record.
+		// D13 media authoring, including upload status, must remain in its own
+		// stage when supplied by the authorized native schema.
 		if ( preg_match( '/(?:media|image|audio|video|reel|pdf|attachment|thumbnail|caption|transcript|duration|alt_text|crop|resize|dimensions|related|relationship|book|lesson|entry|embed|link)/', $value ) ) {
 			return 'media';
+		}
+		if ( preg_match( '/(?:scheduled|schedule|distribution|visibility|status|publish)/', $value ) ) {
+			return 'publish';
 		}
 		return 'compose';
 	}
