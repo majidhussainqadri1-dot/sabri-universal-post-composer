@@ -24,7 +24,14 @@ function harness(fields) {
   return get(form);
 }
 function field(name, value = '', type = 'opaque_reference') {
-  return {name, value, dataset: {fieldType:type}};
+  return {
+    name, value, dataset: {fieldType:type}, inputEvents: 0,
+    dispatchEvent(event) {
+      assert.equal(event.type, 'input');
+      assert.equal(event.bubbles, true);
+      this.inputEvents += 1;
+    }
+  };
 }
 const consent = field('patient_consent_reference');
 const rights = field('media_rights_reference');
@@ -46,6 +53,11 @@ assert.equal(audio.value, 'upload:audio:1');
 assert.equal(h.bindOpaqueReference('upload:other:1', 'image/jpeg'), true, 'Generic media field is allowed');
 assert.equal(generic.value, 'upload:other:1');
 assert.equal(h.getDirty(), true);
+assert.equal(image.inputEvents, 1, 'Binding media triggers ordinary input/autosave scheduling');
+assert.equal(audio.inputEvents, 1);
+assert.equal(generic.inputEvents, 1);
+assert.equal(consent.inputEvents, 0);
+assert.equal(rights.inputEvents, 0);
 
 const h2fields = [field('patient_consent_reference'), field('profile_reference'), field('source_pdf_reference')];
 const h2 = harness(h2fields);
