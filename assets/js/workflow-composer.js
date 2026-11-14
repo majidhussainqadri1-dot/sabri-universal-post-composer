@@ -972,7 +972,9 @@
 		if (mime.startsWith('audio/')) return hasAny(['audio', 'recording', 'sound']) || common;
 		if (mime.startsWith('video/')) return hasAny(['video', 'reel']) || common;
 		if (mime === 'application/pdf') return hasAny(['pdf', 'document']) || common;
-		return common;
+		// An unrecognized/empty MIME cannot be safely routed to a native field.
+		// Keep the transferred object with its native owner for explicit linking.
+		return false;
 	};
 
 	const bindOpaqueReference = (reference, mimeType) => {
