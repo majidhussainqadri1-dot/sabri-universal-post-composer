@@ -49,6 +49,9 @@ final class D13MediaPickerContractTest extends TestCase {
 		yield 'audio rights' => array( 'audio_rights', 'compliance' );
 		yield 'media patient consent' => array( 'media_patient_consent', 'compliance' );
 		yield 'copyright upload' => array( 'media_copyright', 'compliance' );
+		yield 'media upload status' => array( 'media_upload_status', 'media' );
+		yield 'audio processing status' => array( 'audio_processing_status', 'media' );
+		yield 'publication action' => array( 'publication_action', 'publish' );
 		yield 'schedule' => array( 'scheduled_at', 'publish' );
 		yield 'body' => array( 'body', 'compose' );
 	}
