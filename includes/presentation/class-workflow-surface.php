@@ -201,6 +201,8 @@ final class Workflow_Surface {
 	private function upload_panel(): string {
 		$html  = '<section class="supc-upload-panel" data-supc-upload-zone><header><h4>' . esc_html__( 'Native-owner media upload', 'sabri-universal-post-composer' ) . '</h4><p>' . esc_html__( 'Files are sent directly to the native owner. File 22 retains only opaque upload metadata and never stores the media bytes.', 'sabri-universal-post-composer' ) . '</p></header>';
 		$html .= '<label class="supc-upload-panel__picker"><span>' . esc_html__( 'Choose image, video or PDF', 'sabri-universal-post-composer' ) . '</span><input type="file" data-supc-upload-input multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf"></label>';
+		$html .= '<label class="supc-upload-panel__picker"><span>' . esc_html__( 'Choose audio', 'sabri-universal-post-composer' ) . '</span><input type="file" data-supc-upload-input multiple accept="audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm"></label>';
+		$html .= '<p class="description">' . esc_html__( 'The native owner must accept the file, validate audio rights and provide transcript/duration fields. Upload completion alone does not mean scanning, approval or publication is complete.', 'sabri-universal-post-composer' ) . '</p>';
 		$html .= '<ul class="supc-upload-panel__list" data-supc-upload-list aria-live="polite"></ul></section>';
 		return $html;
 	}
