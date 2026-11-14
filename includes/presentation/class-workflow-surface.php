@@ -168,8 +168,12 @@ final class Workflow_Surface {
 				$html .= $this->field( $field_key, $definition );
 			}
 		}
-		if ( $with_uploads ) {
-			$html .= $this->upload_panel();
+		if ( 'media' === $step ) {
+			if ( $with_uploads ) {
+				$html .= $this->upload_panel();
+			} else {
+				$html .= '<p class="supc-workflow__empty-stage" role="status">' . esc_html__( 'This native content workflow has not provided a secure media upload adapter. Media upload is unavailable here; use the native creation form where supported.', 'sabri-universal-post-composer' ) . '</p>';
+			}
 		}
 		return $html . $this->stage_navigation_buttons( $step ) . '</section>';
 	}
