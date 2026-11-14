@@ -44,7 +44,7 @@ final class D13MediaPickerContractTest extends TestCase {
 		self::assertStringContainsString( 'data-supc-step="media"', $html );
 		self::assertStringContainsString( 'data-supc-upload-zone', $html );
 		self::assertTrue( strpos( $html, 'data-supc-upload-zone' ) > strpos( $html, 'data-supc-step="media"' ) );
-		self::assertStringContainsString( 'data-supc-step-go="validation"', $html );
+		self::assertStringContainsString( 'data-supc-step-go="compliance"', $html );
 
 		$source = file_get_contents( dirname( __DIR__ ) . '/includes/presentation/class-workflow-surface.php' );
 		self::assertIsString( $source );
