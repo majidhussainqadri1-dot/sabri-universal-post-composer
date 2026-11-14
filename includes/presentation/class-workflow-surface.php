@@ -322,14 +322,18 @@ final class Workflow_Surface {
 
 	private function field_group( string $key ): string {
 		$value = strtolower( $key );
-		if ( preg_match( '/(?:media|image|video|reel|pdf|attachment|thumbnail|caption|transcript|related|relationship|book|lesson|entry|embed|link)/', $value ) ) {
-			return 'media';
-		}
+		// A native media permission or patient-consent field is a compliance
+		// gate even when its key also contains "image", "audio" or "media".
 		if ( preg_match( '/(?:reference|citation|source|copyright|rights|license|patient|consent|anonym|medical|safety|emergency|seller|declaration|privacy)/', $value ) ) {
 			return 'compliance';
 		}
 		if ( preg_match( '/(?:publication_action|scheduled|schedule|distribution|visibility|status|publish)/', $value ) ) {
 			return 'publish';
+		}
+		// D13 media authoring fields must remain together when supplied by the
+		// authorized native schema; File 22 does not create a parallel record.
+		if ( preg_match( '/(?:media|image|audio|video|reel|pdf|attachment|thumbnail|caption|transcript|duration|alt_text|crop|resize|dimensions|related|relationship|book|lesson|entry|embed|link)/', $value ) ) {
+			return 'media';
 		}
 		return 'compose';
 	}
