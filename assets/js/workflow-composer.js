@@ -963,14 +963,16 @@
 	const compatibleMediaReferenceField = (field, mimeType) => {
 		if (!field || field.dataset.fieldType !== 'opaque_reference') return false;
 		const name = String(field.name || '').toLowerCase();
-		if (/consent|patient|identity|verification|copyright|rights|license|evidence|citation|source|seller/.test(name)) return false;
+		const tokens = name.split(/[^a-z0-9]+/).filter(Boolean);
+		const hasAny = (items) => items.some((item) => tokens.includes(item));
+		if (hasAny(['consent', 'patient', 'identity', 'verification', 'copyright', 'rights', 'license', 'evidence', 'citation', 'source', 'seller'])) return false;
 		const mime = String(mimeType || '').toLowerCase();
-		const common = /media|attachment|asset|upload|file/;
-		if (mime.startsWith('image/')) return /image|thumbnail|photo|cover/.test(name) || common.test(name);
-		if (mime.startsWith('audio/')) return /audio|recording|sound/.test(name) || common.test(name);
-		if (mime.startsWith('video/')) return /video|reel/.test(name) || common.test(name);
-		if (mime === 'application/pdf') return /pdf|document/.test(name) || common.test(name);
-		return common.test(name);
+		const common = hasAny(['media', 'attachment', 'asset', 'upload', 'file']);
+		if (mime.startsWith('image/')) return hasAny(['image', 'thumbnail', 'photo', 'cover']) || common;
+		if (mime.startsWith('audio/')) return hasAny(['audio', 'recording', 'sound']) || common;
+		if (mime.startsWith('video/')) return hasAny(['video', 'reel']) || common;
+		if (mime === 'application/pdf') return hasAny(['pdf', 'document']) || common;
+		return common;
 	};
 
 	const bindOpaqueReference = (reference, mimeType) => {
