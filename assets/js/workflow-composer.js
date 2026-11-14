@@ -795,13 +795,15 @@
 
 	const validationGroupForCode = (code) => {
 		const value = String(code || '').toLowerCase();
-		if (/required|missing/.test(value)) return 'required';
-		if (/media|upload|image|video|pdf|mime/.test(value)) return 'media';
+		// Route sensitive-specific holds before generic "required"/"missing".
+		// A privacy or copyright failure must never be obscured as routine input.
 		if (/permission|authoriz|account|capab|role/.test(value)) return 'permission';
-		if (/medical|emergency|treatment|clinical/.test(value)) return 'medical';
 		if (/patient|privacy|consent|anonym/.test(value)) return 'privacy';
 		if (/copyright|rights|license/.test(value)) return 'copyright';
 		if (/reference|citation|source/.test(value)) return 'references';
+		if (/medical|emergency|treatment|clinical/.test(value)) return 'medical';
+		if (/media|upload|image|audio|video|pdf|mime|transcript|duration|alt_text|crop|resize/.test(value)) return 'media';
+		if (/required|missing/.test(value)) return 'required';
 		return 'technical';
 	};
 
