@@ -29,6 +29,30 @@ final class D13MediaPickerContractTest extends TestCase {
 		self::assertStringContainsString( 'video/mp4,video/webm,application/pdf', $html );
 	}
 
+	/** @dataProvider nativeMediaFieldGrouping */
+	public function test_native_media_metadata_is_grouped_under_the_appropriate_stage( string $field, string $expected ): void {
+		$surface = ( new ReflectionClass( Workflow_Surface::class ) )->newInstanceWithoutConstructor();
+		$group   = ( new ReflectionMethod( Workflow_Surface::class, 'field_group' ) )->invoke( $surface, $field );
+		self::assertSame( $expected, $group, $field );
+	}
+
+	/** @return iterable<string,array{string,string}> */
+	public static function nativeMediaFieldGrouping(): iterable {
+		yield 'audio duration' => array( 'audio_duration', 'media' );
+		yield 'audio transcript' => array( 'audio_transcript', 'media' );
+		yield 'plain transcript' => array( 'transcript', 'media' );
+		yield 'alt text' => array( 'alt_text', 'media' );
+		yield 'crop' => array( 'crop_coordinates', 'media' );
+		yield 'resize' => array( 'resize_width', 'media' );
+		yield 'image caption' => array( 'image_caption', 'media' );
+		yield 'image consent' => array( 'image_consent', 'compliance' );
+		yield 'audio rights' => array( 'audio_rights', 'compliance' );
+		yield 'media patient consent' => array( 'media_patient_consent', 'compliance' );
+		yield 'copyright upload' => array( 'media_copyright', 'compliance' );
+		yield 'schedule' => array( 'scheduled_at', 'publish' );
+		yield 'body' => array( 'body', 'compose' );
+	}
+
 	public function test_media_controls_do_not_claim_native_scanning_or_publication(): void {
 		$html = $this->upload_panel();
 
