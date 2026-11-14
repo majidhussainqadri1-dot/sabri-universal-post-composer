@@ -100,6 +100,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `docs/FILE22-RC3-NEW-PLANS-SOURCE-MANIFEST-2026-08-10.md`
 - `docs/FILE22-RC3-TWO-FRESH-REVIEWS-AND-FINAL-SOURCE-CLOSURE-2026-08-10.md`
 - `docs/FILE22-NOVEMBER-12-2026-V121-SOURCE-AUDIT.md`
+- `docs/FILE22-V123-G0-G3-SOURCE-AND-BLOCKER-AUDIT-2026-11-14.md`
 - `docs/FILE22-PHPSTAN-SCOPE-AUDIT-NOV12-2026.md`
 - `docs/FILE22-IDB-DURABLE-COMMIT-AUDIT-NOV12-2026.md`
 - `docs/FILE22-UNCERTAIN-SESSION-RETENTION-AUDIT-NOV12-2026.md`
@@ -188,6 +189,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/ScalarCitationSchemeTest.php`
 - `tests/UploadTokenExpiryAtUseTest.php`
 - `tests/MultilingualTextareaPresentationTest.php`
+- `tests/D13MediaPickerContractTest.php`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
 - `tests/run-offline-save-acknowledgement-test.cjs`
 - `tests/GoverningPlanReleaseIdentityTest.php`
