@@ -648,7 +648,13 @@ final class Workflow_Coordinator {
 		if ( isset( $result['upload_url'] ) && is_string( $result['upload_url'] ) ) {
 			$url   = trim( $result['upload_url'] );
 			$parts = function_exists( 'wp_parse_url' ) ? wp_parse_url( $url ) : parse_url( $url );
-			if ( ! is_array( $parts ) || 'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) || isset( $parts['user'] ) || isset( $parts['pass'] ) || strlen( $url ) > 2048 ) {
+			if (
+				! is_array( $parts ) ||
+				'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) ||
+				! isset( $parts['host'] ) || ! is_string( $parts['host'] ) || '' === trim( $parts['host'] ) ||
+				isset( $parts['user'] ) || isset( $parts['pass'] ) || isset( $parts['fragment'] ) ||
+				strlen( $url ) > 2048
+			) {
 				return $this->error( 'invalid_native_upload_url', $adapter_key );
 			}
 			$clean['upload_url'] = esc_url_raw( $url, array( 'https' ) );
