@@ -334,3 +334,5 @@ jobs:
           node tests/run-indexeddb-transaction-completion-test.cjs
           node --check tests/run-offline-save-acknowledgement-test.cjs
           node tests/run-offline-save-acknowledgement-test.cjs
+          node --check tests/run-validation-grouping-test.cjs
+          node tests/run-validation-grouping-test.cjs
