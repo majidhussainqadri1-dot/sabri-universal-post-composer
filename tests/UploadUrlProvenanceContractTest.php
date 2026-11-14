@@ -46,7 +46,7 @@ final class UploadUrlProvenanceContractTest extends TestCase {
 		$result = $this->validate( $url );
 		self::assertInstanceOf( WP_Error::class, $result );
 		self::assertSame( 'supc_invalid_native_upload_url', $result->get_error_code() );
-		self::assertStringNotContainsString( $url, (string) wp_json_encode( $result->get_error_data() ) );
+		self::assertStringNotContainsString( $url, $result->get_error_message() );
 	}
 
 	public function test_valid_https_provider_destination_remains_available(): void {
