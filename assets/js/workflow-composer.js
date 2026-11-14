@@ -50,6 +50,7 @@
 		uploadPreparing: 'Preparing native upload…',
 		uploadPending: 'The native owner issued an upload token but did not provide a direct transfer URL. Continue in the native owner.',
 		uploadComplete: 'Upload completed with the native owner.',
+		uploadNeedsLink: 'Transfer completed with the native owner, but no matching media reference field is available. Finish linking the media in the native editor.',
 		uploadFailed: 'Upload failed. Your draft text was not discarded.',
 		offlineStored: 'Encrypted recovery saved on this device. It has not been synced to the native owner yet.',
 		offlineRecovered: 'Recovered newer encrypted changes from this browser. Review them, then reconnect to sync.',
@@ -957,12 +958,29 @@
 		xhr.send(file);
 	});
 
-	const bindOpaqueReference = (reference) => {
-		const target = Array.from(form.querySelectorAll('[data-supc-opaque-reference]')).find((field) => !field.value);
-		if (target) {
-			target.value = reference;
-			dirty = true;
-		}
+	// A media token must never be inserted into consent, patient, identity or
+	// other unrelated opaque reference fields. Native schemas remain authoritative.
+	const compatibleMediaReferenceField = (field, mimeType) => {
+		if (!field || field.dataset.fieldType !== 'opaque_reference') return false;
+		const name = String(field.name || '').toLowerCase();
+		if (/consent|patient|identity|verification|copyright|rights|license|evidence|citation|source|seller/.test(name)) return false;
+		const mime = String(mimeType || '').toLowerCase();
+		const common = /media|attachment|asset|upload|file/;
+		if (mime.startsWith('image/')) return /image|thumbnail|photo|cover/.test(name) || common.test(name);
+		if (mime.startsWith('audio/')) return /audio|recording|sound/.test(name) || common.test(name);
+		if (mime.startsWith('video/')) return /video|reel/.test(name) || common.test(name);
+		if (mime === 'application/pdf') return /pdf|document/.test(name) || common.test(name);
+		return common.test(name);
+	};
+
+	const bindOpaqueReference = (reference, mimeType) => {
+		if (typeof reference !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/.test(reference)) return false;
+		const target = Array.from(form.querySelectorAll('[data-supc-opaque-reference]'))
+			.find((field) => !field.value && compatibleMediaReferenceField(field, mimeType));
+		if (!target) return false;
+		target.value = reference;
+		dirty = true;
+		return true;
 	};
 
 	const uploadFile = async (file) => {
@@ -997,11 +1015,12 @@
 			await uploadViaXhr(begin.native.upload_url, file, item);
 			const completed = await request('/sessions/' + encodeURIComponent(session.session_uuid) + '/uploads/' + encodeURIComponent(begin.upload.upload_uuid) + '/complete', 'POST', {});
 			const reference = completed.native && completed.native.upload_reference ? completed.native.upload_reference : begin.native.upload_reference;
-			if (reference) bindOpaqueReference(reference);
+			const attached = bindOpaqueReference(reference, file.type);
+			const message = attached ? strings.uploadComplete : strings.uploadNeedsLink;
 			const meter = item.querySelector('progress');
 			if (meter) meter.value = 100;
-			if (itemStatus) itemStatus.textContent = strings.uploadComplete;
-			announce(strings.uploadComplete);
+			if (itemStatus) itemStatus.textContent = message;
+			announce(message);
 		} catch (error) {
 			if (itemStatus) itemStatus.textContent = strings.uploadFailed + (error.message ? ' ' + error.message : '');
 			announce(strings.uploadFailed);
