@@ -34,6 +34,14 @@ The current File 21 source `includes/class-universal-composer-subject-schema-ada
 7. Versioned integration tests must pass for File 21 social/publication, structured cases, authenticated media owner unavailable/deactivated, File 00 revocation, File 17 interrupted transfers, and File 24 scan fail-closed.
 8. The D13 native handshake cannot expand permissions, roles, publication authority or public URL visibility; File 22 may display native capabilities only after current authorization.
 
+## Additional File 17 source boundary checked
+
+`17-sabri-network/sabri-network/includes/class-sn-file-transfer.php` declares an explicit **1 GiB per file** limit, encrypted private/resumable transfer and chunk sizes from **1 MiB to 16 MiB** (default **8 MiB**). `class-sn-file-transfer-part-1.php` registers a private transfer contract on `sn_network_file_transfer_contract_registered`, including `resumable=true`, `verified_users_only=true`, `scan_contract=sn_network_transfer_scan_result` and `binary_processing_owner=cf-04-after-activation`.
+
+`class-sn-fourth-fresh-media-hardening.php` requires a separate approved media codec/container/duration validator for private audio/video; its voice-note transcripts are encrypted and source-labelled `user_supplied_unverified`. **These are private network/communications features. They are NOT proof of a File 21 public-post media-upload adapter, nor a license to move File 17 private media into the public feed.**
+
+`File 22` still computes a whole-file SHA-256 with `file.arrayBuffer()` in its direct upload browser path. The unverified large-media/resumable design therefore needs a bounded-memory, versioned File 17/CF04 owner contract instead of assuming 1 GiB uploads can safely use the direct File 22 XHR route. This risk is **open**, and no unjustified capacity limit or private-to-public mapping has been added.
+
 ## Source changes proposed in File 22 PR #53
 
 - Separate audio picker (behind native `Upload_Token_Adapter`) and common token-bound upload bridge.
