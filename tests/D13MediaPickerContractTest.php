@@ -1,0 +1,109 @@
+<?php
+/**
+ * File 22 V12.3 D13: native-owner media picker regressions.
+ *
+ * These are source-surface contract tests, not native provider, scan, or
+ * production deployment acceptance.
+ *
+ * @package SabriUniversalPostComposer
+ */
+
+declare(strict_types=1);
+
+use PHPUnit\Framework\TestCase;
+use Sabri\UniversalComposer\Presentation\Workflow_Surface;
+
+final class D13MediaPickerContractTest extends TestCase {
+	private function upload_panel(): string {
+		$surface = ( new ReflectionClass( Workflow_Surface::class ) )->newInstanceWithoutConstructor();
+		return ( new ReflectionMethod( Workflow_Surface::class, 'upload_panel' ) )->invoke( $surface );
+	}
+
+	public function test_distinct_image_video_pdf_and_audio_picker_controls_exist(): void {
+		$html = $this->upload_panel();
+
+		self::assertSame( 2, substr_count( $html, 'data-supc-upload-input' ) );
+		self::assertStringContainsString( 'Choose audio', $html );
+		self::assertStringContainsString( 'image/jpeg,image/png,image/webp', $html );
+		self::assertStringContainsString( 'audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm', $html );
+		self::assertStringContainsString( 'video/mp4,video/webm,application/pdf', $html );
+	}
+
+	/** @dataProvider nativeMediaFieldGrouping */
+	public function test_native_media_metadata_is_grouped_under_the_appropriate_stage( string $field, string $expected ): void {
+		$surface = ( new ReflectionClass( Workflow_Surface::class ) )->newInstanceWithoutConstructor();
+		$group   = ( new ReflectionMethod( Workflow_Surface::class, 'field_group' ) )->invoke( $surface, $field );
+		self::assertSame( $expected, $group, $field );
+	}
+
+	/** @return iterable<string,array{string,string}> */
+	public static function nativeMediaFieldGrouping(): iterable {
+		yield 'audio duration' => array( 'audio_duration', 'media' );
+		yield 'audio transcript' => array( 'audio_transcript', 'media' );
+		yield 'plain transcript' => array( 'transcript', 'media' );
+		yield 'alt text' => array( 'alt_text', 'media' );
+		yield 'crop' => array( 'crop_coordinates', 'media' );
+		yield 'resize' => array( 'resize_width', 'media' );
+		yield 'image caption' => array( 'image_caption', 'media' );
+		yield 'image consent' => array( 'image_consent', 'compliance' );
+		yield 'audio rights' => array( 'audio_rights', 'compliance' );
+		yield 'media patient consent' => array( 'media_patient_consent', 'compliance' );
+		yield 'copyright upload' => array( 'media_copyright', 'compliance' );
+		yield 'media upload status' => array( 'media_upload_status', 'media' );
+		yield 'audio processing status' => array( 'audio_processing_status', 'media' );
+		yield 'publication action' => array( 'publication_action', 'publish' );
+		yield 'schedule' => array( 'scheduled_at', 'publish' );
+		yield 'body' => array( 'body', 'compose' );
+	}
+
+	public function test_media_controls_do_not_claim_native_scanning_or_publication(): void {
+		$html = $this->upload_panel();
+
+		self::assertStringContainsString( 'native owner', $html );
+		self::assertStringContainsString( 'Upload completion alone does not mean scanning, approval or publication is complete', $html );
+		self::assertStringContainsString( 'opaque upload metadata', $html );
+	}
+
+	public function test_media_uploads_are_rendered_inside_the_media_step_not_on_every_step(): void {
+		$surface = ( new ReflectionClass( Workflow_Surface::class ) )->newInstanceWithoutConstructor();
+		$html    = ( new ReflectionMethod( Workflow_Surface::class, 'fieldset' ) )->invoke( $surface, 'media', array(), false, true );
+
+		self::assertStringContainsString( 'data-supc-step="media"', $html );
+		self::assertStringContainsString( 'data-supc-upload-zone', $html );
+		self::assertTrue( strpos( $html, 'data-supc-upload-zone' ) > strpos( $html, 'data-supc-step="media"' ) );
+		self::assertStringContainsString( 'data-supc-step-go="compliance"', $html );
+
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/presentation/class-workflow-surface.php' );
+		self::assertIsString( $source );
+		self::assertStringContainsString( "fieldset( 'media', \$grouped['media'], false, \$uploads )", $source );
+	}
+
+	public function test_media_without_native_upload_adapter_fails_visibly_closed(): void {
+		$surface = ( new ReflectionClass( Workflow_Surface::class ) )->newInstanceWithoutConstructor();
+		$html    = ( new ReflectionMethod( Workflow_Surface::class, 'fieldset' ) )->invoke( $surface, 'media', array(), false, false );
+		self::assertStringContainsString( 'secure media upload adapter', $html );
+		self::assertStringContainsString( 'role="status"', $html );
+		self::assertStringNotContainsString( 'data-supc-upload-input', $html );
+	}
+
+	public function test_browser_wires_every_input_through_the_same_native_upload_flow(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/assets/js/workflow-composer.js' );
+
+		self::assertIsString( $source );
+		self::assertStringContainsString( "querySelectorAll('[data-supc-upload-input]')", $source );
+		self::assertStringContainsString( 'uploadInputs.forEach((input) => {', $source );
+		self::assertStringContainsString( 'Array.from(input.files || []).forEach(uploadFile);', $source );
+		self::assertStringContainsString( "purpose: 'composer_media'", $source );
+		self::assertStringContainsString( "checksum_sha256: hash", $source );
+		self::assertStringNotContainsString( "const uploadInput = root.querySelector('[data-supc-upload-input]')", $source );
+	}
+
+	public function test_media_picker_is_only_rendered_for_native_upload_capability(): void {
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/presentation/class-workflow-surface.php' );
+
+		self::assertIsString( $source );
+		self::assertStringContainsString( '$uploads      = $adapter instanceof Upload_Token_Adapter;', $source );
+		self::assertStringContainsString( '$this->upload_panel()', $source );
+		self::assertStringContainsString( 'Upload_Token_Adapter', $source );
+	}
+}

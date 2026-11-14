@@ -24,7 +24,7 @@
 	const previewTitle = root.querySelector('[data-supc-preview-title]');
 	const previewBody = root.querySelector('[data-supc-preview-body]');
 	const previewMeta = root.querySelector('[data-supc-preview-meta]');
-	const uploadInput = root.querySelector('[data-supc-upload-input]');
+	const uploadInputs = Array.from(root.querySelectorAll('[data-supc-upload-input]'));
 	const uploadList = root.querySelector('[data-supc-upload-list]');
 	const nativeUrl = String(root.dataset.nativeUrl || '');
 	let session = null;
@@ -50,6 +50,7 @@
 		uploadPreparing: 'Preparing native upload…',
 		uploadPending: 'The native owner issued an upload token but did not provide a direct transfer URL. Continue in the native owner.',
 		uploadComplete: 'Upload completed with the native owner.',
+		uploadNeedsLink: 'Transfer completed with the native owner, but no matching media reference field is available. Finish linking the media in the native editor.',
 		uploadFailed: 'Upload failed. Your draft text was not discarded.',
 		offlineStored: 'Encrypted recovery saved on this device. It has not been synced to the native owner yet.',
 		offlineRecovered: 'Recovered newer encrypted changes from this browser. Review them, then reconnect to sync.',
@@ -795,13 +796,15 @@
 
 	const validationGroupForCode = (code) => {
 		const value = String(code || '').toLowerCase();
-		if (/required|missing/.test(value)) return 'required';
-		if (/media|upload|image|video|pdf|mime/.test(value)) return 'media';
+		// Route sensitive-specific holds before generic "required"/"missing".
+		// A privacy or copyright failure must never be obscured as routine input.
 		if (/permission|authoriz|account|capab|role/.test(value)) return 'permission';
-		if (/medical|emergency|treatment|clinical/.test(value)) return 'medical';
 		if (/patient|privacy|consent|anonym/.test(value)) return 'privacy';
 		if (/copyright|rights|license/.test(value)) return 'copyright';
 		if (/reference|citation|source/.test(value)) return 'references';
+		if (/medical|emergency|treatment|clinical/.test(value)) return 'medical';
+		if (/media|upload|image|audio|video|pdf|mime|transcript|duration|alt_text|crop|resize/.test(value)) return 'media';
+		if (/required|missing/.test(value)) return 'required';
 		return 'technical';
 	};
 
@@ -955,12 +958,36 @@
 		xhr.send(file);
 	});
 
-	const bindOpaqueReference = (reference) => {
-		const target = Array.from(form.querySelectorAll('[data-supc-opaque-reference]')).find((field) => !field.value);
-		if (target) {
-			target.value = reference;
-			dirty = true;
-		}
+	// A media token must never be inserted into consent, patient, identity or
+	// other unrelated opaque reference fields. Native schemas remain authoritative.
+	const compatibleMediaReferenceField = (field, mimeType) => {
+		if (!field || field.dataset.fieldType !== 'opaque_reference') return false;
+		const name = String(field.name || '').toLowerCase();
+		const tokens = name.split(/[^a-z0-9]+/).filter(Boolean);
+		const hasAny = (items) => items.some((item) => tokens.includes(item));
+		if (hasAny(['consent', 'patient', 'identity', 'verification', 'copyright', 'rights', 'license', 'evidence', 'citation', 'source', 'seller'])) return false;
+		const mime = String(mimeType || '').toLowerCase();
+		const common = hasAny(['media', 'attachment', 'asset', 'upload', 'file']);
+		if (mime.startsWith('image/')) return hasAny(['image', 'thumbnail', 'photo', 'cover']) || common;
+		if (mime.startsWith('audio/')) return hasAny(['audio', 'recording', 'sound']) || common;
+		if (mime.startsWith('video/')) return hasAny(['video', 'reel']) || common;
+		if (mime === 'application/pdf') return hasAny(['pdf', 'document']) || common;
+		// An unrecognized/empty MIME cannot be safely routed to a native field.
+		// Keep the transferred object with its native owner for explicit linking.
+		return false;
+	};
+
+	const bindOpaqueReference = (reference, mimeType) => {
+		if (typeof reference !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,254}$/.test(reference)) return false;
+		const target = Array.from(form.querySelectorAll('[data-supc-opaque-reference]'))
+			.find((field) => !field.value && compatibleMediaReferenceField(field, mimeType));
+		if (!target) return false;
+		target.value = reference;
+		dirty = true;
+		// Hidden programmatic mutations do not raise input events automatically.
+		// Reuse normal unsaved/autosave/recovery scheduling after media binding.
+		target.dispatchEvent(new Event('input', {bubbles: true}));
+		return true;
 	};
 
 	const uploadFile = async (file) => {
@@ -995,11 +1022,12 @@
 			await uploadViaXhr(begin.native.upload_url, file, item);
 			const completed = await request('/sessions/' + encodeURIComponent(session.session_uuid) + '/uploads/' + encodeURIComponent(begin.upload.upload_uuid) + '/complete', 'POST', {});
 			const reference = completed.native && completed.native.upload_reference ? completed.native.upload_reference : begin.native.upload_reference;
-			if (reference) bindOpaqueReference(reference);
+			const attached = bindOpaqueReference(reference, file.type);
+			const message = attached ? strings.uploadComplete : strings.uploadNeedsLink;
 			const meter = item.querySelector('progress');
 			if (meter) meter.value = 100;
-			if (itemStatus) itemStatus.textContent = strings.uploadComplete;
-			announce(strings.uploadComplete);
+			if (itemStatus) itemStatus.textContent = message;
+			announce(message);
 		} catch (error) {
 			if (itemStatus) itemStatus.textContent = strings.uploadFailed + (error.message ? ' ' + error.message : '');
 			announce(strings.uploadFailed);
@@ -1046,12 +1074,12 @@
 			if (previewCanvas) previewCanvas.dataset.device = button.dataset.supcPreviewDevice;
 		});
 	});
-	if (uploadInput) {
-		uploadInput.addEventListener('change', () => {
-			Array.from(uploadInput.files || []).forEach(uploadFile);
-			uploadInput.value = '';
+	uploadInputs.forEach((input) => {
+		input.addEventListener('change', () => {
+			Array.from(input.files || []).forEach(uploadFile);
+			input.value = '';
 		});
-	}
+	});
 
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();

@@ -37,7 +37,7 @@ The candidate includes:
 - File 00 fail-closed authorization and current-subject binding;
 - File 20 Create/shell integration boundary;
 - File 21 social publication provider integration and diagnostics;
-- Quick and Advanced composer modes with a seven-stage authoring flow;
+- Quick and Advanced composer modes with seven visible steps (content type selection, followed by six in-workspace authoring stages);
 - native drafts, bounded autosave, recovery, conflict handling, idempotency and partial-failure reconciliation;
 - four independent state dimensions: Composer, Review, Publication and Safety/Hold;
 - schema-driven fields, validation, private preview and native upload-token orchestration;

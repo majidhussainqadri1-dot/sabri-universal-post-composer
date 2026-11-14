@@ -83,6 +83,16 @@ final class Plan_Completion_Runtime {
 	public function append_system_check( array $rows ): array {
 		$rows[] = $this->row( 'audit_store', Audit_Store::table_exists(), 'audit_store_missing' );
 		$rows[] = $this->row( 'upload_token_store', Upload_Token_Store::table_exists(), 'upload_token_store_missing' );
+		// D13 is a separate native-provider capability, not proof derived
+		// from the existence of File 22's metadata-only upload token table.
+		$native_social = Plugin::instance()->registry()->get( 'social_publication' );
+		$native_upload = $native_social instanceof \Sabri\UniversalComposer\Contracts\Upload_Token_Adapter;
+		$rows[] = array(
+			'key'    => 'native_social_media_upload',
+			'status' => $native_upload ? 'pass' : 'warning',
+			'count'  => $native_upload ? 0 : 1,
+			'codes'  => $native_upload ? array() : array( 'native_social_media_upload_adapter_missing' ),
+		);
 		$taxonomy_codes = Version::valid( Taxonomy_Map::VERSION ) ? Taxonomy_Map::integrity_codes() : array( 'taxonomy_map_invalid' );
 		$rows[] = array(
 			'key'    => 'taxonomy_map',

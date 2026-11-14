@@ -126,10 +126,7 @@ final class Workflow_Surface {
 		$html .= $this->step_navigation( $steps_id );
 		$html .= '<main class="supc-workflow__editor" data-supc-editor-column>';
 		$html .= $this->fieldset( 'compose', $grouped['compose'], true );
-		$html .= $this->fieldset( 'media', $grouped['media'], false );
-		if ( $uploads ) {
-			$html .= $this->upload_panel();
-		}
+		$html .= $this->fieldset( 'media', $grouped['media'], false, $uploads );
 		$html .= $this->fieldset( 'compliance', $grouped['compliance'], false );
 		$html .= $this->validation_stage();
 		$html .= $this->preview_stage();
@@ -160,7 +157,7 @@ final class Workflow_Surface {
 	}
 
 	/** @param array<string,array<string,mixed>> $fields */
-	private function fieldset( string $step, array $fields, bool $active ): string {
+	private function fieldset( string $step, array $fields, bool $active, bool $with_uploads = false ): string {
 		$heading_id = wp_unique_id( 'supc-step-' . $step . '-' );
 		$html       = '<section class="supc-workflow__stage' . ( $active ? ' is-active' : '' ) . '" data-supc-step="' . esc_attr( $step ) . '"' . ( $active ? '' : ' hidden' ) . ' aria-labelledby="' . esc_attr( $heading_id ) . '">';
 		$html      .= '<header class="supc-workflow__stage-header"><p class="supc-workflow__stage-kicker">' . esc_html__( 'Step', 'sabri-universal-post-composer' ) . '</p><h3 id="' . esc_attr( $heading_id ) . '">' . esc_html__( self::STEP_LABELS[ $step ] ?? 'Compose', 'sabri-universal-post-composer' ) . '</h3></header>';
@@ -169,6 +166,13 @@ final class Workflow_Surface {
 		} else {
 			foreach ( $fields as $field_key => $definition ) {
 				$html .= $this->field( $field_key, $definition );
+			}
+		}
+		if ( 'media' === $step ) {
+			if ( $with_uploads ) {
+				$html .= $this->upload_panel();
+			} else {
+				$html .= '<p class="supc-workflow__empty-stage" role="status">' . esc_html__( 'This native content workflow has not provided a secure media upload adapter. Media upload is unavailable here; use the native creation form where supported.', 'sabri-universal-post-composer' ) . '</p>';
 			}
 		}
 		return $html . $this->stage_navigation_buttons( $step ) . '</section>';
@@ -201,6 +205,8 @@ final class Workflow_Surface {
 	private function upload_panel(): string {
 		$html  = '<section class="supc-upload-panel" data-supc-upload-zone><header><h4>' . esc_html__( 'Native-owner media upload', 'sabri-universal-post-composer' ) . '</h4><p>' . esc_html__( 'Files are sent directly to the native owner. File 22 retains only opaque upload metadata and never stores the media bytes.', 'sabri-universal-post-composer' ) . '</p></header>';
 		$html .= '<label class="supc-upload-panel__picker"><span>' . esc_html__( 'Choose image, video or PDF', 'sabri-universal-post-composer' ) . '</span><input type="file" data-supc-upload-input multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,application/pdf"></label>';
+		$html .= '<label class="supc-upload-panel__picker"><span>' . esc_html__( 'Choose audio', 'sabri-universal-post-composer' ) . '</span><input type="file" data-supc-upload-input multiple accept="audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm"></label>';
+		$html .= '<p class="description">' . esc_html__( 'The native owner must accept the file, validate audio rights and provide transcript/duration fields. Upload completion alone does not mean scanning, approval or publication is complete.', 'sabri-universal-post-composer' ) . '</p>';
 		$html .= '<ul class="supc-upload-panel__list" data-supc-upload-list aria-live="polite"></ul></section>';
 		return $html;
 	}
@@ -320,13 +326,20 @@ final class Workflow_Surface {
 
 	private function field_group( string $key ): string {
 		$value = strtolower( $key );
-		if ( preg_match( '/(?:media|image|video|reel|pdf|attachment|thumbnail|caption|transcript|related|relationship|book|lesson|entry|embed|link)/', $value ) ) {
-			return 'media';
-		}
+		// A native media permission or patient-consent field is a compliance
+		// gate even when its key also contains "image", "audio" or "media".
 		if ( preg_match( '/(?:reference|citation|source|copyright|rights|license|patient|consent|anonym|medical|safety|emergency|seller|declaration|privacy)/', $value ) ) {
 			return 'compliance';
 		}
-		if ( preg_match( '/(?:publication_action|scheduled|schedule|distribution|visibility|status|publish)/', $value ) ) {
+		if ( 'publication_action' === $value ) {
+			return 'publish';
+		}
+		// D13 media authoring, including upload status, must remain in its own
+		// stage when supplied by the authorized native schema.
+		if ( preg_match( '/(?:media|image|audio|video|reel|pdf|attachment|thumbnail|caption|transcript|duration|alt_text|crop|resize|dimensions|related|relationship|book|lesson|entry|embed|link)/', $value ) ) {
+			return 'media';
+		}
+		if ( preg_match( '/(?:scheduled|schedule|distribution|visibility|status|publish)/', $value ) ) {
 			return 'publish';
 		}
 		return 'compose';
