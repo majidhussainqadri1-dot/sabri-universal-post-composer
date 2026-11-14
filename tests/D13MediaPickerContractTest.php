@@ -37,6 +37,20 @@ final class D13MediaPickerContractTest extends TestCase {
 		self::assertStringContainsString( 'opaque upload metadata', $html );
 	}
 
+	public function test_media_uploads_are_rendered_inside_the_media_step_not_on_every_step(): void {
+		$surface = ( new ReflectionClass( Workflow_Surface::class ) )->newInstanceWithoutConstructor();
+		$html    = ( new ReflectionMethod( Workflow_Surface::class, 'fieldset' ) )->invoke( $surface, 'media', array(), false, true );
+
+		self::assertStringContainsString( 'data-supc-step="media"', $html );
+		self::assertStringContainsString( 'data-supc-upload-zone', $html );
+		self::assertTrue( strpos( $html, 'data-supc-upload-zone' ) > strpos( $html, 'data-supc-step="media"' ) );
+		self::assertStringContainsString( 'data-supc-step-go="validation"', $html );
+
+		$source = file_get_contents( dirname( __DIR__ ) . '/includes/presentation/class-workflow-surface.php' );
+		self::assertIsString( $source );
+		self::assertStringContainsString( "fieldset( 'media', \$grouped['media'], false, \$uploads )", $source );
+	}
+
 	public function test_browser_wires_every_input_through_the_same_native_upload_flow(): void {
 		$source = file_get_contents( dirname( __DIR__ ) . '/assets/js/workflow-composer.js' );
 
