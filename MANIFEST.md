@@ -196,6 +196,7 @@ This manifest describes the current repository/source candidate after reconcilia
 - `tests/UploadUrlProvenanceContractTest.php`
 - `tests/NativeMediaProviderDiagnosticTest.php`
 - `tests/run-validation-grouping-test.cjs`
+- `tests/run-media-reference-binding-test.cjs`
 - `tests/run-indexeddb-transaction-completion-test.cjs`
 - `tests/run-offline-save-acknowledgement-test.cjs`
 - `tests/GoverningPlanReleaseIdentityTest.php`
