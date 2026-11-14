@@ -93,6 +93,17 @@ function esc_url( string $url ): string {
 	return esc_attr( $url );
 }
 
+/**
+ * Minimal WordPress URL sanitization test double for native upload URLs.
+ *
+ * The real WordPress runtime provides esc_url_raw(). This unit harness has
+ * deliberately not implemented it until a native HTTPS upload test needed
+ * the successful path. Do not treat this double as production validation.
+ */
+function esc_url_raw( string $url ): string {
+	return false !== filter_var( $url, FILTER_VALIDATE_URL ) ? $url : '';
+}
+
 function do_action( string $hook, ...$args ): void {
 	$GLOBALS['supc_test_actions_fired'][] = array( $hook, $args );
 }
