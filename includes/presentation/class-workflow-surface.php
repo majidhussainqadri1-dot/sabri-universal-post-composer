@@ -126,10 +126,7 @@ final class Workflow_Surface {
 		$html .= $this->step_navigation( $steps_id );
 		$html .= '<main class="supc-workflow__editor" data-supc-editor-column>';
 		$html .= $this->fieldset( 'compose', $grouped['compose'], true );
-		$html .= $this->fieldset( 'media', $grouped['media'], false );
-		if ( $uploads ) {
-			$html .= $this->upload_panel();
-		}
+		$html .= $this->fieldset( 'media', $grouped['media'], false, $uploads );
 		$html .= $this->fieldset( 'compliance', $grouped['compliance'], false );
 		$html .= $this->validation_stage();
 		$html .= $this->preview_stage();
@@ -160,7 +157,7 @@ final class Workflow_Surface {
 	}
 
 	/** @param array<string,array<string,mixed>> $fields */
-	private function fieldset( string $step, array $fields, bool $active ): string {
+	private function fieldset( string $step, array $fields, bool $active, bool $with_uploads = false ): string {
 		$heading_id = wp_unique_id( 'supc-step-' . $step . '-' );
 		$html       = '<section class="supc-workflow__stage' . ( $active ? ' is-active' : '' ) . '" data-supc-step="' . esc_attr( $step ) . '"' . ( $active ? '' : ' hidden' ) . ' aria-labelledby="' . esc_attr( $heading_id ) . '">';
 		$html      .= '<header class="supc-workflow__stage-header"><p class="supc-workflow__stage-kicker">' . esc_html__( 'Step', 'sabri-universal-post-composer' ) . '</p><h3 id="' . esc_attr( $heading_id ) . '">' . esc_html__( self::STEP_LABELS[ $step ] ?? 'Compose', 'sabri-universal-post-composer' ) . '</h3></header>';
@@ -170,6 +167,9 @@ final class Workflow_Surface {
 			foreach ( $fields as $field_key => $definition ) {
 				$html .= $this->field( $field_key, $definition );
 			}
+		}
+		if ( $with_uploads ) {
+			$html .= $this->upload_panel();
 		}
 		return $html . $this->stage_navigation_buttons( $step ) . '</section>';
 	}
