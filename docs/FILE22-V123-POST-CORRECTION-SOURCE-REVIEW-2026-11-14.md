@@ -30,6 +30,7 @@
 
 - **D22-V123-RISK-01:** Whole-file browser `file.arrayBuffer()` for SHA-256 uses memory proportional to file size. File17 separately owns private/encrypted 1GiB resumable transfers. This is an unverified large-file memory/architectural risk; it does not prove File22 itself must accept 1GiB public media. Require bounded-memory/native resumable contract; do not invent provider limits.
 - **D22-V123-DOC-01:** Seven visible steps include type selection followed by six in-workspace steps; README clarified, no behavioral bug counted.
+- **D22-V123-DOC-02:** The historical compatibility matrix claimed File20 v1.0.0 ZIP lacked the Create 1.0.1 contract and treated this as a standing blocker. The current File20 repository source is v1.4.17 with a source-declared 1.0.1 contract. Updated `docs/COMPATIBILITY-MATRIX.md` to distinguish historical ZIP truth, current repository source and still-unverified deployed contract; no live integration implied.
 - **D22-V123-DEC-01:** D12 new private Notes/Documents canonical ownership explicitly requires Founder approval. No new table, migration, private sharing or export has been written.
 - Previous self-authored test expected an obsolete `if ($uploads)` branch after stage correction and failed on historical SHA. It was corrected and rerun green at `a935d4549365aacc68cc5e2299e7a3459cae8f7f`; that earlier result is not transferable to newer HEAD.
 
@@ -41,7 +42,7 @@
 | Source-level corrections proposed | 10 | SRC-01,03–11; current exact-head CI/independent review still required |
 | Source issues not corrected | 2 | SRC-02 full native media and SRC-12 File21 cross-file contract |
 | Unconfirmed architectural risk | 1 | RISK-01 bounded-memory transfer |
-| Documentation clarifications | 1 | DOC-01 |
+| Documentation clarifications | 2 | DOC-01 and DOC-02 (historical File20 contract identity) |
 | Founder decisions | 1 | D12 |
 | New CI tests/source contracts | Several | PHPUnit and JS test files; CI must establish exact latest SHA |
 | E2E tests accepted in Staging | 0 | 50-case register exists, not executed |
